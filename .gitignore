@@ -1,0 +1,13 @@
+.venv/
+eb-virt/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+__pycache__/
+
+.env
+
+db.sqlite3
