@@ -1,13 +1,38 @@
 from django.db import models
 
 class Anesthesiologist(models.Model):
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=15)
-    medical_license = models.CharField(max_length=50, unique=True)
-    specialization = models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=255, default='')
+    date_of_birth = models.DateField(default='1970-01-01')
+    cpf = models.CharField(max_length=15, unique=True, default='000.000.000-00')
+    function = models.CharField(max_length=255, default='Anestesista')
+    estado = models.CharField(max_length=2, unique=True, default='RJ')
+    crm = models.CharField(max_length=20, unique=True, default='')
+    rqe = models.CharField(max_length=20, unique=True, default='')
+    phone = models.CharField(max_length=15, default='5521999999999')
+    role_in_group = models.CharField(max_length=255, default='Membro')
+    admission_date = models.DateField(default='1970-01-01')
+    responsible_hours = models.CharField(max_length=50, default='N/A')
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return self.name
+    
+class Surgeon(models.Model):
+    name = models.CharField(max_length=255, default='')
+    specialty = models.CharField(max_length=255, default='Cirurgião Geral')
+    estado = models.CharField(max_length=2, unique=True, default='RJ')
+    crm = models.CharField(max_length=20, unique=True, default='')
+    rqe = models.CharField(max_length=20, unique=True, default='')
+    phone = models.CharField(max_length=15, default='0000000000')
+    notes = models.TextField(blank=True, default='No notes')
+
+    def __str__(self):
+        return self.name
+    
+class HospitalClinic(models.Model):
+    name = models.CharField(max_length=255, default='')
+    address = models.CharField(max_length=255, default='No address provided')
+    surgery_center_phone = models.CharField(max_length=15, default='0000000000')
+    hospital_phone = models.CharField(max_length=15, default='0000000000')
+
+    def __str__(self):
+        return self.name
