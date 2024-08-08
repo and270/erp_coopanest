@@ -23,6 +23,7 @@ class CustomUser(AbstractUser):
     )
 
 class Anesthesiologist(models.Model):
+    user = models.OneToOneField(CustomUser, null=True, blank=True, on_delete=models.SET_NULL)
     name = models.CharField(max_length=255, default='')
     date_of_birth = models.DateField(default='1970-01-01')
     cpf = models.CharField(max_length=15, unique=True, default='000.000.000-00')
