@@ -1,4 +1,26 @@
 from django.db import models
+from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import AbstractUser
+
+from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
+
+class CustomUser(AbstractUser):
+
+    USER_TYPE = (
+        (SECRETARIA_USER , 'Secretária'),
+        (GESTOR_USER , 'Gestor'),
+        (ANESTESISTA_USER , 'Anestesista'),
+        (ADMIN_USER , 'Administrador do Sistema'),
+    )
+
+    groups = models.ManyToManyField(Group, blank=True, related_name="%(app_label)s_%(class)s_related")
+    user_permissions = models.ManyToManyField(Permission, blank=True, related_name="%(app_label)s_%(class)s_related")
+
+    user_type = models.CharField(
+        max_length=40,
+        default=ANESTESISTA_USER,
+        choices=USER_TYPE,
+    )
 
 class Anesthesiologist(models.Model):
     name = models.CharField(max_length=255, default='')
