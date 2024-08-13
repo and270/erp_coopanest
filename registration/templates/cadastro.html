@@ -1,0 +1,39 @@
+{% extends 'layout.html' %}
+
+{% block title %}Cadastro{% endblock %}
+
+{% block content %}
+<h1>Cadastro</h1>
+<ul class="tabs">
+    <li><a href="#anesthesiologist">Anestesiologista</a></li>
+    <li><a href="#surgeon">Cirurgião</a></li>
+    <li><a href="#hospital_clinic">Hospital/Clínica</a></li>
+</ul>
+
+<div id="anesthesiologist">
+    <h2>Cadastrar Anestesiologista</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ anesthesiologist_form.as_p }}
+        <button type="submit" name="form_type" value="anesthesiologist">Salvar</button>
+    </form>
+</div>
+
+<div id="surgeon">
+    <h2>Cadastrar Cirurgião</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ surgeon_form.as_p }}
+        <button type="submit" name="form_type" value="surgeon">Salvar</button>
+    </form>
+</div>
+
+<div id="hospital_clinic">
+    <h2>Cadastrar Hospital/Clínica</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ hospital_clinic_form.as_p }}
+        <button type="submit" name="form_type" value="hospital_clinic">Salvar</button>
+    </form>
+</div>
+{% endblock %}

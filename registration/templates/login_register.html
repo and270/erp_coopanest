@@ -6,7 +6,7 @@
     <title>Login / Register</title>
 </head>
 <body>
-    <h1>Login or Register</h1>
+    <h1>Morton - Login / Registro</h1>
     <div>
         <h2>Login</h2>
         <form method="post" action="{% url 'login_register' %}">
@@ -20,7 +20,7 @@
         <form method="post" action="{% url 'login_register' %}">
             {% csrf_token %}
             {{ register_form.as_p }}
-            <button type="submit" name="register">Register</button>
+            <button type="submit" name="register">Criar conta</button>
         </form>
     </div>
 </body>

@@ -1,6 +1,18 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
-from .forms import CustomUserCreationForm, CustomUserLoginForm
+from django.contrib.auth.decorators import login_required
+from .forms import CustomUserCreationForm, CustomUserLoginForm, AnesthesiologistForm, SurgeonForm, HospitalClinicForm
+from .models import Anesthesiologist, Surgeon, HospitalClinic
+from django.contrib.auth import authenticate, login
+from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+
+def home_view(request):
+    context = {
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    }
+    return render(request, 'home.html', context)
 
 def login_register_view(request):
     if request.method == 'POST':
@@ -15,9 +27,9 @@ def login_register_view(request):
             login_form = CustomUserLoginForm(request, data=request.POST)
             register_form = CustomUserCreationForm()
             if login_form.is_valid():
-                username = login_form.cleaned_data.get('username')
+                email = login_form.cleaned_data.get('username')
                 password = login_form.cleaned_data.get('password')
-                user = authenticate(username=username, password=password)
+                user = authenticate(username=email, password=password)
                 if user is not None:
                     login(request, user)
                     return redirect('home')  # Redirect to a homepage or dashboard
@@ -28,5 +40,73 @@ def login_register_view(request):
     return render(request, 'login_register.html', {
         'register_form': register_form,
         'login_form': login_form,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
     })
 
+@login_required
+def cadastro_view(request):
+    if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+        return redirect('login_register')
+    
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+        if form_type == 'anesthesiologist':
+            form = AnesthesiologistForm(request.POST)
+        elif form_type == 'surgeon':
+            form = SurgeonForm(request.POST)
+        elif form_type == 'hospital_clinic':
+            form = HospitalClinicForm(request.POST)
+        
+        if form.is_valid():
+            form.save()
+            return redirect('members')
+    else:
+        anesthesiologist_form = AnesthesiologistForm()
+        surgeon_form = SurgeonForm()
+        hospital_clinic_form = HospitalClinicForm()
+
+    return render(request, 'cadastro.html', {
+        'anesthesiologist_form': anesthesiologist_form,
+        'surgeon_form': surgeon_form,
+        'hospital_clinic_form': hospital_clinic_form,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    })
+
+@login_required
+def members_view(request):
+    if request.user.user_type in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+        anesthesiologists = Anesthesiologist.objects.all()
+        surgeons = Surgeon.objects.all()
+        hospitals = HospitalClinic.objects.all()
+    elif request.user.user_type == ANESTESISTA_USER:
+        try:
+            anesthesiologists = Anesthesiologist.objects.filter(user=request.user)
+        except Anesthesiologist.DoesNotExist:
+            anesthesiologists = None
+    else:
+        anesthesiologists = surgeons = hospitals = None
+
+    return render(request, 'members.html', {
+        'anesthesiologists': anesthesiologists,
+        'surgeons': surgeons,
+        'hospitals': hospitals,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    })
+
+@login_required
+def profile_view(request):
+    return render(request, 'profile.html', {
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    })

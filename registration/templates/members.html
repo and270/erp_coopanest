@@ -1,0 +1,43 @@
+{% extends 'layout.html' %}
+
+{% block title %}Membros{% endblock %}
+
+{% block content %}
+<h1>Membros</h1>
+<ul class="tabs">
+    <li><a href="#anesthesiologists">Anestesiologistas</a></li>
+    <li><a href="#surgeons">Cirurgiões</a></li>
+    <li><a href="#hospitals">Hospitais/Clínicas</a></li>
+</ul>
+
+<div id="anesthesiologists">
+    <h2>Anestesiologistas</h2>
+    {% if anesthesiologists %}
+        <ul>
+            {% for anesthesiologist in anesthesiologists %}
+                <li>{{ anesthesiologist.name }} - {{ anesthesiologist.cpf }} - <a href="{% url 'edit_anesthesiologist' anesthesiologist.id %}">Editar</a></li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Seu registro como Anestesista ainda não foi realizado. Favor solicitar ao administrador do sistema ou a quem tenha acesso de Secretário(a).</p>
+    {% endif %}
+</div>
+
+<div id="surgeons">
+    <h2>Cirurgiões</h2>
+    <ul>
+        {% for surgeon in surgeons %}
+            <li>{{ surgeon.name }} - {{ surgeon.crm }} - <a href="{% url 'edit_surgeon' surgeon.id %}">Editar</a></li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div id="hospitals">
+    <h2>Hospitais/Clínicas</h2>
+    <ul>
+        {% for hospital in hospitals %}
+            <li>{{ hospital.name }} - {{ hospital.address }} - <a href="{% url 'edit_hospital' hospital.id %}">Editar</a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

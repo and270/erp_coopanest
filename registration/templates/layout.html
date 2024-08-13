@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Morton{% endblock %}</title>
+    <!-- Add your CSS links here -->
+</head>
+<body>
+    <!-- Fixed Top Menu -->
+    <header>
+        <nav>
+            <div class="logo">
+                <!-- Placeholder for logo -->
+                <a href="{% url 'home' %}">Logo</a>
+            </div>
+            <ul>
+                {% if user.is_authenticated %}
+                    {% if user.user_type == SECRETARIA_USER or user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
+                        <li><a href="{% url 'cadastro' %}">Cadastrar</a></li>
+                        <li><a href="{% url 'members' %}">Membros</a></li>
+                        <li><a href="#">Dashboard</a></li>
+                        <li><a href="#">Financeiro</a></li>
+                    {% elif user.user_type == ANESTESISTA_USER %}
+                        <li><a href="{% url 'members' %}">Meu Cadastro</a></li>
+                    {% endif %}
+                    <li><a href="{% url 'profile' %}">{{ user.email }}</a></li>
+                {% else %}
+                    <li><a href="{% url 'login_register' %}">Login</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 Morton. Todos os direitos reservados.</p>
+    </footer>
+</body>
+</html>
