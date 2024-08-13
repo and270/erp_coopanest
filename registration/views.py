@@ -48,8 +48,9 @@ def login_register_view(request):
 
 @login_required
 def cadastro_view(request):
-    if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
-        return redirect('login_register')
+    # Check if the user is validated and has the appropriate user type
+    if not request.user.validado or request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+        return render(request, 'usuario_nao_autenticado.html')
     
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
@@ -80,6 +81,9 @@ def cadastro_view(request):
 
 @login_required
 def members_view(request):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
     if request.user.user_type in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
         anesthesiologists = Anesthesiologist.objects.all()
         surgeons = Surgeon.objects.all()
@@ -102,6 +106,7 @@ def members_view(request):
         'ANESTESISTA_USER': ANESTESISTA_USER,
     })
 
+#TODO
 @login_required
 def profile_view(request):
     return render(request, 'profile.html', {

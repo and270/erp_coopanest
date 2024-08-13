@@ -5,7 +5,6 @@ from django.contrib.auth.models import AbstractUser
 from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
 
 class CustomUser(AbstractUser):
-
     USER_TYPE = (
         (SECRETARIA_USER , 'Secretária'),
         (GESTOR_USER , 'Gestor'),
@@ -23,6 +22,11 @@ class CustomUser(AbstractUser):
         verbose_name='Tipo de usuário',
     )
     validado = models.BooleanField(default=False, verbose_name='Validado') 
+
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = self.email  # Set the username to the email if it's empty
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email

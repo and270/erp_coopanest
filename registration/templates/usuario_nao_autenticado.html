@@ -1,0 +1,16 @@
+{% extends 'layout.html' %}
+
+{% block title %}Conta Não Validada{% endblock %}
+
+{% block content %}
+<h1>Desculpe</h1>
+<p>Desculpe, a sua conta ainda não foi validada, o que é necessário para usar essa função. Por favor, contate o administrador do sistema.</p>
+
+<p>Você será redirecionado para a página inicial em breve.</p>
+
+<script>
+    setTimeout(function() {
+        window.location.href = "{% url 'home' %}";
+    }, 5000);  // Redirection after 5 seconds
+</script>
+{% endblock %}
