@@ -1,34 +1,49 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CoopaHub{% endblock %}</title>
-    <!-- Add your CSS links here -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
     <!-- Fixed Top Menu -->
     <header>
-        <nav>
+        <nav class="top-nav">
             <div class="logo">
-                <!-- Placeholder for logo -->
-                <a href="{% url 'home' %}">Logo</a>
+                <a href="{% url 'home' %}">
+                    <img src="{% static 'logo_COOPAHUB.png' %}" alt="CoopaHub Logo">
+                </a>
             </div>
-            <ul>
+            <ul class="nav-links">
                 {% if user.is_authenticated %}
                     {% if user.user_type == SECRETARIA_USER or user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
-                        <li><a href="{% url 'cadastro' %}">Cadastrar</a></li>
                         <li><a href="{% url 'members' %}">Membros</a></li>
-                        <li><a href="#">Dashboard</a></li>
-                        <li><a href="#">Financeiro</a></li>
+                        <li><a href="{% url 'cadastro' %}">Cadastro</a></li>
                     {% elif user.user_type == ANESTESISTA_USER %}
                         <li><a href="{% url 'members' %}">Meu Cadastro</a></li>
+                    {% else %}
+                        <li><a href="{% url 'cadastro' %}">Cadastro</a></li>
                     {% endif %}
-                    <li><a href="{% url 'profile' %}">{{ user.email }}</a></li>
-                {% else %}
-                    <li><a href="{% url 'login_register' %}">Login</a></li>
                 {% endif %}
-            </ul>
+                <li><a href="#">Agenda</a></li>
+                <li><a href="#">Finanças</a></li>
+                <li><a href="#">Qualidade</a></li>
+                <li><a href="#">Dashboard</a></li>
+                {% if user.is_authenticated %}
+                    <li><a href="{% url 'profile' %}">Meu Acesso</a></li>
+                {% else %}
+                    <li><a href="{% url 'login_register' %}">Acesse</a></li>
+                {% endif %}
+            <!-- Por enquanto não temos função de busca
+            <div class="search-and-notification">
+                <input type="text" placeholder="O que você procura">
+                <button class="notification-bell">
+                    <span>&#128276;</span>
+                </button>
+            </div>
+            -->   
         </nav>
     </header>
 
