@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm, CustomUserLoginForm, AnesthesiologistForm, SurgeonForm, HospitalClinicForm
 from .models import Anesthesiologist, Surgeon, HospitalClinic
@@ -80,19 +80,79 @@ def cadastro_view(request):
     })
 
 @login_required
+def edit_view(request, model_name, object_id):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+
+    if model_name == 'anesthesiologist':
+        instance = get_object_or_404(Anesthesiologist, id=object_id)
+        form_class = AnesthesiologistForm
+        template_name = 'edit_anesthesiologist.html'
+
+        # ANESTESISTA_USER can only edit their own record
+        if request.user.user_type == ANESTESISTA_USER and instance.user != request.user:
+            return redirect('home')
+        
+    elif model_name == 'surgeon':
+        if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+            return redirect('home')
+        instance = get_object_or_404(Surgeon, id=object_id)
+        form_class = SurgeonForm
+        template_name = 'edit_surgeon.html'
+    elif model_name == 'hospital_clinic':
+        if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+            return redirect('home')
+        instance = get_object_or_404(HospitalClinic, id=object_id)
+        form_class = HospitalClinicForm
+        template_name = 'edit_hospital_clinic.html'
+    else:
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = form_class(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            return redirect('members')
+    else:
+        form = form_class(instance=instance)
+
+    return render(request, template_name, {
+        'form': form,
+        'instance': instance,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    })
+
+
+@login_required
 def members_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
-    
+
     if request.user.user_type in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
         anesthesiologists = Anesthesiologist.objects.all()
         surgeons = Surgeon.objects.all()
         hospitals = HospitalClinic.objects.all()
     elif request.user.user_type == ANESTESISTA_USER:
         try:
-            anesthesiologists = Anesthesiologist.objects.filter(user=request.user)
+            anesthesiologist = Anesthesiologist.objects.get(user=request.user)
+            # Redirect to the edit view if the user has a record
+            return redirect('edit', model_name='anesthesiologist', object_id=anesthesiologist.id)
         except Anesthesiologist.DoesNotExist:
             anesthesiologists = None
+            surgeons = hospitals = None
+            return render(request, 'members.html', {
+                'anesthesiologists': anesthesiologists,
+                'surgeons': surgeons,
+                'hospitals': hospitals,
+                'SECRETARIA_USER': SECRETARIA_USER,
+                'GESTOR_USER': GESTOR_USER,
+                'ADMIN_USER': ADMIN_USER,
+                'ANESTESISTA_USER': ANESTESISTA_USER,
+                'no_record_message': True  # Pass a flag to show the message
+            })
     else:
         anesthesiologists = surgeons = hospitals = None
 
@@ -105,6 +165,7 @@ def members_view(request):
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
     })
+
 
 #TODO
 @login_required
