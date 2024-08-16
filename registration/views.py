@@ -47,6 +47,17 @@ def login_register_view(request):
     })
 
 @login_required
+def profile_view(request):
+    context = {
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    }
+    return render(request, 'profile.html', context)
+
+
+@login_required
 def cadastro_view(request):
     # Check if the user is validated and has the appropriate user type
     if not request.user.validado or request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
