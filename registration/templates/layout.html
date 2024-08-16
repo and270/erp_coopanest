@@ -7,6 +7,16 @@
     <title>{% block title %}CoopaHub{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const menuToggle = document.querySelector('.menu-toggle');
+            const navLinks = document.querySelector('.nav-links');
+
+            menuToggle.addEventListener('click', function() {
+                navLinks.classList.toggle('active');
+            });
+        });
+    </script>
 </head>
 <body>
     <!-- Fixed Top Menu -->
@@ -17,6 +27,9 @@
                     <img src="{% static 'logo_COOPAHUB.png' %}" alt="CoopaHub Logo">
                 </a>
             </div>
+            <button class="menu-toggle" aria-label="Toggle navigation">
+                &#9776; <!-- hamburger icon -->
+            </button>
             <ul class="nav-links">
                 {% if user.is_authenticated %}
                     {% if user.user_type == SECRETARIA_USER or user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}

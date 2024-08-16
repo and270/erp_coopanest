@@ -51,6 +51,15 @@ body {
     transform: translateY(-2px);
 }
 
+.menu-toggle {
+    display: none; /* Hidden by default on larger screens */
+    font-size: 24px;
+    background-color: transparent;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+}
+
 .search-and-notification {
     display: flex;
     align-items: center;
@@ -81,4 +90,40 @@ footer {
     position: fixed;
     width: 100%;
     bottom: 0;
+}
+
+/* Media Query for Mobile Devices */
+@media (max-width: 768px) {
+    .logo img {
+        height: 100px; /* Reduce logo size on mobile */
+    }
+
+    .nav-links {
+        display: none; /* Hide the links by default */
+        flex-direction: column; /* Stack the links vertically */
+        position: absolute;
+        top: 100px;
+        left: 0;
+        width: 100%;
+        background-color: #232376;
+    }
+
+    .nav-links.active {
+        display: flex; /* Show the menu when active */
+    }
+
+    .menu-toggle {
+        display: block; /* Show the hamburger icon on small screens */
+    }
+}
+
+/* For screens larger than 768px, show the nav-links */
+@media (min-width: 769px) {
+    .nav-links {
+        display: flex !important; /* Ensure nav-links are displayed */
+    }
+
+    .menu-toggle {
+        display: none; /* Hide the hamburger icon on large screens */
+    }
 }
