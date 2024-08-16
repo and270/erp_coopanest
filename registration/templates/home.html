@@ -3,11 +3,25 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<h1>Bem-vindo ao CoopaHub</h1>
-<div class="cards">
-    <div class="card"><a href="{% url 'cadastro' %}">Cadastrar</a></div>
-    <div class="card"><a href="{% url 'members' %}">Membros</a></div>
-    <div class="card"><a href="#">Dashboard</a></div>
-    <div class="card"><a href="#">Financeiro</a></div>
+<div class="home-container">
+    <h1 class="main-title">Transforme a eficiência e qualidade do seu grupo de anestesia com a Coopahub.</h1>
+    <h2 class="sub-title">ENTERPRISE RESOURCE PLANNING PARA PROFISSIONAIS DA SAÚDE</h2>
+    <div class="cards">
+        <div class="card cadastro">
+            <a href="{% url 'cadastro' %}">Cadastro</a>
+        </div>
+        <div class="card agenda">
+            <a href="#">Agenda</a>
+        </div>
+        <div class="card financas">
+            <a href="#">Finanças</a>
+        </div>
+        <div class="card qualidade">
+            <a href="#">Qualidade</a>
+        </div>
+        <div class="card dashboard">
+            <a href="#">Dashboard</a>
+        </div>
+    </div>
 </div>
 {% endblock %}
