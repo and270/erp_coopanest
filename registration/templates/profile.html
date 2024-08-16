@@ -3,20 +3,22 @@
 {% block title %}Perfil{% endblock %}
 
 {% block content %}
-<h1>Seu Perfil</h1>
-<p><strong>Seu e-mail:</strong> {{ user.email }}</p>
-<p><strong>Seu acesso ao sistema:</strong> {{ user.get_user_type_display }}</p>
+<div class="profile-container">
+    <h1>Seu Perfil</h1>
+    <p><strong>Seu e-mail:</strong> {{ user.email }}</p>
+    <p><strong>Seu acesso ao sistema:</strong> {{ user.get_user_type_display }}</p>
 
-{% if user.validado %}
-    <p>Acesso validado</p>
-{% else %}
-    <p>Acesso completo ainda não validado. Solicite ao administrador do sistema.</p>
-{% endif %}
+    {% if user.validado %}
+        <p class="validation-status validated">Acesso validado</p>
+    {% else %}
+        <p class="validation-status not-validated">Acesso completo ainda não validado. Solicite ao administrador do sistema.</p>
+    {% endif %}
 
-<p>Para alterar seu e-mail ou tipo de acesso, contate o administrador do sistema.</p>
+    <p>Para alterar seu e-mail ou tipo de acesso, contate o administrador do sistema.</p>
 
-<form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button type="submit">Logout</button>
-</form>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="logout-button">Logout</button>
+    </form>
+</div>
 {% endblock %}

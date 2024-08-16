@@ -312,6 +312,58 @@ hr {
 
 
 
+.profile-container {
+    margin-left: 30px;
+    margin-right: 30px;
+    max-width: 600px;
+}
+
+.profile-container h1 {
+    color: #418FDE;
+    margin-bottom: 20px;
+}
+
+.profile-container p {
+    margin-bottom: 15px;
+}
+
+.validation-status {
+    font-weight: bold;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.validation-status.validated {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.validation-status.not-validated {
+    background-color: #f44336;
+    color: white;
+}
+
+.logout-button {
+    background-color: #418FDE;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin-top: 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.logout-button:hover {
+    background-color: #2c659e;
+}
+
+
+
 /* Media Query for Mobile Devices */
 @media (max-width: 768px) {
     .logo img {
