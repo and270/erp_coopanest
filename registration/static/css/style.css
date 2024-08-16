@@ -112,6 +112,14 @@ footer {
         display: flex; /* Show the menu when active */
     }
 
+    .nav-links li a {
+        width: auto;  /* Remove the fixed width */
+        height: auto; /* Remove the fixed height */
+        background-color: transparent; /* Remove the background color */
+        box-shadow: none; /* Remove the shadow effect */
+        padding: 10px 0; /* Add some padding for spacing */
+    }
+
     .menu-toggle {
         display: block; /* Show the hamburger icon on small screens */
     }
