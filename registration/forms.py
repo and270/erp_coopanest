@@ -40,6 +40,18 @@ class AnesthesiologistForm(forms.ModelForm):
             'admission_date': 'Data de Admissão',
             'responsible_hours': 'Horário Responsável',
         }
+        widgets = {
+            'date_of_birth': forms.DateInput(attrs={'class': 'date-input'}),
+            'admission_date': forms.DateInput(attrs={'class': 'date-input'}),
+            'cpf': forms.TextInput(attrs={'placeholder': '000.000.000-00'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].initial = None
+            if isinstance(self.fields[field], forms.CharField):
+                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
 class SurgeonForm(forms.ModelForm):
     class Meta:
@@ -53,6 +65,13 @@ class SurgeonForm(forms.ModelForm):
             'notes': 'Sugestões de anestesia',
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].initial = None
+            if isinstance(self.fields[field], forms.CharField):
+                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
+
 class HospitalClinicForm(forms.ModelForm):
     class Meta:
         model = HospitalClinic
@@ -63,3 +82,10 @@ class HospitalClinicForm(forms.ModelForm):
             'surgery_center_phone': 'Telefone do Centro Cirúrgico',
             'hospital_phone': 'Telefone do Hospital',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].initial = None
+            if isinstance(self.fields[field], forms.CharField):
+                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
