@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'League Spartan', Arial, sans-serif;
 }
 
 .top-nav {
@@ -8,7 +8,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 15px 30px;
-    background: linear-gradient(to right, #101820, #4141de);
+    background: linear-gradient(to right, #101820, #232376);
     color: #ffffff;
     height: 100px;
 }
@@ -33,16 +33,16 @@ body {
     text-decoration: none;
     color: #ffffff;
     background-color: #418FDE;
-    padding: 10px 0; /* Set padding only for top and bottom */
+    display: flex;
+    align-items: center;  
+    justify-content: center; 
     border-radius: 5px;
     font-weight: bold;
     box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
     transition: box-shadow 0.3s ease, transform 0.3s ease;
-    width: 150px; /* Set a fixed width for all buttons */
-    height: 7px; /* Set a fixed height for the buttons */
-    line-height: 7px; /* Match line-height to height for vertical centering */
-    text-align: center; /* Center the text inside the button */
-    display: block; /* Ensure the button takes up the full width */
+    width: 130px;  
+    height: 30px; 
+    text-align: center;
 }
 
 .nav-links li a:hover {

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CoopaHub{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Fixed Top Menu -->
@@ -23,9 +24,9 @@
                         <li><a href="{% url 'cadastro' %}">CADASTRO</a></li>
                     {% elif user.user_type == ANESTESISTA_USER %}
                         <li><a href="{% url 'members' %}">MEU CADASTRO</a></li>
-                    {% else %}
-                        <li><a href="{% url 'cadastro' %}">CADASTRO</a></li>
                     {% endif %}
+                {% else %}
+                    <li><a href="{% url 'cadastro' %}">CADASTRO</a></li>
                 {% endif %}
                 <li><a href="#">AGENDA</a></li>
                 <li><a href="#">FINANÇAS</a></li>
