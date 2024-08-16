@@ -33,13 +33,22 @@ body {
     text-decoration: none;
     color: #ffffff;
     background-color: #418FDE;
-    padding: 5px 38px;
+    padding: 10px 0; /* Set padding only for top and bottom */
     border-radius: 5px;
+    font-weight: bold;
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    width: 150px; /* Set a fixed width for all buttons */
+    height: 7px; /* Set a fixed height for the buttons */
+    line-height: 7px; /* Match line-height to height for vertical centering */
+    text-align: center; /* Center the text inside the button */
+    display: block; /* Ensure the button takes up the full width */
 }
 
 .nav-links li a:hover {
     background-color: #2c659e;
-    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
+    transform: translateY(-2px);
 }
 
 .search-and-notification {

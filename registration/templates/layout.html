@@ -19,22 +19,22 @@
             <ul class="nav-links">
                 {% if user.is_authenticated %}
                     {% if user.user_type == SECRETARIA_USER or user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
-                        <li><a href="{% url 'members' %}">Membros</a></li>
-                        <li><a href="{% url 'cadastro' %}">Cadastro</a></li>
+                        <li><a href="{% url 'members' %}">MEMBROS</a></li>
+                        <li><a href="{% url 'cadastro' %}">CADASTRO</a></li>
                     {% elif user.user_type == ANESTESISTA_USER %}
-                        <li><a href="{% url 'members' %}">Meu Cadastro</a></li>
+                        <li><a href="{% url 'members' %}">MEU CADASTRO</a></li>
                     {% else %}
-                        <li><a href="{% url 'cadastro' %}">Cadastro</a></li>
+                        <li><a href="{% url 'cadastro' %}">CADASTRO</a></li>
                     {% endif %}
                 {% endif %}
-                <li><a href="#">Agenda</a></li>
-                <li><a href="#">Finanças</a></li>
-                <li><a href="#">Qualidade</a></li>
-                <li><a href="#">Dashboard</a></li>
+                <li><a href="#">AGENDA</a></li>
+                <li><a href="#">FINANÇAS</a></li>
+                <li><a href="#">QUALIDADE</a></li>
+                <li><a href="#">DASHBOARD</a></li>
                 {% if user.is_authenticated %}
-                    <li><a href="{% url 'profile' %}">Meu Acesso</a></li>
+                    <li><a href="{% url 'profile' %}">MINHA CONTA</a></li>
                 {% else %}
-                    <li><a href="{% url 'login_register' %}">Acesse</a></li>
+                    <li><a href="{% url 'login_register' %}">LOG IN</a></li>
                 {% endif %}
             <!-- Por enquanto não temos função de busca
             <div class="search-and-notification">
