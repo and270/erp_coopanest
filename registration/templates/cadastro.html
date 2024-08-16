@@ -1,39 +1,65 @@
 {% extends 'layout.html' %}
+{% load static %}
 
 {% block title %}Cadastro{% endblock %}
 
 {% block content %}
-<h1>Cadastro</h1>
-<ul class="tabs">
-    <li><a href="#anesthesiologist">Anestesiologista</a></li>
-    <li><a href="#surgeon">Cirurgião</a></li>
-    <li><a href="#hospital_clinic">Hospital/Clínica</a></li>
-</ul>
+<div class="cadastro-container">
+    <div class="tab-container">
+        <button class="tab-button active" data-tab="medicos-anestesiologistas">médicos anestesiologistas</button>
+        <button class="tab-button" data-tab="medicos-cirurgioes">médicos cirurgiões</button>
+        <button class="tab-button" data-tab="hospitais-clinicas">hospitais e clínicas</button>
+    </div>
 
-<div id="anesthesiologist">
-    <h2>Cadastrar Anestesiologista</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ anesthesiologist_form.as_p }}
-        <button type="submit" name="form_type" value="anesthesiologist">Salvar</button>
-    </form>
-</div>
+    <div id="medicos-anestesiologistas" class="tab-content active">
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ anesthesiologist_form.as_p }}
+            </div>
+            <button type="submit" name="form_type" value="anesthesiologist" class="cadastrar-btn">Cadastrar</button>
+        </form>
+    </div>
 
-<div id="surgeon">
-    <h2>Cadastrar Cirurgião</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ surgeon_form.as_p }}
-        <button type="submit" name="form_type" value="surgeon">Salvar</button>
-    </form>
-</div>
+    <div id="medicos-cirurgioes" class="tab-content">
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ surgeon_form.as_p }}
+            </div>
+            <button type="submit" name="form_type" value="surgeon" class="cadastrar-btn">Cadastrar</button>
+        </form>
+    </div>
 
-<div id="hospital_clinic">
-    <h2>Cadastrar Hospital/Clínica</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ hospital_clinic_form.as_p }}
-        <button type="submit" name="form_type" value="hospital_clinic">Salvar</button>
-    </form>
+    <div id="hospitais-clinicas" class="tab-content">
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ hospital_clinic_form.as_p }}
+            </div>
+            <button type="submit" name="form_type" value="hospital_clinic" class="cadastrar-btn">Cadastrar</button>
+        </form>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+    });
+</script>
 {% endblock %}
