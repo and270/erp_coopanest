@@ -449,6 +449,45 @@ hr {
     display: block;
 }
 
+.members-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.members-container h1 {
+    color: #418FDE;
+    margin-bottom: 20px;
+}
+
+.member-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.member-list li {
+    background-color: #222;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.edit-button {
+    background-color: #418FDE;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    transition: background-color 0.3s;
+}
+
+.edit-button:hover {
+    background-color: #2c659e;
+}
+
 .form-row {
     display: flex;
     justify-content: space-between;
@@ -589,6 +628,16 @@ select {
     .tab-button {
         margin-bottom: 10px;
     }
+
+    .member-list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .edit-button {
+        margin-top: 10px;
+    }
+      
 }
 
 /* For screens larger than 768px, show the nav-links */

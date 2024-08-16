@@ -1,49 +1,89 @@
 {% extends 'layout.html' %}
+{% load static %}
 
 {% block title %}Membros{% endblock %}
 
 {% block content %}
-<h1>Membros</h1>
+<div class="members-container">
+    <h1>Membros</h1>
 
-{% if no_record_message %}
-    <p>Você ainda não foi cadastrado como Anestesista do grupo. Por favor, solicite o seu cadastro a quem possui o acesso do tipo Secretário(a) ou Gestor.</p>
-{% else %}
-    <ul class="tabs">
-        <li><a href="#anesthesiologists">Anestesiologistas</a></li>
-        <li><a href="#surgeons">Cirurgiões</a></li>
-        <li><a href="#hospitals">Hospitais/Clínicas</a></li>
-    </ul>
+    {% if no_record_message %}
+        <p>Você ainda não foi cadastrado como Anestesista do grupo. Por favor, solicite o seu cadastro a quem possui o acesso do tipo Secretário(a) ou Gestor.</p>
+    {% else %}
+        <div class="tab-container">
+            <button class="tab-button active" data-tab="anesthesiologists">Anestesiologistas</button>
+            <button class="tab-button" data-tab="surgeons">Cirurgiões</button>
+            <button class="tab-button" data-tab="hospitals">Hospitais/Clínicas</button>
+        </div>
 
-    <div id="anesthesiologists">
-        <h2>Anestesiologistas</h2>
-        {% if anesthesiologists %}
-            <ul>
-                {% for anesthesiologist in anesthesiologists %}
-                    <li>{{ anesthesiologist.name }} - {{ anesthesiologist.cpf }} - 
-                    <a href="{% url 'edit' 'anesthesiologist' anesthesiologist.id %}">Editar</a></li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    </div>
+        <div id="anesthesiologists" class="tab-content active">
+            <h2>Anestesiologistas</h2>
+            {% if anesthesiologists %}
+                <ul class="member-list">
+                    {% for anesthesiologist in anesthesiologists %}
+                        <li>
+                            {{ anesthesiologist.name }} - {{ anesthesiologist.cpf }}
+                            <a href="{% url 'edit' 'anesthesiologist' anesthesiologist.id %}" class="edit-button">Editar</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Nenhum anestesiologista cadastrado.</p>
+            {% endif %}
+        </div>
 
-    <div id="surgeons">
-        <h2>Cirurgiões</h2>
-        <ul>
-            {% for surgeon in surgeons %}
-                <li>{{ surgeon.name }} - {{ surgeon.crm }} - 
-                <a href="{% url 'edit' 'surgeon' surgeon.id %}">Editar</a></li>
-            {% endfor %}
-        </ul>
-    </div>
+        <div id="surgeons" class="tab-content">
+            <h2>Cirurgiões</h2>
+            {% if surgeons %}
+                <ul class="member-list">
+                    {% for surgeon in surgeons %}
+                        <li>
+                            {{ surgeon.name }} - {{ surgeon.crm }}
+                            <a href="{% url 'edit' 'surgeon' surgeon.id %}" class="edit-button">Editar</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Nenhum cirurgião cadastrado.</p>
+            {% endif %}
+        </div>
 
-    <div id="hospitals">
-        <h2>Hospitais/Clínicas</h2>
-        <ul>
-            {% for hospital in hospitals %}
-                <li>{{ hospital.name }} - {{ hospital.address }} - 
-                <a href="{% url 'edit' 'hospital_clinic' hospital.id %}">Editar</a></li>
-            {% endfor %}
-        </ul>
-    </div>
-{% endif %}
+        <div id="hospitals" class="tab-content">
+            <h2>Hospitais/Clínicas</h2>
+            {% if hospitals %}
+                <ul class="member-list">
+                    {% for hospital in hospitals %}
+                        <li>
+                            {{ hospital.name }} - {{ hospital.address }}
+                            <a href="{% url 'edit' 'hospital_clinic' hospital.id %}" class="edit-button">Editar</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Nenhum hospital/clínica cadastrado.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+    });
+</script>
 {% endblock %}
