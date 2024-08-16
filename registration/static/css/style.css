@@ -345,15 +345,30 @@ hr {
     }
 
     .cards {
+        justify-content: flex-start; /* Align cards to the start */
         flex-wrap: nowrap;
-        overflow-x: auto; /* Enable horizontal scrolling */
-        padding-bottom: 20px; /* Space for scrollbar */
+        overflow-x: auto;
+        padding: 20px 0; /* Add vertical padding */
+        padding-left: 20px; /* Add left padding to make the first card visible */
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
+        scrollbar-width: none; /* Hide scrollbar for Firefox */
+        -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+    }
+
+    /* Hide scrollbar for Webkit browsers */
+    .cards::-webkit-scrollbar {
+        display: none;
     }
 
     .card {
         flex: 0 0 auto;
-        margin: 5px 10px; /* Adjust the margin to provide spacing between cards when scrolling */
+        margin-right: 10px; /* Space between cards */
         width: 180px; /* Slightly reduce the width to fit better in smaller screens */
+    }
+
+    /* Remove right margin from the last card */
+    .card:last-child {
+        margin-right: 20px; /* This creates some space after the last card */
     }
 }
 
