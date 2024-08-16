@@ -93,12 +93,13 @@ main {
     justify-content: space-around;
     flex-wrap: wrap;
     margin-top: 20px;
+    gap: 10px; /* Adds space between the cards */
 }
 
 .card {
     width: 200px;
     height: 250px;
-    margin: 10px;
+    margin: 5px; /* Adjusted margin to reduce space between cards */
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -326,6 +327,18 @@ hr {
 
     .menu-toggle {
         display: block; /* Show the hamburger icon on small screens */
+    }
+
+    .cards {
+        flex-wrap: nowrap;
+        overflow-x: auto; /* Enable horizontal scrolling */
+        padding-bottom: 20px; /* Space for scrollbar */
+    }
+
+    .card {
+        flex: 0 0 auto;
+        margin: 5px 10px; /* Adjust the margin to provide spacing between cards when scrolling */
+        width: 180px; /* Slightly reduce the width to fit better in smaller screens */
     }
 }
 
