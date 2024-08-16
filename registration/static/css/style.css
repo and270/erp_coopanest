@@ -1,6 +1,17 @@
-body {
+html, body {
     margin: 0;
+    padding: 0;
+    min-height: 100%;
     font-family: 'League Spartan', Arial, sans-serif;
+    background-color: #101820;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+    padding-bottom: 20px;
 }
 
 .top-nav {
@@ -82,15 +93,130 @@ body {
     cursor: pointer;
 }
 
-footer {
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 50px;
+}
+
+.auth-box {
+    background-color: #222;
+    padding: 20px;
+    border-radius: 10px;
+    width: 350px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+    margin-bottom: 30px;
+}
+
+.auth-box h2 {
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.form-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+}
+
+.form-group label span {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+.form-group input {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    background-color: #333;
+    color: #ffffff;
+}
+
+.form-group select {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    background-color: #333;
+    color: #ffffff;
+    appearance: none; /* Removes the default browser styling for select elements */
+    -webkit-appearance: none; /* For Safari */
+    -moz-appearance: none; /* For Firefox */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%204%205%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M2%200L0%202h4zm0%205L0%203h4z%22/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px top 50%;
+    background-size: 12px auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-group select option {
+    background-color: #333;
+    color: #ffffff;
+}
+
+.auth-box a {
+    color: #418FDE;
+    text-align: right;
+    display: block;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.auth-button {
+    width: 100%;
+    background-color: #418FDE;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.auth-button:hover {
+    background-color: #2c659e;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #333;
+    width: 80%;
+    margin: 20px 0;
+}
+
+.error-message {
+    color: #ff4d4d;
+    font-size: 0.9rem;
+    margin-top: 5px;
+    text-align: left;
+}
+
+.footer {
     text-align: center;
     padding: 10px;
     background-color: #101820;
     color: #ffffff;
-    position: fixed;
+    position: relative; /* Change from fixed to relative */
     width: 100%;
     bottom: 0;
 }
+
 
 /* Media Query for Mobile Devices */
 @media (max-width: 768px) {

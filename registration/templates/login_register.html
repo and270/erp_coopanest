@@ -1,27 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login / Register</title>
-</head>
-<body>
-    <h1>CoopaHub - Login / Registro</h1>
-    <div>
+{% extends 'layout.html' %}
+
+{% block title %}Login / Registro{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
         <h2>Login</h2>
         <form method="post" action="{% url 'login_register' %}">
             {% csrf_token %}
-            {{ login_form.as_p }}
-            <button type="submit" name="login">Login</button>
+            <div class="form-group">
+                <label for="login-email"><span>&#x2709;</span> Digite seu email</label>
+                {{ login_form.username }}
+                {% if login_form.username.errors %}
+                    <div class="error-message">
+                        {{ login_form.username.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="login-password"><span>&#x1F512;</span> Digite a sua senha</label>
+                {{ login_form.password }}
+                {% if login_form.password.errors %}
+                    <div class="error-message">
+                        {{ login_form.password.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <a href="#">Esqueceu a senha?</a>
+            </div>
+            <button type="submit" name="login" class="auth-button">Acessar</button>
+            {% if login_form.non_field_errors %}
+                <div class="error-message">
+                    {{ login_form.non_field_errors.0 }}
+                </div>
+            {% endif %}
         </form>
     </div>
-    <div>
-        <h2>Register</h2>
+    <hr>
+    <div class="auth-box">
+        <h2>Registro</h2>
         <form method="post" action="{% url 'login_register' %}">
             {% csrf_token %}
-            {{ register_form.as_p }}
-            <button type="submit" name="register">Criar conta</button>
+            <div class="form-group">
+                <label for="register-email"><span>&#x2709;</span> Digite seu email</label>
+                {{ register_form.email }}
+                {% if register_form.email.errors %}
+                    <div class="error-message">
+                        {{ register_form.email.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="register-user-type"><span>&#x1F464;</span> Tipo de usuário</label>
+                {{ register_form.user_type }}
+                {% if register_form.user_type.errors %}
+                    <div class="error-message">
+                        {{ register_form.user_type.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="register-password1"><span>&#x1F512;</span> Crie uma senha</label>
+                {{ register_form.password1 }}
+                {% if register_form.password1.errors %}
+                    <div class="error-message">
+                        {{ register_form.password1.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="register-password2"><span>&#x1F512;</span> Confirme sua senha</label>
+                {{ register_form.password2 }}
+                {% if register_form.password2.errors %}
+                    <div class="error-message">
+                        {{ register_form.password2.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            <button type="submit" name="register" class="auth-button">Criar conta</button>
         </form>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
