@@ -60,8 +60,11 @@ def profile_view(request):
 @login_required
 def cadastro_view(request):
     # Check if the user is validated and has the appropriate user type
-    if not request.user.validado or request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+    if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
+    
+    if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+        return render(request, 'usuario_fora_funcao.html')
     
     if request.method == 'POST':
         form_type = request.POST.get('form_type')

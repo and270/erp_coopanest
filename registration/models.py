@@ -9,7 +9,6 @@ class CustomUser(AbstractUser):
         (SECRETARIA_USER , 'Secretária'),
         (GESTOR_USER , 'Gestor'),
         (ANESTESISTA_USER , 'Anestesista'),
-        (ADMIN_USER , 'Administrador do Sistema'),
     )
 
     groups = models.ManyToManyField(Group, blank=True, related_name="%(app_label)s_%(class)s_related")

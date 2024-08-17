@@ -1,4 +1,5 @@
 from django import forms
+from constants import ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
 from registration.models import Anesthesiologist, CustomUser, HospitalClinic, Surgeon
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import get_user_model
@@ -14,6 +15,16 @@ class CustomUserCreationForm(UserCreationForm):
             'password1': 'Senha',
             'password2': 'Confirme a senha',
         }
+
+        def __init__(self, *args, **kwargs):
+            super(CustomUserCreationForm, self).__init__(*args, **kwargs)
+            # Update the choices for the user_type field to exclude ADMIN_USER
+            user_type_choices = [
+                (SECRETARIA_USER, 'Secretário'),
+                (GESTOR_USER, 'Gestor'),
+                (ANESTESISTA_USER, 'Anestesista')
+            ]
+            self.fields['user_type'].choices = user_type_choices
 
 class CustomUserLoginForm(AuthenticationForm):
     class Meta:
