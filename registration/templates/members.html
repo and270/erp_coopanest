@@ -19,14 +19,28 @@
         <div id="anesthesiologists" class="tab-content active">
             <h2>Anestesiologistas</h2>
             {% if anesthesiologists %}
-                <ul class="member-list">
-                    {% for anesthesiologist in anesthesiologists %}
-                        <li>
-                            {{ anesthesiologist.name }} - {{ anesthesiologist.cpf }}
-                            <a href="{% url 'edit' 'anesthesiologist' anesthesiologist.id %}" class="edit-button">Editar</a>
-                        </li>
-                    {% endfor %}
-                </ul>
+                <table class="member-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CRM</th>
+                            <th>E-mail</th>
+                            <th>Telefone</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for anesthesiologist in anesthesiologists %}
+                            <tr>
+                                <td>{{ anesthesiologist.name }}</td>
+                                <td>{{ anesthesiologist.crm }}</td>
+                                <td>{{ anesthesiologist.email }}</td>
+                                <td>{{ anesthesiologist.phone }}</td>
+                                <td><a href="{% url 'edit' 'anesthesiologist' anesthesiologist.id %}" class="edit-button">Editar</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             {% else %}
                 <p>Nenhum anestesiologista cadastrado.</p>
             {% endif %}
@@ -35,14 +49,26 @@
         <div id="surgeons" class="tab-content">
             <h2>Cirurgiões</h2>
             {% if surgeons %}
-                <ul class="member-list">
-                    {% for surgeon in surgeons %}
-                        <li>
-                            {{ surgeon.name }} - {{ surgeon.crm }}
-                            <a href="{% url 'edit' 'surgeon' surgeon.id %}" class="edit-button">Editar</a>
-                        </li>
-                    {% endfor %}
-                </ul>
+                <table class="member-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>CRM</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for surgeon in surgeons %}
+                            <tr>
+                                <td>{{ surgeon.name }}</td>
+                                <td>{{ surgeon.phone }}</td>
+                                <td>{{ surgeon.crm }}</td>
+                                <td><a href="{% url 'edit' 'surgeon' surgeon.id %}" class="edit-button">Editar</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             {% else %}
                 <p>Nenhum cirurgião cadastrado.</p>
             {% endif %}
@@ -51,14 +77,26 @@
         <div id="hospitals" class="tab-content">
             <h2>Hospitais/Clínicas</h2>
             {% if hospitals %}
-                <ul class="member-list">
-                    {% for hospital in hospitals %}
-                        <li>
-                            {{ hospital.name }} - {{ hospital.address }}
-                            <a href="{% url 'edit' 'hospital_clinic' hospital.id %}" class="edit-button">Editar</a>
-                        </li>
-                    {% endfor %}
-                </ul>
+                <table class="member-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Endereço</th>
+                            <th>Telefone do Centro Cirúrgico</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hospital in hospitals %}
+                            <tr>
+                                <td>{{ hospital.name }}</td>
+                                <td>{{ hospital.address }}</td>
+                                <td>{{ hospital.surgery_center_phone }}</td>
+                                <td><a href="{% url 'edit' 'hospital_clinic' hospital.id %}" class="edit-button">Editar</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             {% else %}
                 <p>Nenhum hospital/clínica cadastrado.</p>
             {% endif %}

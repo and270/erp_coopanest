@@ -475,11 +475,50 @@ hr {
     align-items: center;
 }
 
+.member-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: #1c2630;
+    color: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.member-table thead {
+    background-color: #232376;
+}
+
+.member-table th, .member-table td {
+    padding: 30px 25px; /* Increased padding for more space */
+    text-align: left;
+    vertical-align: middle; /* Ensures text is vertically centered */
+}
+
+.member-table th {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.member-table tbody tr {
+    border-bottom: 1px solid #333;
+    height: 60px; /* Added minimum height to each row */
+}
+
+.member-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.member-table tbody tr:hover {
+    background-color: #2c659e;
+}
+
 .edit-button {
     background-color: #418FDE;
     color: #ffffff;
     text-decoration: none;
-    padding: 5px 10px;
+    padding: 20px 25px; /* Increased padding for the edit button */
     border-radius: 3px;
     transition: background-color 0.3s;
 }
