@@ -3,6 +3,8 @@ from constants import ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
 from registration.models import Anesthesiologist, CustomUser, HospitalClinic, Surgeon
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -59,10 +61,19 @@ class AnesthesiologistForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.fields['user'].queryset = CustomUser.objects.filter(user_type=ANESTESISTA_USER)
+
         for field in self.fields:
             self.fields[field].initial = None
             if isinstance(self.fields[field], forms.CharField):
                 self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
+
+    def clean_user(self):
+        user = self.cleaned_data.get('user')
+        if user and user.user_type != ANESTESISTA_USER:
+            raise ValidationError(_('O usuário selecionado não é um Anestesista.'))
+        return user
 
 class SurgeonForm(forms.ModelForm):
     class Meta:

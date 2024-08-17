@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import Group, Permission
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
 
@@ -51,6 +53,18 @@ class Anesthesiologist(models.Model):
     role_in_group = models.CharField(max_length=255, choices=ROLE_CHOICES, default='rotina', verbose_name='Cargo no grupo')
     admission_date = models.DateField(default='1970-01-01', verbose_name='Data de Admissão')
     responsible_hours = models.CharField(max_length=50, default='N/A', verbose_name='Horário Responsável')
+
+    def clean(self):
+        # Ensure the linked user has the correct user_type
+        if self.user and self.user.user_type != ANESTESISTA_USER:
+            raise ValidationError({
+                'user': _('O usuário selecionado não é um Anestesista.')
+            })
+
+    def save(self, *args, **kwargs):
+        # Call the clean method to ensure validation is done before saving
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
