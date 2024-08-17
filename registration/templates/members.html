@@ -36,7 +36,10 @@
                                 <td>{{ anesthesiologist.crm }}</td>
                                 <td>{{ anesthesiologist.email }}</td>
                                 <td>{{ anesthesiologist.phone }}</td>
-                                <td><a href="{% url 'edit' 'anesthesiologist' anesthesiologist.id %}" class="edit-button">Editar</a></td>
+                                <td>
+                                    <a href="{% url 'edit' 'anesthesiologist' anesthesiologist.id %}" class="edit-button">Editar</a>
+                                    <a href="{% url 'delete' 'anesthesiologist' anesthesiologist.id %}" class="delete-button" onclick="return confirm('Tem certeza que deseja deletar este Anestesiologista?');">Deletar</a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -64,7 +67,10 @@
                                 <td>{{ surgeon.name }}</td>
                                 <td>{{ surgeon.phone }}</td>
                                 <td>{{ surgeon.crm }}</td>
-                                <td><a href="{% url 'edit' 'surgeon' surgeon.id %}" class="edit-button">Editar</a></td>
+                                <td>
+                                    <a href="{% url 'edit' 'surgeon' surgeon.id %}" class="edit-button">Editar</a>
+                                    <a href="{% url 'delete' 'surgeon' surgeon.id %}" class="delete-button" onclick="return confirm('Tem certeza que deseja deletar este Cirurgião?');">Deletar</a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -92,7 +98,10 @@
                                 <td>{{ hospital.name }}</td>
                                 <td>{{ hospital.address }}</td>
                                 <td>{{ hospital.surgery_center_phone }}</td>
-                                <td><a href="{% url 'edit' 'hospital_clinic' hospital.id %}" class="edit-button">Editar</a></td>
+                                <td>
+                                    <a href="{% url 'edit' 'hospital_clinic' hospital.id %}" class="edit-button">Editar</a>
+                                    <a href="{% url 'delete' 'hospital_clinic' hospital.id %}" class="delete-button" onclick="return confirm('Tem certeza que deseja deletar este Hospital/Clínica?');">Deletar</a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

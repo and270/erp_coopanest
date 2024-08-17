@@ -4,6 +4,7 @@ from .forms import CustomUserCreationForm, CustomUserLoginForm, Anesthesiologist
 from .models import Anesthesiologist, Surgeon, HospitalClinic
 from django.contrib.auth import authenticate, login
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from django.http import HttpResponseForbidden
 
 def home_view(request):
     context = {
@@ -180,13 +181,22 @@ def members_view(request):
         'ANESTESISTA_USER': ANESTESISTA_USER,
     })
 
-
-#TODO
 @login_required
-def profile_view(request):
-    return render(request, 'profile.html', {
-        'SECRETARIA_USER': SECRETARIA_USER,
-        'GESTOR_USER': GESTOR_USER,
-        'ADMIN_USER': ADMIN_USER,
-        'ANESTESISTA_USER': ANESTESISTA_USER,
-    })
+def delete_view(request, model_name, object_id):
+    if not request.user.validado:
+        return HttpResponseForbidden("Você não tem permissão para deletar este registro.")
+
+    if model_name == 'anesthesiologist':
+        instance = get_object_or_404(Anesthesiologist, id=object_id)
+    elif model_name == 'surgeon':
+        instance = get_object_or_404(Surgeon, id=object_id)
+    elif model_name == 'hospital_clinic':
+        instance = get_object_or_404(HospitalClinic, id=object_id)
+    else:
+        return redirect('home')
+
+    if request.method == 'POST':
+        instance.delete()
+        return redirect('members')
+
+    return render(request, 'confirm_delete.html', {'instance': instance})

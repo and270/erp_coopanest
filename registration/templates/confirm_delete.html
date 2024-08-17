@@ -1,0 +1,17 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Confirmar Deleção{% endblock %}
+
+{% block content %}
+<div class="confirm-delete-container">
+    <h1>Confirmar Deleção</h1>
+    <p>Tem certeza que deseja deletar {{ instance }}?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="delete-button">Deletar</button>
+        <a href="{% url 'members' %}" class="cancel-button">Cancelar</a>
+    </form>
+</div>
+{% endblock %}
