@@ -80,11 +80,32 @@ def cadastro_view(request):
         elif form_type == 'hospital_clinic':
             form = HospitalClinicForm(request.POST)
         else:
-            form = None
+            return render(request, 'cadastro.html', {
+                'anesthesiologist_form': anesthesiologist_form,
+                'surgeon_form': surgeon_form,
+                'hospital_clinic_form': hospital_clinic_form,
+                'SECRETARIA_USER': SECRETARIA_USER,
+                'GESTOR_USER': GESTOR_USER,
+                'ADMIN_USER': ADMIN_USER,
+                'ANESTESISTA_USER': ANESTESISTA_USER,
+                'error_message': 'Formulário inválido. Por favor, tente novamente.'
+            })
         
         if form and form.is_valid():
             form.save()
             return redirect('members')
+        else:
+            # Form is invalid, re-render the page with error messages
+            return render(request, 'cadastro.html', {
+                'anesthesiologist_form': AnesthesiologistForm() if form_type != 'anesthesiologist' else form,
+                'surgeon_form': SurgeonForm() if form_type != 'surgeon' else form,
+                'hospital_clinic_form': HospitalClinicForm() if form_type != 'hospital_clinic' else form,
+                'SECRETARIA_USER': SECRETARIA_USER,
+                'GESTOR_USER': GESTOR_USER,
+                'ADMIN_USER': ADMIN_USER,
+                'ANESTESISTA_USER': ANESTESISTA_USER,
+                'error_message': 'Por favor, corrija os erros no formulário.'
+            })
     else:
         anesthesiologist_form = AnesthesiologistForm()
         surgeon_form = SurgeonForm()

@@ -11,6 +11,12 @@
         <button class="tab-button" data-tab="hospitais-clinicas">hospitais e clínicas</button>
     </div>
 
+    {% if error_message %}
+        <div class="error-message">
+            {{ error_message }}
+        </div>
+    {% endif %}
+
     <div id="medicos-anestesiologistas" class="tab-content active">
         <form method="post">
             {% csrf_token %}
