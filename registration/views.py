@@ -67,6 +67,10 @@ def cadastro_view(request):
     if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
         return render(request, 'usuario_fora_funcao.html')
     
+    anesthesiologist_form = AnesthesiologistForm()
+    surgeon_form = SurgeonForm()
+    hospital_clinic_form = HospitalClinicForm()
+    
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
         if form_type == 'anesthesiologist':
@@ -75,8 +79,10 @@ def cadastro_view(request):
             form = SurgeonForm(request.POST)
         elif form_type == 'hospital_clinic':
             form = HospitalClinicForm(request.POST)
+        else:
+            form = None
         
-        if form.is_valid():
+        if form and form.is_valid():
             form.save()
             return redirect('members')
     else:
