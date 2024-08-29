@@ -83,8 +83,9 @@ class CustomUserLoginForm(AuthenticationForm):
 class AnesthesiologistForm(forms.ModelForm):
     class Meta:
         model = Anesthesiologist
-        fields = '__all__'
+        fields = ['user', 'name', 'date_of_birth', 'cpf', 'function', 'crm', 'phone', 'email', 'role_in_group', 'admission_date', 'responsible_hours']
         labels = {
+            'user': 'Usuário',
             'name': 'Nome',
             'date_of_birth': 'Data de Nascimento',
             'cpf': 'CPF',

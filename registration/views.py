@@ -172,7 +172,7 @@ def members_view(request):
     user_group = request.user.group
 
     if request.user.user_type in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
-        anesthesiologists = Anesthesiologist.objects.filter(user__group=user_group)
+        anesthesiologists = Anesthesiologist.objects.filter(group=user_group)
         surgeons = Surgeon.objects.filter(group=user_group)
         hospitals = HospitalClinic.objects.filter(group=user_group)
     elif request.user.user_type == ANESTESISTA_USER:

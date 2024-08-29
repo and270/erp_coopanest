@@ -57,6 +57,7 @@ class Anesthesiologist(models.Model):
     ]
 
     user = models.OneToOneField(CustomUser, null=True, blank=True, on_delete=models.SET_NULL, verbose_name='Usuário')
+    group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     name = models.CharField(max_length=255, default='', verbose_name='Nome')
     date_of_birth = models.DateField(default='1970-01-01', verbose_name='Data de Nascimento')
     cpf = models.CharField(max_length=15, unique=True, default='000.000.000-00', verbose_name='CPF')
