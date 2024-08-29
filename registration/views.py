@@ -67,14 +67,14 @@ def cadastro_view(request):
     if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
         return render(request, 'usuario_fora_funcao.html')
     
-    anesthesiologist_form = AnesthesiologistForm()
+    anesthesiologist_form = AnesthesiologistForm(user=request.user)
     surgeon_form = SurgeonForm()
     hospital_clinic_form = HospitalClinicForm()
     
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
         if form_type == 'anesthesiologist':
-            form = AnesthesiologistForm(request.POST)
+            form = AnesthesiologistForm(request.POST, user=request.user)
         elif form_type == 'surgeon':
             form = SurgeonForm(request.POST)
         elif form_type == 'hospital_clinic':
@@ -92,12 +92,12 @@ def cadastro_view(request):
             })
         
         if form and form.is_valid():
-            form.save()
+            form.save(user=request.user)
             return redirect('members')
         else:
             # Form is invalid, re-render the page with error messages
             return render(request, 'cadastro.html', {
-                'anesthesiologist_form': AnesthesiologistForm() if form_type != 'anesthesiologist' else form,
+                'anesthesiologist_form': AnesthesiologistForm(user=request.user) if form_type != 'anesthesiologist' else form,
                 'surgeon_form': SurgeonForm() if form_type != 'surgeon' else form,
                 'hospital_clinic_form': HospitalClinicForm() if form_type != 'hospital_clinic' else form,
                 'SECRETARIA_USER': SECRETARIA_USER,
@@ -107,19 +107,15 @@ def cadastro_view(request):
                 'error_message': 'Por favor, corrija os erros no formulário.'
             })
     else:
-        anesthesiologist_form = AnesthesiologistForm()
-        surgeon_form = SurgeonForm()
-        hospital_clinic_form = HospitalClinicForm()
-
-    return render(request, 'cadastro.html', {
-        'anesthesiologist_form': anesthesiologist_form,
-        'surgeon_form': surgeon_form,
-        'hospital_clinic_form': hospital_clinic_form,
-        'SECRETARIA_USER': SECRETARIA_USER,
-        'GESTOR_USER': GESTOR_USER,
-        'ADMIN_USER': ADMIN_USER,
-        'ANESTESISTA_USER': ANESTESISTA_USER,
-    })
+        return render(request, 'cadastro.html', {
+            'anesthesiologist_form': anesthesiologist_form,
+            'surgeon_form': surgeon_form,
+            'hospital_clinic_form': hospital_clinic_form,
+            'SECRETARIA_USER': SECRETARIA_USER,
+            'GESTOR_USER': GESTOR_USER,
+            'ADMIN_USER': ADMIN_USER,
+            'ANESTESISTA_USER': ANESTESISTA_USER,
+        })
 
 @login_required
 def edit_view(request, model_name, object_id):
@@ -172,11 +168,13 @@ def edit_view(request, model_name, object_id):
 def members_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
+    
+    user_group = request.user.group
 
     if request.user.user_type in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
-        anesthesiologists = Anesthesiologist.objects.all()
-        surgeons = Surgeon.objects.all()
-        hospitals = HospitalClinic.objects.all()
+        anesthesiologists = Anesthesiologist.objects.filter(user__group=user_group)
+        surgeons = Surgeon.objects.filter(group=user_group)
+        hospitals = HospitalClinic.objects.filter(group=user_group)
     elif request.user.user_type == ANESTESISTA_USER:
         try:
             anesthesiologist = Anesthesiologist.objects.get(user=request.user)

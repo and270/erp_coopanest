@@ -1,6 +1,6 @@
 from django import forms
 from constants import ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
-from registration.models import Anesthesiologist, CustomUser, HospitalClinic, Surgeon
+from registration.models import Anesthesiologist, CustomUser, Groups, HospitalClinic, Surgeon
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -8,9 +8,13 @@ from django.utils.translation import gettext_lazy as _
 
 
 class CustomUserCreationForm(UserCreationForm):
+    group = forms.ModelChoiceField(queryset=Groups.objects.all(), required=False, label='Selecione seu Grupo')
+    new_group = forms.CharField(required=False, label='Registre o nome do seu Grupo')
+    create_new_group = forms.BooleanField(required=False, label='Criar novo grupo')
+
     class Meta:
         model = CustomUser
-        fields = ('email', 'user_type', 'password1', 'password2')
+        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'password1', 'password2')
         labels = {
             'email': 'E-mail',
             'user_type': 'Tipo de usuário',
@@ -18,15 +22,54 @@ class CustomUserCreationForm(UserCreationForm):
             'password2': 'Confirme a senha',
         }
 
-        def __init__(self, *args, **kwargs):
-            super(CustomUserCreationForm, self).__init__(*args, **kwargs)
-            # Update the choices for the user_type field to exclude ADMIN_USER
-            user_type_choices = [
-                (SECRETARIA_USER, 'Secretário'),
-                (GESTOR_USER, 'Gestor'),
-                (ANESTESISTA_USER, 'Anestesista')
-            ]
-            self.fields['user_type'].choices = user_type_choices
+    def __init__(self, *args, **kwargs):
+        super(CustomUserCreationForm, self).__init__(*args, **kwargs)
+
+        user_type_choices = [
+            (SECRETARIA_USER, 'Secretária'),
+            (GESTOR_USER, 'Gestor'),
+            (ANESTESISTA_USER, 'Anestesista')
+        ]
+        self.fields['user_type'].choices = user_type_choices
+
+    def clean(self):
+        cleaned_data = super().clean()
+        user_type = cleaned_data.get("user_type")
+        create_new_group = cleaned_data.get("create_new_group")
+        group = cleaned_data.get("group")
+        new_group = cleaned_data.get("new_group")
+
+        if user_type == GESTOR_USER:
+            if create_new_group and not new_group:
+                raise forms.ValidationError("Por favor, insira o nome do novo grupo.")
+            elif not create_new_group and not group:
+                raise forms.ValidationError("Por favor, selecione um grupo.")
+
+        elif user_type != GESTOR_USER and not group:
+            raise forms.ValidationError("Por favor, selecione um grupo.")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user_type = self.cleaned_data.get("user_type")
+        create_new_group = self.cleaned_data.get("create_new_group")
+        group = self.cleaned_data.get("group")
+        new_group = self.cleaned_data.get("new_group")
+
+        if user_type == GESTOR_USER:
+            if create_new_group:
+                group, created = Groups.objects.get_or_create(name=new_group)
+                user.group = group
+            else:
+                user.group = group
+        else:
+            user.group = group
+
+        if commit:
+            user.save()
+
+        return user
 
 class CustomUserLoginForm(AuthenticationForm):
     class Meta:
@@ -60,9 +103,11 @@ class AnesthesiologistForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        self.fields['user'].queryset = CustomUser.objects.filter(user_type=ANESTESISTA_USER)
+        if user:
+            self.fields['user'].queryset = CustomUser.objects.filter(user_type=ANESTESISTA_USER, group=user.group)
 
         for field in self.fields:
             self.fields[field].initial = None
@@ -74,11 +119,19 @@ class AnesthesiologistForm(forms.ModelForm):
         if user and user.user_type != ANESTESISTA_USER:
             raise ValidationError(_('O usuário selecionado não é um Anestesista.'))
         return user
+    
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        if user:
+            instance.group = user.group  # Set the group to the same as the creating user's group
+        if commit:
+            instance.save()
+        return instance
 
 class SurgeonForm(forms.ModelForm):
     class Meta:
         model = Surgeon
-        fields = '__all__'
+        fields = ['name', 'specialty', 'crm', 'phone', 'notes']
         labels = {
             'name': 'Nome',
             'specialty': 'Especialidade',
@@ -94,10 +147,18 @@ class SurgeonForm(forms.ModelForm):
             if isinstance(self.fields[field], forms.CharField):
                 self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        if user:
+            instance.group = user.group  # Set the group to the same as the creating user's group
+        if commit:
+            instance.save()
+        return instance
+
 class HospitalClinicForm(forms.ModelForm):
     class Meta:
         model = HospitalClinic
-        fields = '__all__'
+        fields = ['name', 'address', 'surgery_center_phone', 'hospital_phone']
         labels = {
             'name': 'Nome',
             'address': 'Endereço',
@@ -111,3 +172,11 @@ class HospitalClinicForm(forms.ModelForm):
             self.fields[field].initial = None
             if isinstance(self.fields[field], forms.CharField):
                 self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
+
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        if user:
+            instance.group = user.group  # Set the group to the same as the creating user's group
+        if commit:
+            instance.save()
+        return instance

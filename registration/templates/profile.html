@@ -7,6 +7,9 @@
     <h1>Seu Perfil</h1>
     <p><strong>Seu e-mail:</strong> {{ user.email }}</p>
     <p><strong>Seu acesso ao sistema:</strong> {{ user.get_user_type_display }}</p>
+    {% if user.group %}
+        <p><strong>Seu Grupo:</strong> {{ user.group }}</p>
+    {% endif %}
 
     {% if user.validado %}
         <p class="validation-status validated">Acesso validado</p>
