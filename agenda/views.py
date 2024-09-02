@@ -6,6 +6,12 @@ from calendar import monthrange
 from datetime import datetime, timedelta
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 
+MONTH_NAMES_PT = {
+    1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+    5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+    9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+}
+
 def get_calendar_dates(year, month):
     first_day_of_month = datetime(year, month, 1)
     last_day_of_month = datetime(year, month, monthrange(year, month)[1])
@@ -38,12 +44,20 @@ def agenda_view(request):
     year = int(year)
     month = int(month)
 
+    if month > 12:
+        year += (month - 1) // 12
+        month = (month - 1) % 12 + 1
+    elif month < 1:
+        year -= (abs(month) + 12) // 12
+        month = 12 - (abs(month) % 12)
+
     calendar_dates = get_calendar_dates(year, month)
     
     context = {
         'calendar_dates': calendar_dates,
         'current_year': year,
         'current_month': month,
+        'month_name': MONTH_NAMES_PT[month],
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,

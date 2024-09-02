@@ -4,58 +4,57 @@
 {% block title %}Agenda{% endblock %}
 
 {% block content %}
-<div class="agenda-header">
-    <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
-    <h2>{{ current_year }} - {{ current_month|date:"F" }}</h2>
-    
-    <div class="view-switcher">
-        <a href="?year={{ current_year }}&month={{ current_month|add:"-1" }}">
-            <button class="btn btn-secondary">Anterior</button>
-        </a>
-        <a href="?year={{ current_year }}&month={{ current_month|add:"1" }}">
-            <button class="btn btn-secondary">Próximo</button>
-        </a>
-        <button id="semana-view" class="btn btn-secondary">SEMANA</button>
-        <button id="mes-view" class="btn btn-secondary active">MÊS</button>
+<div class="agenda-container">
+    <div class="agenda-header">
+        <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
+        <h2>{{ current_year }} - {{ month_name }}</h2>
+        <div class="view-switcher">
+            <a href="?year={{ current_year }}&month={{ current_month|add:"-1" }}" class="btn btn-secondary">&lt;</a>
+            <a href="?year={{ current_year }}&month={{ current_month|add:"1" }}" class="btn btn-secondary">&gt;</a>
+            <button id="semana-view" class="btn btn-secondary">SEMANA</button>
+            <button id="mes-view" class="btn btn-secondary active">MÊS</button>
+        </div>
     </div>
-</div>
 
-<div class="calendar-container">
-    <div id="month-view" class="calendar-view active">
-        <div class="calendar">
-            <div class="calendar-sidebar">
-                <ul>
-                    <li><button>CIRURGIAS</button></li>
-                    <li><button>PROCEDIMENTOS FORA DO CENTRO CIRÚRGICO</button></li>
-                    <li><button>EXAMES</button></li>
-                </ul>
+    <div class="calendar-container">
+        <div class="calendar-sidebar">
+            <div class="mini-calendar">
+                <!-- Mini calendar implementation goes here -->
             </div>
-            <div class="calendar-main">
-                <div class="calendar-grid">
-                    {% for date in calendar_dates %}
-                        <div class="day {% if not date.is_current_month %}other-month{% endif %}">
-                            <span>{{ date.day.day }}</span>
-                            <!-- You can add event data here -->
-                        </div>
-                    {% endfor %}
+            <ul class="event-types">
+                <li><button class="btn-cirurgias">CIRURGIAS</button></li>
+                <li><button class="btn-procedimentos">PROCEDIMENTOS FORA DO CENTRO CIRÚRGICO</button></li>
+                <li><button class="btn-exames">EXAMES</button></li>
+            </ul>
+        </div>
+        <div class="calendar-main">
+            <div class="calendar-search">
+                <input type="radio" id="search-data" name="search-type" checked>
+                <label for="search-data">DATA</label>
+                <input type="radio" id="search-paciente" name="search-type">
+                <label for="search-paciente">PACIENTE</label>
+                <input type="radio" id="search-procedimento" name="search-type">
+                <label for="search-procedimento">PROCEDIMENTO</label>
+                <input type="text" placeholder="Buscar...">
+            </div>
+            <div class="calendar-grid">
+                <div class="calendar-days">
+                    <span>DOM</span>
+                    <span>SEG</span>
+                    <span>TER</span>
+                    <span>QUA</span>
+                    <span>QUI</span>
+                    <span>SEX</span>
+                    <span>SÁB</span>
                 </div>
+                {% for date in calendar_dates %}
+                    <div class="day {% if not date.is_current_month %}other-month{% endif %}">
+                        <span>{{ date.day.day }}</span>
+                        <!-- You can add event data here -->
+                    </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-    }
-    .day {
-        border: 1px solid #ddd;
-        min-height: 100px;
-        padding: 5px;
-    }
-    .other-month {
-        background-color: #f0f0f0;
-    }
-</style>
 {% endblock %}
