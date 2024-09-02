@@ -1,0 +1,61 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Agenda{% endblock %}
+
+{% block content %}
+<div class="agenda-header">
+    <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
+    <h2>{{ current_year }} - {{ current_month|date:"F" }}</h2>
+    
+    <div class="view-switcher">
+        <a href="?year={{ current_year }}&month={{ current_month|add:"-1" }}">
+            <button class="btn btn-secondary">Anterior</button>
+        </a>
+        <a href="?year={{ current_year }}&month={{ current_month|add:"1" }}">
+            <button class="btn btn-secondary">Próximo</button>
+        </a>
+        <button id="semana-view" class="btn btn-secondary">SEMANA</button>
+        <button id="mes-view" class="btn btn-secondary active">MÊS</button>
+    </div>
+</div>
+
+<div class="calendar-container">
+    <div id="month-view" class="calendar-view active">
+        <div class="calendar">
+            <div class="calendar-sidebar">
+                <ul>
+                    <li><button>CIRURGIAS</button></li>
+                    <li><button>PROCEDIMENTOS FORA DO CENTRO CIRÚRGICO</button></li>
+                    <li><button>EXAMES</button></li>
+                </ul>
+            </div>
+            <div class="calendar-main">
+                <div class="calendar-grid">
+                    {% for date in calendar_dates %}
+                        <div class="day {% if not date.is_current_month %}other-month{% endif %}">
+                            <span>{{ date.day.day }}</span>
+                            <!-- You can add event data here -->
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+    }
+    .day {
+        border: 1px solid #ddd;
+        min-height: 100px;
+        padding: 5px;
+    }
+    .other-month {
+        background-color: #f0f0f0;
+    }
+</style>
+{% endblock %}
