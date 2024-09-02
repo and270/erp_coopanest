@@ -29,7 +29,7 @@ def get_calendar_dates(year, month):
 @login_required
 def agenda_view(request):
     if not request.user.validado:
-        return render(request, 'registration/usuario_nao_autenticado.html')
+        return render(request, 'usuario_nao_autenticado.html')
     
     today = datetime.today()
     year = request.GET.get('year', today.year)
