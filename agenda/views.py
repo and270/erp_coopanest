@@ -40,12 +40,13 @@ def get_calendar_dates(year, month):
 
 def get_week_dates(week_start):
     # Ensure week_start is a Sunday
-    week_start -= timedelta(days=(week_start.weekday() + 1) % 7)
+    week_start -= timedelta(days=week_start.weekday() + 1)
+    days_order = [ 2, 3, 4, 5, 6, 0, 1]  # Sunday to Saturday
     return [
         {
-            'day_name': _(date_format(week_start + timedelta(days=i), 'D')).upper(),
-            'date': (week_start + timedelta(days=i)).strftime('%d/%m'),
-            'full_date': week_start + timedelta(days=i)
+            'day_name': _(date_format(week_start + timedelta(days=days_order[i]), 'D')).upper(),
+            'date': (week_start + timedelta(days=days_order[i])).strftime('%d/%m'),
+            'full_date': week_start + timedelta(days=days_order[i])
         } for i in range(7)
     ]
 
@@ -71,10 +72,6 @@ def agenda_view(request):
     hours = ['06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']
 
     if view_type == 'week':
-        # Get week dates starting from Sunday
-        week_dates_objects = get_week_dates(week_start)  
-        
-        # Format dates for week view with the desired order and format
         week_dates = get_week_dates(week_start)
     else:
         week_dates = []
