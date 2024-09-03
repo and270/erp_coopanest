@@ -6,13 +6,31 @@
 {% block content %}
 <div class="agenda-container">
     <div class="agenda-header">
-        <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
-        <h2>{{ current_year }} - {{ month_name }}</h2>
         <div class="view-switcher">
             <a href="?year={{ current_year }}&month={{ current_month|add:"-1" }}" class="btn btn-secondary">&lt;</a>
             <a href="?year={{ current_year }}&month={{ current_month|add:"1" }}" class="btn btn-secondary">&gt;</a>
+        </div>
+        <h2>{{ current_year }} - {{ month_name }}</h2>
+        <div class="view-type-switcher">
             <button id="semana-view" class="btn btn-secondary">SEMANA</button>
             <button id="mes-view" class="btn btn-secondary active">MÊS</button>
+        </div>
+    </div>
+
+    <div class="calendar-top-bar">
+        <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
+        <div class="calendar-search">
+            <input type="radio" id="search-data" name="search-type" checked>
+            <label for="search-data">DATA</label>
+            <input type="radio" id="search-paciente" name="search-type">
+            <label for="search-paciente">PACIENTE</label>
+            <input type="radio" id="search-procedimento" name="search-type">
+            <label for="search-procedimento">PROCEDIMENTO</label>
+            <input type="text" placeholder="Buscar...">
+        </div>
+        <div class="agenda-scale">
+            <input type="checkbox" id="agenda-scale" name="agenda-scale">
+            <label for="agenda-scale">AGENDA ESCALA</label>
         </div>
     </div>
 
@@ -28,16 +46,7 @@
             </ul>
         </div>
         <div class="calendar-main">
-            <div class="calendar-search">
-                <input type="radio" id="search-data" name="search-type" checked>
-                <label for="search-data">DATA</label>
-                <input type="radio" id="search-paciente" name="search-type">
-                <label for="search-paciente">PACIENTE</label>
-                <input type="radio" id="search-procedimento" name="search-type">
-                <label for="search-procedimento">PROCEDIMENTO</label>
-                <input type="text" placeholder="Buscar...">
-            </div>
-            <div class="calendar-grid">
+            <div class="calendar-grid month-view">
                 <div class="calendar-days">
                     <span>DOM</span>
                     <span>SEG</span>
@@ -54,7 +63,56 @@
                     </div>
                 {% endfor %}
             </div>
+            <div class="calendar-grid week-view">
+                <div class="calendar-days">
+                    <span></span> <!-- Empty span for time column -->
+                    <span>DOM</span>
+                    <span>SEG</span>
+                    <span>TER</span>
+                    <span>QUA</span>
+                    <span>QUI</span>
+                    <span>SEX</span>
+                    <span>SÁB</span>
+                </div>
+                <div class="time-slots">
+                    {% for hour in hours %}
+                        <div class="time-slot">{{ hour }}:00</div>
+                    {% endfor %}
+                </div>
+                {% for day in "0123456"|make_list %}
+                    <div class="day-column">
+                        {% for hour in hours %}
+                            <div class="hour-slot"></div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const semanaBtn = document.getElementById('semana-view');
+    const mesBtn = document.getElementById('mes-view');
+    const monthView = document.querySelector('.month-view');
+    const weekView = document.querySelector('.week-view');
+
+    semanaBtn.addEventListener('click', function() {
+        semanaBtn.classList.add('active');
+        mesBtn.classList.remove('active');
+        monthView.style.display = 'none';
+        weekView.style.display = 'grid';
+    });
+
+    mesBtn.addEventListener('click', function() {
+        mesBtn.classList.add('active');
+        semanaBtn.classList.remove('active');
+        monthView.style.display = 'grid';
+        weekView.style.display = 'none';
+    });
+});
+</script>
 {% endblock %}

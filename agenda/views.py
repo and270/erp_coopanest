@@ -53,6 +53,8 @@ def agenda_view(request):
 
     calendar_dates = get_calendar_dates(year, month)
     
+    hours = ['06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']
+    
     context = {
         'calendar_dates': calendar_dates,
         'current_year': year,
@@ -62,6 +64,7 @@ def agenda_view(request):
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
+        'hours': hours,
     }
     
     return render(request, 'agenda.html', context)
