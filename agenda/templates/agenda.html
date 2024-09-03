@@ -7,10 +7,10 @@
 <div class="agenda-container">
     <div class="agenda-header">
         <div class="view-switcher">
-            <a href="?year={{ current_year }}&month={{ current_month|add:"-1" }}" class="btn btn-secondary">&lt;</a>
-            <a href="?year={{ current_year }}&month={{ current_month|add:"1" }}" class="btn btn-secondary">&gt;</a>
+            <a href="#" id="prev-btn" class="btn btn-secondary">&lt;</a>
+            <a href="#" id="next-btn" class="btn btn-secondary">&gt;</a>
         </div>
-        <h2>{{ current_year }} - {{ month_name }}</h2>
+        <h2 id="current-date-range"></h2>
         <div class="view-type-switcher">
             <button id="semana-view" class="btn btn-secondary">SEMANA</button>
             <button id="mes-view" class="btn btn-secondary active">MÊS</button>
@@ -99,19 +99,102 @@ document.addEventListener('DOMContentLoaded', function() {
     const mesBtn = document.getElementById('mes-view');
     const monthView = document.querySelector('.month-view');
     const weekView = document.querySelector('.week-view');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentDateRange = document.getElementById('current-date-range');
+
+    let currentView = '{{ view_type }}';
+    let currentYear = {{ current_year }};
+    let currentMonth = {{ current_month }};
+    let currentWeekStart = new Date('{{ current_week_start|date:"Y-m-d" }}');
+
+    const MONTH_NAMES_PT = {
+        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+    };
+
+    function updateDateRange() {
+        if (currentView === 'month') {
+            currentDateRange.textContent = `${currentYear} - ${MONTH_NAMES_PT[currentMonth]}`;
+        } else {
+            const weekEnd = new Date(currentWeekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            currentDateRange.textContent = `${currentWeekStart.toLocaleDateString('pt-BR')} - ${weekEnd.toLocaleDateString('pt-BR')}`;
+        }
+    }
+
+    function loadView(year, month, weekStart) {
+        const url = new URL(window.location);
+        url.searchParams.set('year', year);
+        url.searchParams.set('month', month);
+        if (weekStart) {
+            url.searchParams.set('week_start', weekStart.toISOString().split('T')[0]);
+        } else {
+            url.searchParams.delete('week_start');
+        }
+        window.location.href = url.toString();
+    }
+
+    function updateViewDisplay() {
+        if (currentView === 'week') {
+            semanaBtn.classList.add('active');
+            mesBtn.classList.remove('active');
+            monthView.style.display = 'none';
+            weekView.style.display = 'grid';
+        } else {
+            mesBtn.classList.add('active');
+            semanaBtn.classList.remove('active');
+            monthView.style.display = 'grid';
+            weekView.style.display = 'none';
+        }
+    }
+
+    updateViewDisplay();
+    updateDateRange();
 
     semanaBtn.addEventListener('click', function() {
-        semanaBtn.classList.add('active');
-        mesBtn.classList.remove('active');
-        monthView.style.display = 'none';
-        weekView.style.display = 'grid';
+        currentView = 'week';
+        updateViewDisplay();
+        updateDateRange();
+        loadView(currentYear, currentMonth, currentWeekStart);
     });
 
     mesBtn.addEventListener('click', function() {
-        mesBtn.classList.add('active');
-        semanaBtn.classList.remove('active');
-        monthView.style.display = 'grid';
-        weekView.style.display = 'none';
+        currentView = 'month';
+        updateViewDisplay();
+        updateDateRange();
+        loadView(currentYear, currentMonth, null);
+    });
+
+    prevBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentView === 'month') {
+            currentMonth--;
+            if (currentMonth < 1) {
+                currentMonth = 12;
+                currentYear--;
+            }
+        } else {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+        }
+        updateDateRange();
+        loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
+    });
+
+    nextBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentView === 'month') {
+            currentMonth++;
+            if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+            }
+        } else {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        }
+        updateDateRange();
+        loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
     });
 });
 </script>

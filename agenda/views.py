@@ -32,39 +32,43 @@ def get_calendar_dates(year, month):
     
     return calendar_dates
 
+def get_week_dates(week_start):
+    return [week_start + timedelta(days=i) for i in range(7)]
+
+
 @login_required
 def agenda_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
     
     today = datetime.today()
-    year = request.GET.get('year', today.year)
-    month = request.GET.get('month', today.month)
-    
-    year = int(year)
-    month = int(month)
+    year = int(request.GET.get('year', today.year))
+    month = int(request.GET.get('month', today.month))
+    week_start_str = request.GET.get('week_start')
 
-    if month > 12:
-        year += (month - 1) // 12
-        month = (month - 1) % 12 + 1
-    elif month < 1:
-        year -= (abs(month) + 12) // 12
-        month = 12 - (abs(month) % 12)
+    if week_start_str:
+        week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+        calendar_dates = get_week_dates(week_start)
+        view_type = 'week'
+    else:
+        calendar_dates = get_calendar_dates(year, month)
+        view_type = 'month'
+        week_start = today.date() - timedelta(days=today.weekday())
 
-    calendar_dates = get_calendar_dates(year, month)
-    
     hours = ['06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']
     
     context = {
         'calendar_dates': calendar_dates,
         'current_year': year,
         'current_month': month,
+        'current_week_start': week_start,
         'month_name': MONTH_NAMES_PT[month],
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
         'hours': hours,
+        'view_type': view_type,
     }
     
     return render(request, 'agenda.html', context)
