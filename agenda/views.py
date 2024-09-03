@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import Procedimento, EscalaAnestesiologista
 from .forms import ProcedimentoForm, EscalaForm
 from django.contrib.auth.decorators import login_required
-from calendar import monthrange
+from calendar import monthrange, weekday, SUNDAY
 from datetime import datetime, timedelta
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 
@@ -13,22 +13,26 @@ MONTH_NAMES_PT = {
 }
 
 def get_calendar_dates(year, month):
-    first_day_of_month = datetime(year, month, 1)
-    last_day_of_month = datetime(year, month, monthrange(year, month)[1])
+    _, num_days = monthrange(year, month)
+    first_day_weekday = weekday(year, month, 1)
     
-    start_date = first_day_of_month - timedelta(days=first_day_of_month.weekday())
-
-    end_date = last_day_of_month + timedelta(days=6 - last_day_of_month.weekday())
+    # Adjust to make Sunday the first day of the week
+    first_day_weekday = (first_day_weekday + 1) % 7
     
-    current_day = start_date
+    # Calculate the number of days from the previous month to include
+    days_from_prev_month = first_day_weekday
+    
+    # Calculate the start date (it might be in the previous month)
+    start_date = datetime(year, month, 1) - timedelta(days=days_from_prev_month)
+    
     calendar_dates = []
     
-    while current_day <= end_date:
+    for i in range(42):  # 6 weeks * 7 days
+        current_date = start_date + timedelta(days=i)
         calendar_dates.append({
-            'day': current_day,
-            'is_current_month': current_day.month == month
+            'day': current_date,
+            'is_current_month': current_date.month == month
         })
-        current_day += timedelta(days=1)
     
     return calendar_dates
 
