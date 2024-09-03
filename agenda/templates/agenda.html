@@ -66,13 +66,12 @@
             <div class="calendar-grid week-view">
                 <div class="calendar-days">
                     <span></span> <!-- Empty span for time column -->
-                    <span>DOM</span>
-                    <span>SEG</span>
-                    <span>TER</span>
-                    <span>QUA</span>
-                    <span>QUI</span>
-                    <span>SEX</span>
-                    <span>SÁB</span>
+                    {% for date in week_dates %}
+                        <span>
+                            {{ date.day_name }}<br>
+                            ({{ date.date }})
+                        </span>
+                    {% endfor %}
                 </div>
                 <div class="time-slots">
                     {% for hour in hours %}
@@ -119,8 +118,9 @@ document.addEventListener('DOMContentLoaded', function() {
             currentDateRange.textContent = `${currentYear} - ${MONTH_NAMES_PT[currentMonth]}`;
         } else {
             const weekEnd = new Date(currentWeekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6);
-            currentDateRange.textContent = `${currentWeekStart.toLocaleDateString('pt-BR')} - ${weekEnd.toLocaleDateString('pt-BR')}`;
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        // Use toLocaleDateString for proper date formatting
+            currentDateRange.textContent = `${currentWeekStart.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'numeric' })} - ${weekEnd.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'numeric' })}`;
         }
     }
 
