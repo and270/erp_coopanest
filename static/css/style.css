@@ -801,8 +801,9 @@ select {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    align-items: center;
-    gap: 15px; /* Adds space between elements in center-controls */
+    align-items: center; /* Vertically centers the elements */
+    justify-content: center; /* Horizontally centers the elements */
+    gap: 20px; /* Adds space between elements */
 }
 
 
@@ -822,11 +823,13 @@ select {
 .view-type-switcher .btn {
     background-color: #f0f0f0;
     color: #000000;
-    border: 1px solid #ccc;
-    padding: 5px 15px;
-    border-radius: 5px;
-    font-size: 1.1rem;
+    border: 2px solid #ccc;
+    padding: 5px 20px; /* Increased padding for bigger size */
+    border-radius: 10px; /* Rounded corners */
+    font-size: 1.1rem; /* Adjusted font size */
+    font-weight: bold; /* Bold font */
     cursor: pointer;
+    transition: background-color 0.3s, border-color 0.3s;
 }
 
 .view-type-switcher .btn.active {
@@ -834,10 +837,10 @@ select {
     color: #000000;
 }
 
-.view-type-switcher .btn {
-    margin-left: 10px;
+.view-type-switcher .btn:hover {
+    background-color: #2c659e;
+    color: #ffffff;
 }
-
 
 .calendar-top-bar {
     display: flex;
@@ -866,9 +869,9 @@ select {
     background: none;
     border: none;
     color: #418FDE; /* Set color to blue */
-    font-size: 1.5rem; /* Increase size */
+    font-size: 2rem; /* Increase size */
     cursor: pointer;
-    margin-right: 10px; /* Adjust spacing */
+    margin: 0 5px; /* Adjust spacing */
 }
 
 #prev-btn:hover, #next-btn:hover {
@@ -877,7 +880,8 @@ select {
 
 .view-switcher {
     display: flex;
-    gap: 5px; /* Space between the < and > buttons */
+    align-items: center; /* Ensures alignment of arrows and date */
+    gap: 10px; /* Space between arrows and date */
 }
 
 #current-date-range {
