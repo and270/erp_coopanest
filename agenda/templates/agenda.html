@@ -6,82 +6,83 @@
 {% block content %}
 <div class="agenda-container">
     <div class="agenda-header">
-        <div class="view-switcher">
-            <a href="#" id="prev-btn" class="btn btn-secondary">&lt;</a>
-            <a href="#" id="next-btn" class="btn btn-secondary">&gt;</a>
+        <div class="left-controls">
+            <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
+            <div id="procedimento-form-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <br>
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        <div class="form-group">
+                            {{ form.procedimento_type.label_tag }} {{ form.procedimento_type }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.data.label_tag }} {{ form.data }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.time.label_tag }} {{ form.time }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.nome_paciente.label_tag }} {{ form.nome_paciente }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.contato_pacinete.label_tag }} {{ form.contato_pacinete }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.procedimento.label_tag }} {{ form.procedimento }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.hospital.label_tag }} {{ form.hospital }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.outro_local.label_tag }} {{ form.outro_local }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.cirurgiao.label_tag }} {{ form.cirurgiao }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.anestesista_responsavel.label_tag }} {{ form.anestesista_responsavel }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.link_nps.label_tag }} {{ form.link_nps }}
+                        </div>
+                        <div class="form-group-inline">
+                            {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
+                        </div>
+                        <div class="conditional-container" style="display:none;">
+                            <div class="form-group">
+                                {{ form.data_visita_pre_anestesica.label_tag }} {{ form.data_visita_pre_anestesica }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.foto_anexo.label_tag }} {{ form.foto_anexo }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.nome_responsavel_visita.label_tag }} {{ form.nome_responsavel_visita }}
+                            </div>
+                        </div>
+                        <button type="submit" class="cadastrar-btn">Criar Agendamento</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <h2 id="current-date-range"></h2>
-        <div class="view-type-switcher">
-            <button id="semana-view" class="btn btn-secondary">SEMANA</button>
-            <button id="mes-view" class="btn btn-secondary active">MÊS</button>
+
+        <div class="center-controls">
+            <div class="view-switcher">
+                <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
+                <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
+            </div>
+            <h2 id="current-date-range"></h2>
+            <div class="view-type-switcher">
+                <button id="semana-view" class="btn">SEMANA</button>
+                <button id="mes-view" class="btn active">MÊS</button>
+            </div>
         </div>
     </div>
 
     <div class="calendar-top-bar">
-        <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
-        <div class="dropdown-menu" id="procedimento-type-dropdown" style="display:none;">
-            <button class="dropdown-item" data-procedimento-type="Cirurgia">CIRURGIA</button>
-            <button class="dropdown-item" data-procedimento-type="Procedimento Fora do Centro Cirúrgico">PROCEDIMENTO FORA DO CENTRO CIRÚRGICO</button>
-            <button class="dropdown-item" data-procedimento-type="Exame">EXAME</button>
-        </div>
-        <div id="procedimento-form-modal" class="modal" style="display:none;">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <br>
-                <form method="POST" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ form.non_field_errors }}
-                    <div class="form-group">
-                        {{ form.procedimento_type.label_tag }} {{ form.procedimento_type }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.data.label_tag }} {{ form.data }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.time.label_tag }} {{ form.time }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.nome_paciente.label_tag }} {{ form.nome_paciente }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.contato_pacinete.label_tag }} {{ form.contato_pacinete }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.procedimento.label_tag }} {{ form.procedimento }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.hospital.label_tag }} {{ form.hospital }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.outro_local.label_tag }} {{ form.outro_local }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.cirurgiao.label_tag }} {{ form.cirurgiao }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.anestesista_responsavel.label_tag }} {{ form.anestesista_responsavel }}
-                    </div>
-                    <div class="form-group">
-                        {{ form.link_nps.label_tag }} {{ form.link_nps }}
-                    </div>
-                    <div class="form-group-inline">
-                        {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
-                    </div>
-                    <div class="conditional-container" style="display:none;">
-                        <div class="form-group">
-                            {{ form.data_visita_pre_anestesica.label_tag }} {{ form.data_visita_pre_anestesica }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.foto_anexo.label_tag }} {{ form.foto_anexo }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.nome_responsavel_visita.label_tag }} {{ form.nome_responsavel_visita }}
-                        </div>
-                    </div>
-                    <button type="submit" class="cadastrar-btn">Criar Agendamento</button>
-                </form>
-            </div>
-        </div>
+        
         <!-- buscar por data, paciente, procedimento
         <div class="calendar-search">
             <input type="radio" id="search-data" name="search-type" checked>

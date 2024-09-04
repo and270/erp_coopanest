@@ -788,23 +788,56 @@ select {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    padding: 10px;
 }
 
-.view-switcher .btn,
+.left-controls {
+    display: flex;
+    align-items: center;
+}
+
+.center-controls {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Adds space between elements in center-controls */
+}
+
+
+.right-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* If you want to center the right controls horizontally */
+    gap: 15px; /* Adds space between elements */
+}
+
+
+.view-type-switcher {
+    display: flex;
+    gap: 5px; /* Space between the Semana and Mês buttons */
+}
+
 .view-type-switcher .btn {
     background-color: #f0f0f0;
     color: #000000;
     border: 1px solid #ccc;
-    padding: 5px 10px;
+    padding: 5px 15px;
     border-radius: 5px;
+    font-size: 1.1rem;
     cursor: pointer;
 }
 
 .view-type-switcher .btn.active {
-    background-color: #418FDE;
-    color: #ffffff;
+    background-color: #ccc; /* Grey background for active button */
+    color: #000000;
 }
+
+.view-type-switcher .btn {
+    margin-left: 10px;
+}
+
 
 .calendar-top-bar {
     display: flex;
@@ -817,9 +850,39 @@ select {
     background-color: #418FDE;
     color: #ffffff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
+    padding: 15px 30px; /* Increased padding for bigger size */
+    border-radius: 10px; /* Slightly rounded corners */
+    font-weight: bold; /* Make text bold */
+    font-size: 1.1rem; /* Adjust font size if needed */
     cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#agendar-btn:hover {
+    background-color: #2c659e;
+}
+
+#prev-btn, #next-btn {
+    background: none;
+    border: none;
+    color: #418FDE; /* Set color to blue */
+    font-size: 1.5rem; /* Increase size */
+    cursor: pointer;
+    margin-right: 10px; /* Adjust spacing */
+}
+
+#prev-btn:hover, #next-btn:hover {
+    color: #2c659e;
+}
+
+.view-switcher {
+    display: flex;
+    gap: 5px; /* Space between the < and > buttons */
+}
+
+#current-date-range {
+    margin: 0;
+    font-size: 2.2rem;
 }
 
 .calendar-search {
