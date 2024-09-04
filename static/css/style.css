@@ -923,6 +923,7 @@ select {
     grid-template-columns: repeat(7, 1fr);
     align-items: center;
     height: 50px; /* Adjust this value as needed */
+    position: relative;
 }
 
 .week-view .calendar-days span {
@@ -931,10 +932,18 @@ select {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    border-left: none !important; /* Ensure left border is removed */
+    border-right: none !important;
 }
 
 .week-view .calendar-days span:first-child {
     grid-column: 2;
+    border-left: none;
+}
+
+.week-view .calendar-days span:last-child {
+    border-right: none; /* Remove right border for the last element */
 }
 
 .week-view .calendar-days .time-column {
