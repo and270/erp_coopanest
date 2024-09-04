@@ -231,25 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     document.getElementById('agendar-btn').addEventListener('click', function() {
         document.getElementById('procedimento-form-modal').style.display = 'block';
-    });
-    
-    document.querySelectorAll('.dropdown-item').forEach(function(item) {
-        item.addEventListener('click', function() {
-            var procedimentoType = this.getAttribute('data-procedimento-type');
-            
-            // Now send an AJAX request to load the form with the selected procedimentoType
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/get_procedimento_form/?procedimento_type=' + procedimentoType, true);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    document.getElementById('procedimento-form-container').innerHTML = xhr.responseText;
-                    document.getElementById('procedimento-form-modal').style.display = 'block';
-                }
-            };
-            xhr.send();
-        });
-    });
-    
+    }); 
     document.querySelector('.close').addEventListener('click', function() {
         document.getElementById('procedimento-form-modal').style.display = 'none';
     });
