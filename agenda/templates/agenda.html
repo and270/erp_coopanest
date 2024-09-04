@@ -153,8 +153,16 @@ document.addEventListener('DOMContentLoaded', function() {
     updateViewDisplay();
     updateDateRange();
 
+    function getFirstDayOfWeek(date) {
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+        return new Date(date.setDate(diff));
+    }
+
     semanaBtn.addEventListener('click', function() {
         currentView = 'week';
+        const firstDayOfMonth = new Date(currentYear, currentMonth - 1, 1);
+        currentWeekStart = getFirstDayOfWeek(firstDayOfMonth);
         updateViewDisplay();
         updateDateRange();
         loadView(currentYear, currentMonth, currentWeekStart);
