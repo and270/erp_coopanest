@@ -4,6 +4,7 @@
 {% block title %}Agenda{% endblock %}
 
 {% block content %}
+<!--
 <div>
     <h3>Detailed Debug Info:</h3>
     <p>Number of procedimentos: {{ procedimentos|length }}</p>
@@ -25,6 +26,7 @@
     <p>Hours being checked:</p>
     <p>{{ hours|join:", " }}</p>
 </div>
+-->
 <div class="agenda-container">
     <div class="agenda-header">
         <div class="left-controls">
@@ -153,7 +155,30 @@
                 {% for date in calendar_dates %}
                     <div class="day {% if not date.is_current_month %}other-month{% endif %}">
                         <span>{{ date.day.day }}</span>
-                        <!-- You can add event data here -->
+                        {% for procedimento in procedimentos %}
+                            {% if procedimento.data_horario.date == date.day.date %}
+                                <div class="procedure-card" data-id="{{ procedimento.id }}">
+                                    <span>{{ procedimento.nome_paciente }}</span>
+                                    <span>{{ procedimento.procedimento }}</span>
+                                </div>
+                                <div id="procedure-details-modal" class="procedure-modal" style="display:none;">
+                                    <div class="procedure-modal-content">
+                                        <span class="close-modal">&times;</span>
+                                        <p>Nome do Paciente: <span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                        <p>Contato do Paciente: <span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
+                                        <p>Procedimento: <span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
+                                        <p>Local: <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
+                                        <p>Data e Horário: <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
+                                        <p>Cirurgião: <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
+                                        <p>Anestesista Responsável: <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
+                                        <p>Link NPS: <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
+                                        <p>Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
+                                        <p>Data da Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
+                                        <p>Nome do Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
                 {% endfor %}
             </div>
