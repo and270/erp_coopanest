@@ -188,9 +188,11 @@ document.addEventListener('DOMContentLoaded', function() {
             currentDateRange.textContent = `${currentYear} - ${MONTH_NAMES_PT[currentMonth]}`;
         } else {
             const weekEnd = new Date(currentWeekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        // Use toLocaleDateString for proper date formatting
-            currentDateRange.textContent = `${currentWeekStart.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'numeric' })} - ${weekEnd.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'numeric' })}`;
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            const startDateFormatted = currentWeekStart.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' });
+            const endDateFormatted = weekEnd.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' });
+
+            currentDateRange.textContent = `${startDateFormatted} a ${endDateFormatted}`;
         }
     }
 
