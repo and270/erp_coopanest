@@ -53,13 +53,6 @@ def get_week_dates(week_start):
     ]
 
 @login_required
-def get_procedimento_form(request):
-    procedimento_type = request.GET.get('procedimento_type')
-    form = ProcedimentoForm(initial={'procedimento_type': procedimento_type})
-    html = render_to_string('procedimento_form.html', {'form': form}, request=request)
-    return JsonResponse({'html': html})
-
-@login_required
 def agenda_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
