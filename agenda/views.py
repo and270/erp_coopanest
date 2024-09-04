@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
+from django.http import JsonResponse
+from django.template.loader import render_to_string
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -51,9 +53,24 @@ def get_week_dates(week_start):
     ]
 
 @login_required
+def get_procedimento_form(request):
+    procedimento_type = request.GET.get('procedimento_type')
+    form = ProcedimentoForm(initial={'procedimento_type': procedimento_type})
+    html = render_to_string('procedimento_form.html', {'form': form}, request=request)
+    return JsonResponse({'html': html})
+
+@login_required
 def agenda_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
+    
+    if request.method == 'POST':
+        form = ProcedimentoForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('agenda')
+    else:
+        form = ProcedimentoForm()
     
     today = datetime.today()
     year = int(request.GET.get('year', today.year))
@@ -75,6 +92,8 @@ def agenda_view(request):
         week_dates = get_week_dates(week_start)
     else:
         week_dates = []
+
+    procedimentos = Procedimento.objects.all()
     
     context = {
         'calendar_dates': calendar_dates,
@@ -89,6 +108,8 @@ def agenda_view(request):
         'hours': hours,
         'view_type': view_type,
         'week_dates': week_dates, 
+        'procedimentos': procedimentos,
+        'form': form
     }
     
     return render(request, 'agenda.html', context)
