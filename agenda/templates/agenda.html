@@ -64,10 +64,10 @@
                     <div class="form-group">
                         {{ form.link_nps.label_tag }} {{ form.link_nps }}
                     </div>
-                    <div class="form-group">
+                    <div class="form-group-inline">
                         {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
                     </div>
-                    <div class="conditional-container">
+                    <div class="conditional-container" style="display:none;">
                         <div class="form-group">
                             {{ form.data_visita_pre_anestesica.label_tag }} {{ form.data_visita_pre_anestesica }}
                         </div>
@@ -295,18 +295,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const visitaPreAnestesicaCheckbox = document.getElementById('id_visita_pre_anestesica');
-        const conditionalFields = document.querySelectorAll('.conditional-field');
-    
+        const conditionalContainer = document.querySelector('.conditional-container'); // Change this line
+
         function toggleConditionalFields() {
             if (visitaPreAnestesicaCheckbox.checked) {
-                conditionalFields.forEach(field => field.style.display = 'block');
+                conditionalContainer.style.display = 'block';  // Show the container when checked
             } else {
-                conditionalFields.forEach(field => field.style.display = 'none');
+                conditionalContainer.style.display = 'none';  // Hide the container when unchecked
             }
         }
-    
+
         visitaPreAnestesicaCheckbox.addEventListener('change', toggleConditionalFields);
         toggleConditionalFields(); // Initial call to set the correct state on page load
     });
+
 </script>
 {% endblock %}

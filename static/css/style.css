@@ -225,6 +225,18 @@ main {
     font-size: 1rem;
 }
 
+.form-group-inline {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between; /* Optional: can also use flex-start */
+    margin-bottom: 15px;
+}
+
+.form-group-inline label {
+    margin-right: 10px; /* Add space between label and input */
+}
+
 .form-group label span {
     margin-right: 10px;
     font-size: 1.2rem;
