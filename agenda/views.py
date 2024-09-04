@@ -112,3 +112,20 @@ def agenda_view(request):
     }
     
     return render(request, 'agenda.html', context)
+
+@login_required
+def get_procedimento_details(request, procedimento_id):
+    procedimento = get_object_or_404(Procedimento, id=procedimento_id)
+    data = {
+        'nome_paciente': procedimento.nome_paciente,
+        'contato_paciente': procedimento.contato_pacinete,
+        'procedimento': procedimento.procedimento,
+        'hospital': procedimento.hospital.name if procedimento.hospital else procedimento.outro_local,
+        'data_horario': procedimento.data_horario.strftime('%d/%m/%Y %H:%M'),
+        'cirurgiao': procedimento.cirurgiao.name,
+        'anestesista_responsavel': procedimento.anestesista_responsavel.name,
+        'link_nps': procedimento.link_nps,
+        'visita_pre_anestesica': procedimento.visita_pre_anestesica,
+        'data_visita_pre_anestesica': procedimento.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedimento.data_visita_pre_anestesica else None,
+    }
+    return JsonResponse(data)

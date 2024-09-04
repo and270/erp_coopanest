@@ -1113,3 +1113,72 @@ select {
     text-decoration: none;
     cursor: pointer;
 }
+
+
+.procedure-modal {
+    position: absolute;
+    background-color: #ffffff;
+    color: #000000;
+    border: 2px solid #b3e5fc;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 250px;
+    padding: 15px;
+    z-index: 1000;
+    display: none; /* Hidden by default */
+}
+
+.procedure-modal-content {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+}
+
+.procedure-modal-content p {
+    margin: 5px 0;
+}
+
+.procedure-patient-name {
+    font-weight: bold;
+}
+
+.pdf-link {
+    display: flex;
+    align-items: center;
+    color: #d32f2f;
+    text-decoration: none;
+    margin-top: 10px;
+}
+
+.pdf-link img {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+}
+
+.procedure-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.edit-btn {
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background-color: #d32f2f;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.edit-btn:hover, .cancel-btn:hover {
+    opacity: 0.9;
+}

@@ -4,6 +4,27 @@
 {% block title %}Agenda{% endblock %}
 
 {% block content %}
+<div>
+    <h3>Detailed Debug Info:</h3>
+    <p>Number of procedimentos: {{ procedimentos|length }}</p>
+    {% for proc in procedimentos %}
+        <p>Procedimento: {{ proc.nome_paciente }} - {{ proc.data_horario|date:"Y-m-d H:i" }}</p>
+        {% for date in week_dates %}
+            <p>Comparing with: {{ date.full_date|date:"Y-m-d" }} - Date Match: {% if proc.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" %}Yes{% else %}No{% endif %}</p>
+            {% if proc.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" %}
+                {% for hour in hours %}
+                    <p>Hour comparison: Procedure hour: {{ proc.data_horario|date:"H" }}, Comparing with: {{ hour }} - Hour Match: {% if proc.data_horario|date:"H" == hour %}Yes{% else %}No{% endif %}</p>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+    <p>Current week dates:</p>
+    {% for date in week_dates %}
+        <p>{{ date.full_date|date:"Y-m-d" }} ({{ date.day_name }})</p>
+    {% endfor %}
+    <p>Hours being checked:</p>
+    <p>{{ hours|join:", " }}</p>
+</div>
 <div class="agenda-container">
     <div class="agenda-header">
         <div class="left-controls">
@@ -138,7 +159,7 @@
             </div>
             <div class="calendar-grid week-view">
                 <div class="calendar-days">
-                    <span class="time-column"></span> <!-- Empty span for time column -->
+                    <span class="time-column"></span>
                     {% for date in week_dates %}
                         <span class="day-column">
                             {{ date.day_name }}<br>
@@ -151,10 +172,35 @@
                         <div class="time-slot">{{ hour }}:00</div>
                     {% endfor %}
                 </div>
-                {% for day in "0123456"|make_list %}
+                {% for date in week_dates %}
                     <div class="day-column">
                         {% for hour in hours %}
-                            <div class="hour-slot"></div>
+                            <div class="hour-slot">
+                                {% for procedimento in procedimentos %}
+                                    {% if procedimento.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" and procedimento.data_horario|date:"H" == hour %}
+                                        <div class="procedure-card" data-id="{{ procedimento.id }}">
+                                            <span>{{ procedimento.nome_paciente }}</span>
+                                            <span>{{ procedimento.procedimento }}</span>
+                                        </div>
+                                        <div id="procedure-details-modal" class="procedure-modal" style="display:none;">
+                                            <div class="procedure-modal-content">
+                                                <span class="close-modal">&times;</span>
+                                                <p>Nome do Paciente: <span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                                <p>Contato do Paciente: <span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
+                                                <p>Procedimento: <span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
+                                                <p>Local: <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
+                                                <p>Data e Horário: <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
+                                                <p>Cirurgião: <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
+                                                <p>Anestesista Responsável: <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
+                                                <p>Link NPS: <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
+                                                <p>Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
+                                                <p>Data da Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
+                                                <p>Nome do Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         {% endfor %}
                     </div>
                 {% endfor %}
@@ -316,4 +362,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const procedureCards = document.querySelectorAll('.procedure-card');
+        procedureCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const procedimentoId = this.getAttribute('data-id');
+            });
+        });
+
+        // Close the modal
+        document.querySelector('.close-modal').addEventListener('click', function() {
+            document.getElementById('procedure-details-modal').style.display = 'none';
+        });
+    });
+</script>
+
 {% endblock %}
