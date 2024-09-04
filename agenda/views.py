@@ -41,7 +41,7 @@ def get_calendar_dates(year, month):
 def get_week_dates(week_start):
     # Ensure week_start is a Sunday
     week_start -= timedelta(days=week_start.weekday() + 1)
-    days_order = [ 2, 3, 4, 5, 6, 0, 1]  # Sunday to Saturday
+    days_order = [0, 1, 2, 3, 4, 5, 6, ]  # Sunday to Saturday
     return [
         {
             'day_name': _(date_format(week_start + timedelta(days=days_order[i]), 'D')).upper(),

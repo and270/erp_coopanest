@@ -65,9 +65,9 @@
             </div>
             <div class="calendar-grid week-view">
                 <div class="calendar-days">
-                    <span></span> <!-- Empty span for time column -->
+                    <span class="time-column"></span> <!-- Empty span for time column -->
                     {% for date in week_dates %}
-                        <span>
+                        <span class="day-column">
                             {{ date.day_name }}<br>
                             ({{ date.date }})
                         </span>
