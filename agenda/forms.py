@@ -1,4 +1,6 @@
 from django import forms
+
+from registration.models import Anesthesiologist, HospitalClinic, Surgeon
 from .models import Procedimento, EscalaAnestesiologista
 from datetime import datetime
 
@@ -20,6 +22,8 @@ class ProcedimentoForm(forms.ModelForm):
         exclude = ['group', 'data_horario'] 
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+
         super(ProcedimentoForm, self).__init__(*args, **kwargs)
         # Reorder fields: set the order manually
         self.fields['procedimento_type'].label = 'Tipo de Procedimento'
@@ -44,6 +48,12 @@ class ProcedimentoForm(forms.ModelForm):
             'foto_anexo': self.fields['foto_anexo'],
             'nome_responsavel_visita': self.fields['nome_responsavel_visita']
         }
+
+        if user:
+            # Filter the ForeignKey fields by the user's group
+            self.fields['anestesista_responsavel'].queryset = Anesthesiologist.objects.filter(group=user.group)
+            self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group)
+            self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group)
 
     def save(self, commit=True):
         # Combine the date and time fields to form the `data_horario`

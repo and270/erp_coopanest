@@ -62,14 +62,14 @@ def agenda_view(request):
     user = CustomUser.objects.get(id=request.user.id)
     
     if request.method == 'POST':
-        form = ProcedimentoForm(request.POST, request.FILES)
+        form = ProcedimentoForm(request.POST, request.FILES, user=user)
         if form.is_valid():
             procedimento = form.save(commit=False)
             procedimento.group = user.group 
             procedimento.save()
             return redirect('agenda')
     else:
-        form = ProcedimentoForm()
+        form = ProcedimentoForm(user=user)
     
     today = datetime.today()
     year = int(request.GET.get('year', today.year))
