@@ -1063,9 +1063,3 @@ select {
 .calendar-main {
     flex-grow: 1;
 }
-
-.calendar-grid {
-    display: grid;
-    gap: 1px;
-    background-color: #000000;
-}
