@@ -1,4 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
+
+from registration.models import CustomUser
 from .models import Procedimento, EscalaAnestesiologista
 from .forms import ProcedimentoForm, EscalaForm
 from django.contrib.auth.decorators import login_required
@@ -57,10 +59,14 @@ def agenda_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
     
+    user = CustomUser.objects.get(id=request.user.id)
+    
     if request.method == 'POST':
         form = ProcedimentoForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            procedimento = form.save(commit=False)
+            procedimento.group = user.group 
+            procedimento.save()
             return redirect('agenda')
     else:
         form = ProcedimentoForm()
@@ -86,7 +92,7 @@ def agenda_view(request):
     else:
         week_dates = []
 
-    procedimentos = Procedimento.objects.all()
+    procedimentos = Procedimento.objects.filter(group=user.group)
     
     context = {
         'calendar_dates': calendar_dates,

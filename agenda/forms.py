@@ -4,7 +4,7 @@ from .models import Procedimento, EscalaAnestesiologista
 class ProcedimentoForm(forms.ModelForm):
     class Meta:
         model = Procedimento
-        fields = '__all__'
+        exclude = ['group'] 
 
 class EscalaForm(forms.ModelForm):
     class Meta:
