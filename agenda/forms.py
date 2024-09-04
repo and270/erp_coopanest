@@ -55,6 +55,11 @@ class ProcedimentoForm(forms.ModelForm):
             self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group)
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group)
 
+        # Add CSS classes to the conditional fields
+        self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
+        self.fields['foto_anexo'].widget.attrs.update({'class': 'form-control conditional-field'})
+        self.fields['nome_responsavel_visita'].widget.attrs.update({'class': 'form-control conditional-field'})
+
     def save(self, commit=True):
         # Combine the date and time fields to form the `data_horario`
         instance = super().save(commit=False)

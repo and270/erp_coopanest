@@ -27,9 +27,57 @@
         <div id="procedimento-form-modal" class="modal" style="display:none;">
             <div class="modal-content">
                 <span class="close">&times;</span>
+                <br>
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
-                    {{ form.as_p }}
+                    {{ form.non_field_errors }}
+                    <div class="form-group">
+                        {{ form.procedimento_type.label_tag }} {{ form.procedimento_type }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.data.label_tag }} {{ form.data }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.time.label_tag }} {{ form.time }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.nome_paciente.label_tag }} {{ form.nome_paciente }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.contato_pacinete.label_tag }} {{ form.contato_pacinete }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.procedimento.label_tag }} {{ form.procedimento }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.hospital.label_tag }} {{ form.hospital }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.outro_local.label_tag }} {{ form.outro_local }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.cirurgiao.label_tag }} {{ form.cirurgiao }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.anestesista_responsavel.label_tag }} {{ form.anestesista_responsavel }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.link_nps.label_tag }} {{ form.link_nps }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
+                    </div>
+                    <div class="conditional-container">
+                        <div class="form-group">
+                            {{ form.data_visita_pre_anestesica.label_tag }} {{ form.data_visita_pre_anestesica }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.foto_anexo.label_tag }} {{ form.foto_anexo }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.nome_responsavel_visita.label_tag }} {{ form.nome_responsavel_visita }}
+                        </div>
+                    </div>
                     <button type="submit" class="btn btn-primary">Criar Agendamento</button>
                 </form>
             </div>
@@ -242,6 +290,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Apply masks
         $("input[name='data']").inputmask("99/99/9999");  // dd/mm/yyyy
         $("input[name='time']").inputmask("99:99");  // hh:mm
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const visitaPreAnestesicaCheckbox = document.getElementById('id_visita_pre_anestesica');
+        const conditionalFields = document.querySelectorAll('.conditional-field');
+    
+        function toggleConditionalFields() {
+            if (visitaPreAnestesicaCheckbox.checked) {
+                conditionalFields.forEach(field => field.style.display = 'block');
+            } else {
+                conditionalFields.forEach(field => field.style.display = 'none');
+            }
+        }
+    
+        visitaPreAnestesicaCheckbox.addEventListener('change', toggleConditionalFields);
+        toggleConditionalFields(); // Initial call to set the correct state on page load
     });
 </script>
 {% endblock %}

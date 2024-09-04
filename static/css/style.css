@@ -1012,7 +1012,8 @@ select {
 }
 
 .modal-content {
-    background-color: #fefefe;
+    background-color: #101820;
+    color: #ffffff;
     margin: 15% auto; 
     padding: 20px;
     border: 1px solid #888;
