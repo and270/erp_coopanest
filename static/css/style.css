@@ -1069,11 +1069,3 @@ select {
     gap: 1px;
     background-color: #000000;
 }
-
-.month-view {
-    grid-template-columns: repeat(7, 1fr);
-}
-
-.week-view {
-    grid-template-columns: auto repeat(7, 1fr);
-}
