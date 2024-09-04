@@ -921,6 +921,19 @@ select {
     grid-column: 2 / -1;
 }
 
+.week-view .calendar-days span {
+    grid-column: span 1;
+}
+
+.week-view .calendar-days span:first-child {
+    grid-column: 2;
+}
+
+.week-view .time-slots,
+.week-view .day-column {
+    border-top: 1px solid #e0e0e0;
+}
+
 .time-slots {
     grid-column: 1 / 2;
     display: grid;
@@ -954,17 +967,4 @@ select {
 
 .other-month {
     opacity: 0.5;
-}
-
-.week-view .calendar-days span {
-    grid-column: span 1;
-}
-
-.week-view .calendar-days span:first-child {
-    grid-column: 2;
-}
-
-.week-view .time-slots,
-.week-view .day-column {
-    border-top: 1px solid #e0e0e0;
 }
