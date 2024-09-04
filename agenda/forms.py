@@ -17,9 +17,15 @@ class ProcedimentoForm(forms.ModelForm):
         label="Hora do Procedimento"
     )
 
+    end_time = forms.TimeField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'hh:mm'}),
+        input_formats=['%H:%M'],
+        label="Hora de Término"
+    )
+
     class Meta:
         model = Procedimento
-        exclude = ['group', 'data_horario'] 
+        exclude = ['group', 'data_horario', 'data_horario_fim']
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
@@ -35,6 +41,7 @@ class ProcedimentoForm(forms.ModelForm):
             'procedimento_type': self.fields['procedimento_type'],
             'data': self.fields['data'],
             'time': self.fields['time'],
+            'end_time': self.fields['end_time'],
             'nome_paciente': self.fields['nome_paciente'],
             'contato_pacinete': self.fields['contato_pacinete'],
             'procedimento': self.fields['procedimento'],
@@ -65,7 +72,9 @@ class ProcedimentoForm(forms.ModelForm):
         instance = super().save(commit=False)
         date = self.cleaned_data['data']
         time = self.cleaned_data['time']
+        end_time = self.cleaned_data['end_time']
         instance.data_horario = datetime.combine(date, time)
+        instance.data_horario_fim = datetime.combine(date, end_time)
         if commit:
             instance.save()
         return instance

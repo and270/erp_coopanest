@@ -93,6 +93,12 @@ def agenda_view(request):
         week_dates = []
 
     procedimentos = Procedimento.objects.filter(group=user.group)
+
+    for procedimento in procedimentos:
+        if procedimento.data_horario_fim:
+            procedimento.duration = (procedimento.data_horario_fim - procedimento.data_horario).total_seconds() // 3600  # Duration in hours
+        else:
+            procedimento.duration = 1
     
     context = {
         'calendar_dates': calendar_dates,
