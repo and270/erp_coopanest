@@ -1183,8 +1183,8 @@ select {
     opacity: 0.9;
 }
 
+/* Default styles for procedure-card */
 .procedure-card {
-    background-color: #418FDE;
     color: #ffffff;
     border-radius: 5px;
     padding: 5px;
@@ -1195,7 +1195,7 @@ select {
 }
 
 .procedure-card:hover {
-    background-color: #2c659e;
+    opacity: 0.9;
 }
 
 .procedure-card span {
@@ -1207,4 +1207,17 @@ select {
 
 .procedure-card span:first-child {
     font-weight: bold;
+}
+
+/* Specific colors based on procedimento_type */
+.cirurgia {
+    background-color: #4CAF50; /* Green for CIRURGIA_PROCEDIMENTO */
+}
+
+.fora-centro {
+    background-color: #FFA500; /* Orange for FORA_CENTRO_PROCEDIMENTO */
+}
+
+.exame {
+    background-color: #FFD700; /* Gold for EXAME_PROCEDIMENTO */
 }

@@ -157,7 +157,7 @@
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
                             {% if procedimento.data_horario.date == date.day.date %}
-                                <div class="procedure-card" data-id="{{ procedimento.id }}">
+                            <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
                                     <span>{{ procedimento.nome_paciente }}</span>
                                     <span>{{ procedimento.procedimento }}</span>
                                 </div>
@@ -203,7 +203,7 @@
                             <div class="hour-slot">
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" and procedimento.data_horario|date:"H" == hour %}
-                                        <div class="procedure-card" data-id="{{ procedimento.id }}">
+                                    <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
                                             <span>{{ procedimento.nome_paciente }}</span>
                                             <span>{{ procedimento.procedimento }}</span>
                                         </div>
