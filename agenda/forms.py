@@ -19,6 +19,32 @@ class ProcedimentoForm(forms.ModelForm):
         model = Procedimento
         exclude = ['group', 'data_horario'] 
 
+    def __init__(self, *args, **kwargs):
+        super(ProcedimentoForm, self).__init__(*args, **kwargs)
+        # Reorder fields: set the order manually
+        self.fields['procedimento_type'].label = 'Tipo de Procedimento'
+        self.fields['data'].label = 'Data do Procedimento'
+        self.fields['time'].label = 'Hora do Procedimento'
+
+        # Set the order explicitly: first procedimento_type, then data and time
+        self.fields = {
+            'procedimento_type': self.fields['procedimento_type'],
+            'data': self.fields['data'],
+            'time': self.fields['time'],
+            'nome_paciente': self.fields['nome_paciente'],
+            'contato_pacinete': self.fields['contato_pacinete'],
+            'procedimento': self.fields['procedimento'],
+            'hospital': self.fields['hospital'],
+            'outro_local': self.fields['outro_local'],
+            'cirurgiao': self.fields['cirurgiao'],
+            'anestesista_responsavel': self.fields['anestesista_responsavel'],
+            'link_nps': self.fields['link_nps'],
+            'visita_pre_anestesica': self.fields['visita_pre_anestesica'],
+            'data_visita_pre_anestesica': self.fields['data_visita_pre_anestesica'],
+            'foto_anexo': self.fields['foto_anexo'],
+            'nome_responsavel_visita': self.fields['nome_responsavel_visita']
+        }
+
     def save(self, commit=True):
         # Combine the date and time fields to form the `data_horario`
         instance = super().save(commit=False)
