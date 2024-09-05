@@ -12,6 +12,7 @@ from django.utils.translation import gettext as _
 from django.http import JsonResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
+from django.forms.utils import ErrorDict
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -35,7 +36,7 @@ def update_procedure(request, procedure_id):
 
 @require_http_methods(["POST"])
 def create_procedure(request):
-    form = ProcedimentoForm(request.POST, request.FILES)
+    form = ProcedimentoForm(request.POST, request.FILES, user=request.user)
     if form.is_valid():
         procedure = form.save(commit=False)
         procedure.group = request.user.group
@@ -48,7 +49,7 @@ def create_procedure(request):
     else:
         return JsonResponse({
             'success': False,
-            'errors': form.errors,
+            'errors': ErrorDict(form.errors).as_json(),
             'message': 'Erro ao criar procedimento.'
         })
 

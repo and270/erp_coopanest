@@ -414,6 +414,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         const procedureId = document.getElementById('procedure_id').value;
         
+         // Reset previous error messages
+        document.querySelectorAll('.error-message').forEach(el => el.remove());
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
         fetch(procedureId ? `/update-procedure/${procedureId}/` : '/create-procedure/', {
             method: 'POST',
             body: formData,
@@ -426,7 +430,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 location.reload();  // Reload the page to show the updated data
             } else {
-                alert('Failed to save the procedure. Please try again.');
+                const errors = JSON.parse(data.errors);
+                Object.keys(errors).forEach(fieldName => {
+                    const field = document.getElementById(`id_${fieldName}`);
+                    if (field) {
+                        field.classList.add('is-invalid');
+                        const errorMessage = document.createElement('div');
+                        errorMessage.className = 'invalid-feedback error-message';
+                        errorMessage.textContent = errors[fieldName][0].message;
+                        field.parentNode.appendChild(errorMessage);
+                    }
+                });
+                alert('Erro ao salvar o procedimento. Verifique os campos e tente novamente.');
             }
         });
     });
