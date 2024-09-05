@@ -9,14 +9,85 @@ from datetime import datetime, timedelta
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
     5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
     9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
 }
+
+@require_http_methods(["POST"])
+def update_procedure(request, procedure_id):
+    procedure = get_object_or_404(Procedimento, id=procedure_id)
+    
+    # Check if user belongs to the same group as the procedure
+    if request.user.group != procedure.group:
+        return HttpResponseForbidden("You don't have permission to update this procedure.")
+    
+    form = ProcedimentoForm(request.POST, request.FILES, instance=procedure)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False, 'errors': form.errors})
+
+@require_http_methods(["POST"])
+def create_procedure(request):
+    form = ProcedimentoForm(request.POST, request.FILES)
+    if form.is_valid():
+        procedure = form.save(commit=False)
+        procedure.group = request.user.group
+        procedure.save()
+        return JsonResponse({
+            'success': True,
+            'id': procedure.id,
+            'message': 'Procedimento criado com sucesso.'
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'errors': form.errors,
+            'message': 'Erro ao criar procedimento.'
+        })
+
+@require_http_methods(["POST"])
+def delete_procedure(request, procedure_id):
+    procedure = get_object_or_404(Procedimento, id=procedure_id)
+    
+    # Check if user belongs to the same group as the procedure
+    if request.user.group != procedure.group:
+        return HttpResponseForbidden("You don't have permission to delete this procedure.")
+    
+    procedure.delete()
+    return JsonResponse({'success': True})
+
+def get_procedure(request, procedure_id):
+    procedure = get_object_or_404(Procedimento, id=procedure_id)
+    
+    # Check if user belongs to the same group as the procedure
+    if request.user.group != procedure.group:
+        return HttpResponseForbidden("You don't have permission to view this procedure.")
+    
+    data = {
+        'procedimento_type': procedure.procedimento_type,
+        'data': procedure.data_horario.strftime('%d/%m/%Y'),
+        'time': procedure.data_horario.strftime('%H:%M'),
+        'end_time': procedure.data_horario_fim.strftime('%H:%M'),
+        'nome_paciente': procedure.nome_paciente,
+        'contato_pacinete': procedure.contato_pacinete,
+        'procedimento': procedure.procedimento,
+        'hospital': procedure.hospital.id if procedure.hospital else '',
+        'outro_local': procedure.outro_local,
+        'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
+        'anestesista_responsavel': procedure.anestesista_responsavel.id if procedure.anestesista_responsavel else '',
+        'link_nps': procedure.link_nps,
+        'visita_pre_anestesica': procedure.visita_pre_anestesica,
+        'data_visita_pre_anestesica': procedure.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedure.data_visita_pre_anestesica else '',
+        'nome_responsavel_visita': procedure.nome_responsavel_visita,
+    }
+    return JsonResponse(data)
 
 def get_calendar_dates(year, month):
     _, num_days = monthrange(year, month)

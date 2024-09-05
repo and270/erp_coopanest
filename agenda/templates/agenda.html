@@ -35,8 +35,9 @@
                 <div class="modal-content">
                     <span class="close">&times;</span>
                     <br>
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data" id="procedimento-form">
                         {% csrf_token %}
+                        <input type="hidden" name="procedure_id" id="procedure_id">
                         {{ form.non_field_errors }}
                         <div class="form-group">
                             {{ form.procedimento_type.label_tag }} {{ form.procedimento_type }}
@@ -88,7 +89,7 @@
                                 {{ form.nome_responsavel_visita.label_tag }} {{ form.nome_responsavel_visita }}
                             </div>
                         </div>
-                        <button type="submit" class="cadastrar-btn">Criar Agendamento</button>
+                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Agendamento</button>
                     </form>
                 </div>
             </div>
@@ -164,20 +165,25 @@
                                     <span>{{ procedimento.nome_paciente }}</span>
                                     <span>{{ procedimento.procedimento }}</span>
                                 </div>
-                                <div id="procedure-details-modal" class="procedure-modal" style="display:none;">
+                                <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                     <div class="procedure-modal-content">
+                                        <span class="close-modal">&times;</span>
                                         <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
                                         <p><span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
                                         <p><span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
-                                        <p>Local: <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
-                                        <p>Início: <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
-                                        <p>Fim: <span class="modal-time">{{ procedimento.data_horario_fim|date:"d/m/Y H:i" }}</span></p>
-                                        <p>Cirurgião: <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
-                                        <p>Anestesista: <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
-                                        <p>Link NPS: <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
-                                        <p>Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
-                                        <p>Data da Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
-                                        <p>Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                        <p><strong>Local:</strong> <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
+                                        <p><strong>Início:</strong> <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
+                                        <p><strong>Fim:</strong> <span class="modal-time">{{ procedimento.data_horario_fim|date:"d/m/Y H:i" }}</span></p>
+                                        <p><strong>Cirurgião:</strong> <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
+                                        <p><strong>Anestesista:</strong> <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
+                                        <p><strong>Link NPS:</strong> <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
+                                        <p><strong>Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
+                                        <p><strong>Data da Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
+                                        <p><strong>Responsável pela Visita:</strong> <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                        <div class="modal-actions">
+                                            <button class="btn btn-primary edit-procedure">Editar</button>
+                                            <button class="btn btn-danger delete-procedure">Cancelar</button>
+                                        </div>
                                     </div>
                                 </div>
                             {% endif %}
@@ -210,8 +216,9 @@
                                             <span>{{ procedimento.nome_paciente }}</span>
                                             <span>{{ procedimento.procedimento }}</span>
                                         </div>
-                                        <div id="procedure-details-modal" class="procedure-modal" style="display:none;">
+                                        <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                             <div class="procedure-modal-content">
+                                                <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
                                                 <p><span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
                                                 <p><span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
@@ -224,6 +231,10 @@
                                                 <p>Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
                                                 <p>Data da Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
                                                 <p>Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                                <div class="modal-actions">
+                                                    <button class="btn btn-primary edit-procedure">Editar</button>
+                                                    <button class="btn btn-danger delete-procedure">Cancelar</button>
+                                                </div>
                                             </div>
                                         </div>
                                     {% endif %}
@@ -390,88 +401,209 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 </script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const procedureCards = document.querySelectorAll('.procedure-card');
-        procedureCards.forEach(card => {
-            card.addEventListener('click', function() {
-                const procedimentoId = this.getAttribute('data-id');
-            });
-        });
 
-        // Close the modal
-        document.querySelector('.close-modal').addEventListener('click', function() {
-            document.getElementById('procedure-details-modal').style.display = 'none';
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
+    const procedureFormModal = document.getElementById('procedimento-form-modal');
+    const formSubmitBtn = document.getElementById('form-submit-btn');
+    const procedimentoForm = document.getElementById('procedimento-form');
+    
+    procedimentoForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const procedureId = document.getElementById('procedure_id').value;
+        
+        fetch(procedureId ? `/update-procedure/${procedureId}/` : '/create-procedure/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();  // Reload the page to show the updated data
+            } else {
+                alert('Failed to save the procedure. Please try again.');
+            }
         });
     });
+    
+    procedureCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const procedureId = this.getAttribute('data-id');
+            const modal = document.getElementById(`procedure-details-modal-${procedureId}`);
+            
+            if (modal) {
+                // Get the position of the clicked card
+                const rect = this.getBoundingClientRect();
+                
+                // Show the modal to get its dimensions
+                modal.style.display = 'block';
+                const modalRect = modal.getBoundingClientRect();
+                
+                // Calculate available space
+                const spaceRight = window.innerWidth - rect.right;
+                const spaceBottom = window.innerHeight - rect.bottom;
+                
+                // Determine horizontal position
+                if (spaceRight >= modalRect.width) {
+                    // Enough space on the right
+                    modal.style.left = rect.left + 'px';
+                    modal.style.right = 'auto';
+                } else if (rect.left >= modalRect.width) {
+                    // Not enough space on the right, but enough on the left
+                    modal.style.left = (rect.right - modalRect.width) + 'px';
+                    modal.style.right = 'auto';
+                } else {
+                    // Not enough space on either side, center it
+                    modal.style.left = Math.max(0, (window.innerWidth - modalRect.width) / 2) + 'px';
+                    modal.style.right = 'auto';
+                }
+                
+                // Determine vertical position
+                if (spaceBottom >= modalRect.height) {
+                    // Enough space below
+                    modal.style.top = (rect.bottom + window.scrollY) + 'px';
+                } else if (rect.top >= modalRect.height) {
+                    // Not enough space below, but enough above
+                    modal.style.top = (rect.top + window.scrollY - modalRect.height) + 'px';
+                } else {
+                    // Not enough space above or below, position at top of viewport
+                    modal.style.top = window.scrollY + 'px';
+                }
+                
+                // Ensure the modal doesn't exceed viewport boundaries
+                const updatedModalRect = modal.getBoundingClientRect();
+                if (updatedModalRect.right > window.innerWidth) {
+                    modal.style.left = (window.innerWidth - modalRect.width) + 'px';
+                }
+                if (updatedModalRect.bottom > window.innerHeight + window.scrollY) {
+                    modal.style.top = (window.innerHeight + window.scrollY - modalRect.height) + 'px';
+                }
+                
+                // Set the procedure ID as a data attribute on the modal
+                modal.setAttribute('data-procedure-id', procedureId);
+            }
+        });
+    });
+    
+    // Edit button click handler
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('edit-procedure')) {
+            const modal = e.target.closest('.procedure-modal');
+            const procedureId = modal.getAttribute('data-procedure-id');
+            
+            // Hide the details modal
+            modal.style.display = 'none';
+            
+            // Load the procedure data into the form
+            loadProcedureDataIntoForm(procedureId);
+        }
+    });
+    
+    // Delete button click handler
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('delete-procedure')) {
+            const modal = e.target.closest('.procedure-modal');
+            const procedureId = modal.getAttribute('data-procedure-id');
+            
+            if (confirm('Tem certeza que deseja cancelar este procedimento?')) {
+                deleteProcedure(procedureId);
+            }
+        }
+    });
+    
+    function loadProcedureDataIntoForm(procedureId) {
+        fetch(`/get-procedure/${procedureId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('procedure_id').value = procedureId;
+                document.getElementById('id_procedimento_type').value = data.procedimento_type;
+                document.getElementById('id_data').value = data.data;
+                document.getElementById('id_time').value = data.time;
+                document.getElementById('id_end_time').value = data.end_time;
+                document.getElementById('id_nome_paciente').value = data.nome_paciente;
+                document.getElementById('id_contato_pacinete').value = data.contato_pacinete;
+                document.getElementById('id_procedimento').value = data.procedimento;
+                document.getElementById('id_hospital').value = data.hospital;
+                document.getElementById('id_outro_local').value = data.outro_local;
+                document.getElementById('id_cirurgiao').value = data.cirurgiao;
+                document.getElementById('id_anestesista_responsavel').value = data.anestesista_responsavel;
+                document.getElementById('id_link_nps').value = data.link_nps;
+                document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
+                document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
+                document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
+                
+                // Show the form modal for editing
+                procedureFormModal.style.display = 'block';
+                formSubmitBtn.textContent = 'Editar Agendamento';
+            });
+    }
+    
+    // Function to delete a procedure
+    function deleteProcedure(procedureId) {
+        fetch(`/delete-procedure/${procedureId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to delete the procedure. Please try again.');
+            }
+        });
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Reset form when opening for a new procedure
+    document.getElementById('agendar-btn').addEventListener('click', function() {
+        document.querySelector('#procedimento-form-modal form').reset();
+        document.getElementById('procedure_id').value = '';
+        formSubmitBtn.textContent = 'Criar Agendamento';
+        procedureFormModal.style.display = 'block';
+    });
+});
 </script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
-        
-        procedureCards.forEach(card => {
-            card.addEventListener('click', function(e) {
-                e.stopPropagation(); // Prevent event from bubbling up
-                const modal = this.closest('.day, .hour-slot').querySelector('.procedure-modal');
-                if (modal) {
-                    // Get the position of the clicked card
-                    const rect = this.getBoundingClientRect();
-                    
-                    // Show the modal to get its dimensions
-                    modal.style.display = 'block';
-                    const modalRect = modal.getBoundingClientRect();
-                    
-                    // Calculate available space
-                    const spaceRight = window.innerWidth - rect.right;
-                    const spaceBottom = window.innerHeight - rect.bottom;
-                    
-                    // Determine horizontal position
-                    if (spaceRight >= modalRect.width) {
-                        // Enough space on the right
-                        modal.style.left = rect.left + 'px';
-                        modal.style.right = 'auto';
-                    } else if (rect.left >= modalRect.width) {
-                        // Not enough space on the right, but enough on the left
-                        modal.style.left = (rect.right - modalRect.width) + 'px';
-                        modal.style.right = 'auto';
-                    } else {
-                        // Not enough space on either side, center it
-                        modal.style.left = Math.max(0, (window.innerWidth - modalRect.width) / 2) + 'px';
-                        modal.style.right = 'auto';
-                    }
-                    
-                    // Determine vertical position
-                    if (spaceBottom >= modalRect.height) {
-                        // Enough space below
-                        modal.style.top = (rect.bottom + window.scrollY) + 'px';
-                    } else if (rect.top >= modalRect.height) {
-                        // Not enough space below, but enough above
-                        modal.style.top = (rect.top + window.scrollY - modalRect.height) + 'px';
-                    } else {
-                        // Not enough space above or below, position at top of viewport
-                        modal.style.top = window.scrollY + 'px';
-                    }
-                    
-                    // Ensure the modal doesn't exceed viewport boundaries
-                    const updatedModalRect = modal.getBoundingClientRect();
-                    if (updatedModalRect.right > window.innerWidth) {
-                        modal.style.left = (window.innerWidth - modalRect.width) + 'px';
-                    }
-                    if (updatedModalRect.bottom > window.innerHeight + window.scrollY) {
-                        modal.style.top = (window.innerHeight + window.scrollY - modalRect.height) + 'px';
-                    }
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('close-modal')) {
+                const modal = e.target.closest('.procedure-modal');
+                modal.style.display = 'none';
+            }
+        });
+        window.addEventListener('click', function(e) {
+            const modals = document.querySelectorAll('.procedure-modal');
+            modals.forEach(modal => {
+                if (e.target == modal) {
+                    modal.style.display = 'none';
                 }
             });
-        });
-    
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            if (!event.target.closest('.procedure-card') && !event.target.closest('.procedure-modal')) {
-                const modals = document.querySelectorAll('.procedure-modal');
-                modals.forEach(modal => {
-                    modal.style.display = 'none';
-                });
-            }
         });
     });
     </script>
