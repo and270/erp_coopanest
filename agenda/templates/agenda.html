@@ -160,24 +160,24 @@
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
                             {% if procedimento.data_horario.date == date.day.date %}
-                            <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
+                                <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
                                     <span>{{ procedimento.nome_paciente }}</span>
                                     <span>{{ procedimento.procedimento }}</span>
                                 </div>
                                 <div id="procedure-details-modal" class="procedure-modal" style="display:none;">
                                     <div class="procedure-modal-content">
-                                        <span class="close-modal">&times;</span>
-                                        <p>Nome do Paciente: <span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                        <p>Contato do Paciente: <span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
-                                        <p>Procedimento: <span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
+                                        <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                        <p><span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
+                                        <p><span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
                                         <p>Local: <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
-                                        <p>Data e Horário: <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
+                                        <p>Início: <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
+                                        <p>Fim: <span class="modal-time">{{ procedimento.data_horario_fim|date:"d/m/Y H:i" }}</span></p>
                                         <p>Cirurgião: <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
-                                        <p>Anestesista Responsável: <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
+                                        <p>Anestesista: <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
                                         <p>Link NPS: <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
                                         <p>Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
                                         <p>Data da Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
-                                        <p>Nome do Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                        <p>Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
                                     </div>
                                 </div>
                             {% endif %}
@@ -206,24 +206,24 @@
                             <div class="hour-slot">
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" and procedimento.data_horario|date:"H" <= hour and procedimento.data_horario_fim|date:"H" > hour %}
-                                    <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
+                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
                                             <span>{{ procedimento.nome_paciente }}</span>
                                             <span>{{ procedimento.procedimento }}</span>
                                         </div>
                                         <div id="procedure-details-modal" class="procedure-modal" style="display:none;">
                                             <div class="procedure-modal-content">
-                                                <span class="close-modal">&times;</span>
-                                                <p>Nome do Paciente: <span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                                <p>Contato do Paciente: <span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
-                                                <p>Procedimento: <span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
+                                                <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                                <p><span class="modal-contact">{{ procedimento.contato_pacinete }}</span></p>
+                                                <p><span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
                                                 <p>Local: <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
-                                                <p>Data e Horário: <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
+                                                <p>Início: <span class="modal-time">{{ procedimento.data_horario|date:"d/m/Y H:i" }}</span></p>
+                                                <p>Fim: <span class="modal-time">{{ procedimento.data_horario_fim|date:"d/m/Y H:i" }}</span></p>
                                                 <p>Cirurgião: <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
-                                                <p>Anestesista Responsável: <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
+                                                <p>Anestesista: <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
                                                 <p>Link NPS: <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
                                                 <p>Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
                                                 <p>Data da Visita Pré-Anestésica: <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
-                                                <p>Nome do Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                                <p>Responsável pela Visita: <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
                                             </div>
                                         </div>
                                     {% endif %}
@@ -405,5 +405,74 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 </script>
-
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
+        
+        procedureCards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent event from bubbling up
+                const modal = this.closest('.day, .hour-slot').querySelector('.procedure-modal');
+                if (modal) {
+                    // Get the position of the clicked card
+                    const rect = this.getBoundingClientRect();
+                    
+                    // Show the modal to get its dimensions
+                    modal.style.display = 'block';
+                    const modalRect = modal.getBoundingClientRect();
+                    
+                    // Calculate available space
+                    const spaceRight = window.innerWidth - rect.right;
+                    const spaceBottom = window.innerHeight - rect.bottom;
+                    
+                    // Determine horizontal position
+                    if (spaceRight >= modalRect.width) {
+                        // Enough space on the right
+                        modal.style.left = rect.left + 'px';
+                        modal.style.right = 'auto';
+                    } else if (rect.left >= modalRect.width) {
+                        // Not enough space on the right, but enough on the left
+                        modal.style.left = (rect.right - modalRect.width) + 'px';
+                        modal.style.right = 'auto';
+                    } else {
+                        // Not enough space on either side, center it
+                        modal.style.left = Math.max(0, (window.innerWidth - modalRect.width) / 2) + 'px';
+                        modal.style.right = 'auto';
+                    }
+                    
+                    // Determine vertical position
+                    if (spaceBottom >= modalRect.height) {
+                        // Enough space below
+                        modal.style.top = (rect.bottom + window.scrollY) + 'px';
+                    } else if (rect.top >= modalRect.height) {
+                        // Not enough space below, but enough above
+                        modal.style.top = (rect.top + window.scrollY - modalRect.height) + 'px';
+                    } else {
+                        // Not enough space above or below, position at top of viewport
+                        modal.style.top = window.scrollY + 'px';
+                    }
+                    
+                    // Ensure the modal doesn't exceed viewport boundaries
+                    const updatedModalRect = modal.getBoundingClientRect();
+                    if (updatedModalRect.right > window.innerWidth) {
+                        modal.style.left = (window.innerWidth - modalRect.width) + 'px';
+                    }
+                    if (updatedModalRect.bottom > window.innerHeight + window.scrollY) {
+                        modal.style.top = (window.innerHeight + window.scrollY - modalRect.height) + 'px';
+                    }
+                }
+            });
+        });
+    
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (!event.target.closest('.procedure-card') && !event.target.closest('.procedure-modal')) {
+                const modals = document.querySelectorAll('.procedure-modal');
+                modals.forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+        });
+    });
+    </script>
 {% endblock %}

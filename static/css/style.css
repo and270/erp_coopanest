@@ -1133,6 +1133,10 @@ select {
     display: none; /* Hidden by default */
 }
 
+.procedure-modal.right-aligned {
+    right: 0;
+}
+
 .procedure-modal-content {
     font-family: Arial, sans-serif;
     font-size: 14px;
