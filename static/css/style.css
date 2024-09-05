@@ -1201,8 +1201,8 @@ select {
     height: 100%; /* Ensure the card covers the entire hour slot */
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: left;
+    align-items: left;
     padding: 5px;
     box-sizing: border-box;
     max-width: 30%;
