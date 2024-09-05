@@ -364,6 +364,47 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDateRange();
         loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
     });
+
+    // Function to open the form modal with pre-filled data
+    function openFormModal(date, time) {
+        const formModal = document.getElementById('procedimento-form-modal');
+        const dateField = document.getElementById('id_data');
+        const timeField = document.getElementById('id_time');
+        
+        // Pre-fill the date and time fields
+        dateField.value = date;
+        if (time) {
+            timeField.value = time;
+        } else {
+            timeField.value = '';
+        }
+
+        // Show the form modal
+        formModal.style.display = 'block';
+    }
+
+    // Add event listeners to month view cells
+    const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
+    monthViewCells.forEach(cell => {
+        cell.addEventListener('click', function() {
+            const date = this.querySelector('span').textContent.trim();
+            const month = currentMonth.toString().padStart(2, '0');
+            const year = currentYear;
+            const formattedDate = `${date}/${month}/${year}`;
+            openFormModal(formattedDate);
+        });
+    });
+
+    // Add event listeners to week view cells
+    const weekViewCells = document.querySelectorAll('.calendar-grid.week-view .hour-slot');
+    weekViewCells.forEach(cell => {
+        cell.addEventListener('click', function() {
+            const date = this.closest('.day-column').querySelector('.day-column').textContent.trim();
+            const time = this.querySelector('.time-slot').textContent.trim();
+            const formattedDate = date.split('(')[1].split(')')[0]; // Extract date from (dd/mm)
+            openFormModal(formattedDate, time);
+        });
+    });
 });
 </script>
 
