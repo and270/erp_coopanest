@@ -28,11 +28,15 @@ def update_procedure(request, procedure_id):
     if request.user.group != procedure.group:
         return HttpResponseForbidden("You don't have permission to update this procedure.")
     
-    form = ProcedimentoForm(request.POST, request.FILES, instance=procedure)
+    form = ProcedimentoForm(request.POST, request.FILES, instance=procedure, user=request.user)
     if form.is_valid():
         form.save()
-        return JsonResponse({'success': True})
-    return JsonResponse({'success': False, 'errors': form.errors})
+        return JsonResponse({'success': True, 'message': 'Procedimento atualizado com sucesso.'})
+    return JsonResponse({
+        'success': False,
+        'errors': ErrorDict(form.errors).as_json(),
+        'message': 'Erro ao atualizar procedimento.'
+    })
 
 @require_http_methods(["POST"])
 def create_procedure(request):
