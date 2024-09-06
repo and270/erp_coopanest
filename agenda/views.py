@@ -25,7 +25,7 @@ def update_procedure(request, procedure_id):
     procedure = get_object_or_404(Procedimento, id=procedure_id)
     
     # Check if user belongs to the same group as the procedure
-    if request.user.group != procedure.group:
+    if not request.user.validado or request.user.group != procedure.group:
         return HttpResponseForbidden("You don't have permission to update this procedure.")
     
     form = ProcedimentoForm(request.POST, request.FILES, instance=procedure, user=request.user)
@@ -40,6 +40,9 @@ def update_procedure(request, procedure_id):
 
 @require_http_methods(["POST"])
 def create_procedure(request):
+    if not request.user.validado:
+        return HttpResponseForbidden("You don't have permission to update this procedure.")
+    
     form = ProcedimentoForm(request.POST, request.FILES, user=request.user)
     if form.is_valid():
         procedure = form.save(commit=False)
@@ -62,7 +65,7 @@ def delete_procedure(request, procedure_id):
     procedure = get_object_or_404(Procedimento, id=procedure_id)
     
     # Check if user belongs to the same group as the procedure
-    if request.user.group != procedure.group:
+    if not request.user.validado or request.user.group != procedure.group:
         return HttpResponseForbidden("You don't have permission to delete this procedure.")
     
     procedure.delete()
@@ -72,7 +75,7 @@ def get_procedure(request, procedure_id):
     procedure = get_object_or_404(Procedimento, id=procedure_id)
     
     # Check if user belongs to the same group as the procedure
-    if request.user.group != procedure.group:
+    if not request.user.validado or request.user.group != procedure.group:
         return HttpResponseForbidden("You don't have permission to view this procedure.")
     
     data = {
@@ -81,7 +84,8 @@ def get_procedure(request, procedure_id):
         'time': procedure.data_horario.strftime('%H:%M'),
         'end_time': procedure.data_horario_fim.strftime('%H:%M'),
         'nome_paciente': procedure.nome_paciente,
-        'contato_pacinete': procedure.contato_pacinete,
+        'telefone_paciente': procedure.telefone_paciente,
+        'email_paciente': procedure.email_paciente,
         'procedimento': procedure.procedimento,
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
@@ -198,6 +202,10 @@ def agenda_view(request):
 @login_required
 def get_procedimento_details(request, procedimento_id):
     procedimento = get_object_or_404(Procedimento, id=procedimento_id)
+    
+    if not request.user.validado or request.user.group != procedimento.group:
+        return HttpResponseForbidden("You don't have permission to view this procedure.")
+    
     data = {
         'nome_paciente': procedimento.nome_paciente,
         'contato_paciente': procedimento.contato_pacinete,

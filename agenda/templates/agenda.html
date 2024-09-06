@@ -597,7 +597,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_time').value = data.time;
                 document.getElementById('id_end_time').value = data.end_time;
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
-                document.getElementById('id_contato_pacinete').value = data.contato_pacinete;
+                document.getElementById('id_telefone_paciente').value = data.telefone_paciente;
+                document.getElementById('id_email_paciente').value = data.email_paciente;
                 document.getElementById('id_procedimento').value = data.procedimento;
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
@@ -608,6 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
                 
+                toggleConditionalFields();
                 // Show the form modal for editing
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Editar Agendamento';
