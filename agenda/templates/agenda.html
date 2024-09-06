@@ -372,11 +372,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const timeField = document.getElementById('id_time');
         
         // Pre-fill the date and time fields
-        dateField.value = date;
+        $(dateField).inputmask("setvalue", date);
         if (time) {
-            timeField.value = time;
+            $(timeField).inputmask("setvalue", time);
         } else {
-            timeField.value = '';
+            $(timeField).inputmask("setvalue", "");
         }
 
         // Show the form modal
@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
     monthViewCells.forEach(cell => {
         cell.addEventListener('click', function() {
-            const date = this.querySelector('span').textContent.trim();
+            const date = this.querySelector('span').textContent.trim().padStart(2, '0');
             const month = currentMonth.toString().padStart(2, '0');
             const year = currentYear;
             const formattedDate = `${date}/${month}/${year}`;
@@ -399,10 +399,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const weekViewCells = document.querySelectorAll('.calendar-grid.week-view .hour-slot');
     weekViewCells.forEach(cell => {
         cell.addEventListener('click', function() {
-            const date = this.closest('.day-column').querySelector('.day-column').textContent.trim();
-            const time = this.querySelector('.time-slot').textContent.trim();
-            const formattedDate = date.split('(')[1].split(')')[0]; // Extract date from (dd/mm)
-            openFormModal(formattedDate, time);
+            const dateElement = this.closest('.day-column').querySelector('.day-column');
+            const dateText = dateElement.textContent.trim();
+            const date = dateText.match(/\((\d{2}\/\d{2})\)/)[1]; // Extract date from (dd/mm)
+            const time = this.closest('.hour-slot').querySelector('.time-slot').textContent.trim();
+            openFormModal(date, time);
         });
     });
 });
@@ -416,12 +417,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('procedimento-form-modal').style.display = 'none';
     });
 </script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
 <script>
     $(document).ready(function(){
         // Apply masks
         $("input[name='data']").inputmask("99/99/9999");  // dd/mm/yyyy
-        $("input[name='time']").inputmask("99:99");  // hh:mm
+        $("input[name='time'], input[name='end_time']").inputmask("99:99");  // hh:mm
     });
 </script>
 <script>
