@@ -395,15 +395,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
+    const procedureFormModal = document.getElementById('procedimento-form-modal');
+    const formSubmitBtn = document.getElementById('form-submit-btn');
+    const procedimentoForm = document.getElementById('procedimento-form');
+
     // Add event listeners to week view cells
     const weekViewCells = document.querySelectorAll('.calendar-grid.week-view .hour-slot');
     weekViewCells.forEach(cell => {
-        cell.addEventListener('click', function() {
-            const dateElement = this.closest('.day-column').querySelector('.day-column');
-            const dateText = dateElement.textContent.trim();
-            const date = dateText.match(/\((\d{2}\/\d{2})\)/)[1]; // Extract date from (dd/mm)
-            const time = this.closest('.hour-slot').querySelector('.time-slot').textContent.trim();
-            openFormModal(date, time);
+        cell.addEventListener('click', function(e) {
+            // Prevent opening the form if clicking on an existing procedure card
+            if (!e.target.closest('.procedure-card')) {
+                procedureFormModal.style.display = 'block';
+                procedimentoForm.reset();
+                document.getElementById('procedure_id').value = '';
+                formSubmitBtn.textContent = 'Criar Agendamento';
+            }
         });
     });
 });
