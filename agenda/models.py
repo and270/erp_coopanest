@@ -1,6 +1,6 @@
 from django.utils import timezone
 from django.db import models
-from constants import CIRURGIA_PROCEDIMENTO, EXAME_PROCEDIMENTO, FORA_CENTRO_PROCEDIMENTO
+from constants import CIRURGIA_PROCEDIMENTO, EXAME_PROCEDIMENTO, FORA_CENTRO_PROCEDIMENTO, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
 
 class Procedimento(models.Model):
@@ -42,12 +42,35 @@ class Procedimento(models.Model):
         return f'{self.procedimento} - {self.nome_paciente}'
 
 class EscalaAnestesiologista(models.Model):
+
+    ESCALA_TYPE = (
+        (PLANTONISTA_ESCALA , 'Plantonista'),
+        (SUBSTITUTO_ESCALA , 'Substituto'),
+        (FERIAS_ESCALA , 'Férias/Licença'),
+    )
+    DIAS_DA_SEMANA = (
+        (1, 'Segunda-feira'),
+        (2, 'Terça-feira'),
+        (3, 'Quarta-feira'),
+        (4, 'Quinta-feira'),
+        (5, 'Sexta-feira'),
+        (6, 'Sábado'),
+        (7, 'Domingo'),
+    )
+
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
+    escala_type = models.CharField(
+        max_length=40,
+        default=PLANTONISTA_ESCALA,
+        choices=ESCALA_TYPE,
+        verbose_name='Tipo de Escala',
+    )
     anestesiologista = models.ForeignKey(Anesthesiologist, on_delete=models.CASCADE, verbose_name='Anestesiologista')
-    data_inicio = models.DateTimeField(verbose_name='Início do Turno')
-    data_fim = models.DateTimeField(verbose_name='Fim do Turno')
-    coringa = models.BooleanField(default=False, verbose_name='Coringa')
-    fixo = models.BooleanField(default=False, verbose_name='Fixo')
+    data_inicio = models.DateField(verbose_name='Início do Turno', default=timezone.now)
+    data_fim = models.DateField(verbose_name='Fim do Turno', default=timezone.now)
+    hora_inicio = models.TimeField(verbose_name='Hora de Início', default=timezone.now().replace(hour=8, minute=0, second=0, microsecond=0))
+    hora_fim = models.TimeField(verbose_name='Hora de Fim', default=timezone.now().replace(hour=17, minute=0, second=0, microsecond=0))
+    dias_da_semana = models.CharField(max_length=20, choices=DIAS_DA_SEMANA, verbose_name='Dias da Semana', default='1')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
     
     class Meta:

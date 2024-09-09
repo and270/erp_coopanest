@@ -1,0 +1,166 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Escala{% endblock %}
+
+{% block content %}
+<div class="agenda-container">
+    <div class="agenda-header">
+        <div class="left-controls">
+            <button class="btn btn-primary" id="criar-escala-btn">+ CRIAR ESCALA</button>
+            <div id="escala-form-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <br>
+                    <form method="POST" id="escala-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="escala_id" id="escala_id">
+                        {{ form.as_p }}
+                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Escala</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="center-controls">
+            <div class="view-switcher">
+                <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
+                <h2 id="current-date-range"></h2>
+                <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
+            </div>
+            <ul class="event-types">
+                <li><span class="color-indicator plantonista"></span>PLANTONISTA</li>
+                <li><span class="color-indicator substituto"></span>SUBSTITUTO</li>
+                <li><span class="color-indicator ferias"></span>FÉRIAS/LICENÇA</li>
+            </ul>
+        </div>
+
+        <div class="right-controls">
+            <div class="agenda-scale">
+                <input type="radio" id="agenda-view" name="view-toggle">
+                <label for="agenda-view"><b>AGENDA</b></label>
+                <input type="radio" id="scale-view" name="view-toggle" checked>
+                <label for="scale-view"><b>ESCALA</b></label>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div class="calendar-main">
+            <div class="escala-grid">
+                <div class="escala-days">
+                    <span>DOM</span>
+                    <span>SEG</span>
+                    <span>TER</span>
+                    <span>QUA</span>
+                    <span>QUI</span>
+                    <span>SEX</span>
+                    <span>SÁB</span>
+                </div>
+                {% for week in weeks %}
+                    <div class="escala-week-row">
+                        <div class="escala-week-dates">{{ week.start_date|date:"d/m" }} - {{ week.end_date|date:"d/m" }}</div>
+                        {% for day in week.days %}
+                            <div class="escala-day-cell" data-date="{{ day|date:'Y-m-d' }}">
+                                {% for escala in escalas %}
+                                    {% if escala.data_inicio <= day and escala.data_fim >= day and escala.dias_da_semana|stringformat:"s"|slice:":1" == day|date:"w" %}
+                                        <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}">
+                                            {{ escala.anestesiologista.name }}: {{ escala.get_escala_type_display }}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const criarEscalaBtn = document.getElementById('criar-escala-btn');
+    const escalaFormModal = document.getElementById('escala-form-modal');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentDateRange = document.getElementById('current-date-range');
+    
+    let currentStartDate = new Date('{{ weeks.0.start_date|date:"Y-m-d" }}');
+
+    function updateDateRange() {
+        const endDate = new Date(currentStartDate);
+        endDate.setDate(endDate.getDate() + 27); // 4 weeks - 1 day
+        currentDateRange.textContent = `${formatDate(currentStartDate)} até ${formatDate(endDate)}`;
+    }
+
+    function formatDate(date) {
+        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+    }
+
+    updateDateRange();
+
+    prevBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        currentStartDate.setDate(currentStartDate.getDate() - 28);
+        updateDateRange();
+        loadEscalas(currentStartDate);
+    });
+
+    nextBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        currentStartDate.setDate(currentStartDate.getDate() + 28);
+        updateDateRange();
+        loadEscalas(currentStartDate);
+    });
+
+    function loadEscalas(startDate) {
+        // Here you would typically make an AJAX call to fetch new data
+        // For now, we'll just reload the page with the new date
+        window.location.href = `/escala/?start_date=${startDate.toISOString().split('T')[0]}`;
+    }
+
+    criarEscalaBtn.addEventListener('click', function() {
+        escalaFormModal.style.display = 'block';
+        document.getElementById('escala-form').reset();
+        document.getElementById('escala_id').value = '';
+        document.getElementById('form-submit-btn').textContent = 'Criar Escala';
+    });
+    
+    document.querySelector('.close').addEventListener('click', function() {
+        escalaFormModal.style.display = 'none';
+    });
+    
+    window.addEventListener('click', function(event) {
+        if (event.target == escalaFormModal) {
+            escalaFormModal.style.display = 'none';
+        }
+    });
+
+    // ... (keep the rest of your existing JavaScript)
+});
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const agendaRadio = document.getElementById('agenda-view');
+        const escalaRadio = document.getElementById('scale-view');
+        
+        // Add an event listener for the "ESCALA" view
+        escalaRadio.addEventListener('change', function() {
+            if (escalaRadio.checked) {
+                window.location.href = "{% url 'escala' %}";  // Redirect to escala view
+            }
+        });
+
+        // Add an event listener for the "AGENDA" view, in case you need to toggle back
+        agendaRadio.addEventListener('change', function() {
+            if (agendaRadio.checked) {
+                window.location.href = "{% url 'agenda' %}";  // Redirect to agenda view
+            }
+        });
+    });
+</script>
+{% endblock %}

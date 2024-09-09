@@ -112,9 +112,9 @@
 
         <div class="right-controls">
             <div class="agenda-scale">
-                <input type="checkbox" id="agenda-view" name="agenda-view" checked disabled>
-                <label for="agenda-scale"><b>AGENDA</b></label>
-                <input type="checkbox" id="scale-view" name="scale-view" disabled>
+                <input type="radio" id="agenda-view" name="view-toggle" checked>
+                <label for="agenda-view"><b>AGENDA</b></label>
+                <input type="radio" id="scale-view" name="view-toggle">
                 <label for="scale-view"><b>ESCALA</b></label>
             </div>
         </div>
@@ -679,4 +679,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const agendaRadio = document.getElementById('agenda-view');
+        const escalaRadio = document.getElementById('scale-view');
+        
+        // Add an event listener for the "ESCALA" view
+        escalaRadio.addEventListener('change', function() {
+            if (escalaRadio.checked) {
+                window.location.href = "{% url 'escala' %}";  // Redirect to escala view
+            }
+        });
+
+        // Add an event listener for the "AGENDA" view, in case you need to toggle back
+        agendaRadio.addEventListener('change', function() {
+            if (agendaRadio.checked) {
+                window.location.href = "{% url 'agenda' %}";  // Redirect to agenda view
+            }
+        });
+    });
+</script>
+
 {% endblock %}

@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 
-from registration.models import CustomUser
+from registration.models import Anesthesiologist, CustomUser
 from .models import Procedimento, EscalaAnestesiologista
 from .forms import ProcedimentoForm, EscalaForm
 from django.contrib.auth.decorators import login_required
@@ -217,5 +217,105 @@ def get_procedimento_details(request, procedimento_id):
         'link_nps': procedimento.link_nps,
         'visita_pre_anestesica': procedimento.visita_pre_anestesica,
         'data_visita_pre_anestesica': procedimento.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedimento.data_visita_pre_anestesica else None,
+    }
+    return JsonResponse(data)
+
+@login_required
+def escala_view(request):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
+    user = CustomUser.objects.get(id=request.user.id)
+    
+    start_date_str = request.GET.get('start_date')
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = datetime.now().date() - timedelta(days=datetime.now().weekday())
+
+    end_date = start_date + timedelta(days=27)
+
+    weeks = []
+    for i in range(4):
+        week_start = start_date + timedelta(days=i*7)
+        week_end = week_start + timedelta(days=6)
+        weeks.append({
+            'start_date': week_start,
+            'end_date': week_end,
+            'days': [week_start + timedelta(days=x) for x in range(7)]
+        })
+
+    escalas = EscalaAnestesiologista.objects.filter(
+        group=user.group,
+        data_inicio__lte=end_date,
+        data_fim__gte=start_date
+    )
+
+    context = {
+        'weeks': weeks,
+        'escalas': escalas,
+        'form': EscalaForm(user=user),
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    }
+    
+    return render(request, 'escala.html', context)
+
+@require_http_methods(["POST"])
+def create_escala(request):
+    if not request.user.validado:
+        return HttpResponseForbidden("You don't have permission to create a scale.")
+    
+    form = EscalaForm(request.POST, user=request.user)
+    if form.is_valid():
+        escala = form.save(commit=False)
+        escala.group = request.user.group
+        escala.save()
+        return JsonResponse({
+            'success': True,
+            'id': escala.id,
+            'message': 'Escala criada com sucesso.'
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'errors': ErrorDict(form.errors).as_json(),
+            'message': 'Erro ao criar escala.'
+        })
+
+@require_http_methods(["POST"])
+def update_escala(request, escala_id):
+    escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
+    
+    if not request.user.validado or request.user.group != escala.group:
+        return HttpResponseForbidden("You don't have permission to update this scale.")
+    
+    form = EscalaForm(request.POST, instance=escala, user=request.user)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': 'Escala atualizada com sucesso.'})
+    return JsonResponse({
+        'success': False,
+        'errors': ErrorDict(form.errors).as_json(),
+        'message': 'Erro ao atualizar escala.'
+    })
+
+def get_escala(request, escala_id):
+    escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
+    
+    if not request.user.validado or request.user.group != escala.group:
+        return HttpResponseForbidden("You don't have permission to view this scale.")
+    
+    data = {
+        'escala_type': escala.escala_type,
+        'anestesiologista': escala.anestesiologista.id,
+        'data_inicio': escala.data_inicio.strftime('%Y-%m-%d'),
+        'data_fim': escala.data_fim.strftime('%Y-%m-%d'),
+        'hora_inicio': escala.hora_inicio.strftime('%H:%M'),
+        'hora_fim': escala.hora_fim.strftime('%H:%M'),
+        'dias_da_semana': escala.dias_da_semana,
+        'observacoes': escala.observacoes,
     }
     return JsonResponse(data)

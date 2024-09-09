@@ -81,6 +81,20 @@ class ProcedimentoForm(forms.ModelForm):
         return instance
 
 class EscalaForm(forms.ModelForm):
+
     class Meta:
         model = EscalaAnestesiologista
-        fields = '__all__'
+        fields = ['escala_type', 'anestesiologista', 'data_inicio', 'hora_inicio', 'data_fim', 'hora_fim', 'dias_da_semana', 'observacoes']
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(EscalaForm, self).__init__(*args, **kwargs)
+        if user:
+            # Filter the ForeignKey fields by the user's group
+            self.fields['anestesiologista'].queryset = Anesthesiologist.objects.filter(group=user.group)
+        self.fields['data_inicio'].widget.attrs.update({'class': 'form-control'})
+        self.fields['hora_inicio'].widget.attrs.update({'class': 'form-control'})
+        self.fields['data_fim'].widget.attrs.update({'class': 'form-control'})
+        self.fields['hora_fim'].widget.attrs.update({'class': 'form-control'})
+        self.fields['observacoes'].widget.attrs.update({'class': 'form-control'})
+
