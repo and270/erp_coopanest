@@ -5,7 +5,7 @@ from .models import Procedimento, EscalaAnestesiologista
 from .forms import ProcedimentoForm, EscalaForm
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange, weekday, SUNDAY
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
@@ -231,23 +231,14 @@ def escala_view(request):
     if start_date_str:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
     else:
-        start_date = datetime.now().date() - timedelta(days=datetime.now().weekday())
+        start_date = date.today() - timedelta(days=(date.today().weekday() + 1) % 7)  # Align to Sunday
 
-    end_date = start_date + timedelta(days=27)
 
-    weeks = []
-    for i in range(4):
-        week_start = start_date + timedelta(days=i*7)
-        week_end = week_start + timedelta(days=6)
-        weeks.append({
-            'start_date': week_start,
-            'end_date': week_end,
-            'days': [week_start + timedelta(days=x) for x in range(7)]
-        })
+    weeks = get_escala_week_dates(start_date)
 
     escalas = EscalaAnestesiologista.objects.filter(
         group=user.group,
-        data_inicio__lte=end_date,
+        data_inicio__lte=start_date + timedelta(days=27),
         data_fim__gte=start_date
     )
 
@@ -259,9 +250,12 @@ def escala_view(request):
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
+        'start_date': start_date,
+        'end_date': start_date + timedelta(days=27),
     }
     
     return render(request, 'escala.html', context)
+
 
 @require_http_methods(["POST"])
 def create_escala(request):
@@ -319,3 +313,23 @@ def get_escala(request, escala_id):
         'observacoes': escala.observacoes,
     }
     return JsonResponse(data)
+
+def get_escala_week_dates(start_date):
+    # Adjust the start date to the previous Sunday if it's not already Sunday
+    if start_date.weekday() != 6:
+        start_date -= timedelta(days=start_date.weekday() + 1)
+
+    weeks = []
+    for i in range(4):  # Create four weeks
+        week_start = start_date + timedelta(days=i * 7)
+        week_end = week_start + timedelta(days=6)
+        weeks.append({
+            'start_date': week_start,
+            'end_date': week_end,
+            'days': [week_start + timedelta(days=x) for x in range(7)]
+        })
+    
+    # Debug information
+    print(f"get_escala_week_dates - weeks[0]['start_date']: {weeks[0]['start_date']}")
+    
+    return weeks

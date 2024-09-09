@@ -4,6 +4,10 @@
 {% block title %}Escala{% endblock %}
 
 {% block content %}
+<div>
+    <p>Template - start_date: {{ start_date }}</p>
+    <p>Template - weeks[0].start_date: {{ weeks.0.start_date }}</p>
+</div>
 <div class="agenda-container">
     <div class="agenda-header">
         <div class="left-controls">
@@ -25,7 +29,7 @@
         <div class="center-controls">
             <div class="view-switcher">
                 <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
-                <h2 id="current-date-range"></h2>
+                <h2 id="current-date-range">{{ start_date|date:"d/m" }} até {{ start_date|add:"27 days"|date:"d/m" }}</h2>
                 <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
             </div>
             <ul class="event-types">
@@ -88,37 +92,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const nextBtn = document.getElementById('next-btn');
     const currentDateRange = document.getElementById('current-date-range');
     
-    let currentStartDate = new Date('{{ weeks.0.start_date|date:"Y-m-d" }}');
+    // Parse the start date string into year, month, and day components
+    const [year, month, day] = '{{ start_date|date:"Y-m-d" }}'.split('-').map(Number);
+    
+    // Create a Date object using UTC to avoid timezone issues
+    let currentStartDate = new Date(Date.UTC(year, month - 1, day));
 
     function updateDateRange() {
         const endDate = new Date(currentStartDate);
-        endDate.setDate(endDate.getDate() + 27); // 4 weeks - 1 day
+        endDate.setUTCDate(endDate.getUTCDate() + 27); // 4 weeks - 1 day
         currentDateRange.textContent = `${formatDate(currentStartDate)} até ${formatDate(endDate)}`;
     }
 
+
     function formatDate(date) {
-        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        return `${date.getUTCDate().toString().padStart(2, '0')}/${(date.getUTCMonth() + 1).toString().padStart(2, '0')}`;
     }
 
     updateDateRange();
 
     prevBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        currentStartDate.setDate(currentStartDate.getDate() - 28);
+        currentStartDate.setUTCDate(currentStartDate.getUTCDate() - 28);
         updateDateRange();
         loadEscalas(currentStartDate);
     });
 
     nextBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        currentStartDate.setDate(currentStartDate.getDate() + 28);
+        currentStartDate.setUTCDate(currentStartDate.getUTCDate() + 28);
         updateDateRange();
         loadEscalas(currentStartDate);
     });
 
     function loadEscalas(startDate) {
-        // Here you would typically make an AJAX call to fetch new data
-        // For now, we'll just reload the page with the new date
         window.location.href = `/escala/?start_date=${startDate.toISOString().split('T')[0]}`;
     }
 
@@ -139,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ... (keep the rest of your existing JavaScript)
+    // ... (rest of the JavaScript code remains the same)
 });
 </script>
 
