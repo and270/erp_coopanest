@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from agenda.models import Procedimento
+from agenda.models import EscalaAnestesiologista, Procedimento
 from registration.models import Anesthesiologist, CustomUser, Groups, HospitalClinic, Surgeon
 from django.contrib.auth.admin import UserAdmin
 
@@ -29,3 +29,4 @@ admin.site.register(Anesthesiologist)
 admin.site.register(Surgeon)
 admin.site.register(HospitalClinic)
 admin.site.register(Procedimento)
+admin.site.register(EscalaAnestesiologista)

@@ -1330,13 +1330,22 @@ select {
     background-color: #f5f5f5;
 }
 
+.escala-days span {
+    background-color: #418FDE; /* Blue background */
+    color: #ffffff; /* White text */
+    height: 30px; /* Adjust the height as needed */
+    display: flex; /* Ensure content is centered */
+    align-items: center; /* Vertically center the content */
+    justify-content: center; /* Horizontally center the content */
+}
+
 .escala-week-row {
     display: contents;
 }
 
 .escala-week-dates {
     padding: 10px;
-    background-color: #f5f5f5;
+    background-color: white;
     font-weight: bold;
 }
 

@@ -66,10 +66,10 @@ class EscalaAnestesiologista(models.Model):
         verbose_name='Tipo de Escala',
     )
     anestesiologista = models.ForeignKey(Anesthesiologist, on_delete=models.CASCADE, verbose_name='Anestesiologista')
-    data_inicio = models.DateField(verbose_name='Início do Turno', default=timezone.now)
-    data_fim = models.DateField(verbose_name='Fim do Turno', default=timezone.now)
-    hora_inicio = models.TimeField(verbose_name='Hora de Início', default=timezone.now().replace(hour=8, minute=0, second=0, microsecond=0))
-    hora_fim = models.TimeField(verbose_name='Hora de Fim', default=timezone.now().replace(hour=17, minute=0, second=0, microsecond=0))
+    data_inicio = models.DateField(verbose_name='Escala válida a partir do dia', default=timezone.now)
+    data_fim = models.DateField(verbose_name='Escala válida até o dia', default=timezone.now)
+    hora_inicio = models.TimeField(verbose_name='Hora de Início do Turno', default=timezone.now().replace(hour=8, minute=0, second=0, microsecond=0))
+    hora_fim = models.TimeField(verbose_name='Hora de Fim do Turno', default=timezone.now().replace(hour=17, minute=0, second=0, microsecond=0))
     dias_da_semana = models.CharField(max_length=20, choices=DIAS_DA_SEMANA, verbose_name='Dias da Semana', default='1')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
     
