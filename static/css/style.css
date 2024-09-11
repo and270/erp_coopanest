@@ -1356,15 +1356,19 @@ select {
 }
 
 .escala-item {
-    padding: 5px;
-    margin: 2px 0;
+    padding: 3px;
+    margin: 1px 0;
     border-radius: 3px;
     font-size: 0.8em;
 }
 
-.escala-item.plantonista_escala { background-color: #4CAF50; }
-.escala-item.substituto_escala { background-color: #FFA500; }
-.escala-item.ferias_escala { background-color: #F44336; }
+.escala-item p {
+    margin: 0.1em; /* Remove default paragraph margins */
+}
+
+.escala-item.plantonista { background-color: #4CAF50; }
+.escala-item.substituto { background-color: #FFA500; }
+.escala-item.ferias { background-color: #F44336; }
 
 .escala-legend {
     display: flex;
