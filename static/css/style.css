@@ -1310,6 +1310,9 @@ select {
     color: #dc3545;
 }
 
+.escala-header {
+    margin-bottom: 20px;
+}
 
 .escala-grid {
     display: grid;
@@ -1339,7 +1342,7 @@ select {
 
 .escala-day-cell {
     background-color: white;
-    min-height: 50px;
+    min-height: 90px;
     padding: 5px;
 }
 
@@ -1377,3 +1380,56 @@ select {
 .escala-color-indicator.plantonista { background-color: #4CAF50; }
 .escala-color-indicator.substituto { background-color: #FFA500; }
 .escala-color-indicator.ferias { background-color: #F44336; }
+
+
+.escala-types {
+    display: flex;
+    gap: 10px; /* Space between the buttons */
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.escala-types li {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 14px; /* Adjust padding for button-like appearance */
+    border-radius: 10px; /* Rounded corners */
+    font-weight: bold;
+    color: #ffffff;
+    cursor: default; /* Not clickable */
+}
+
+.escala-types .plantonista {
+    background-color: #4CAF50; /* Green */
+}
+
+.escala-types .substituto {
+    background-color: #DDA0DD; /* Plum */
+}
+
+.escala-types .ferias {
+    background-color: #FF0000; /* Red */
+}
+
+
+
+   .escala-view .view-switcher {
+    display: flex;
+    align-items: center; /* Ensures alignment of arrows and date */
+    gap: 5px; /* Reduce space between arrows and date */
+}
+
+.escala-view .view-switcher .btn-link {
+    padding: 0; /* Remove padding from the buttons */
+    margin: 0; /* Remove margin from the buttons */
+}
+
+.escala-view .view-switcher .escala-date-range {
+    margin: 0; /* Remove margin from the date range */
+}
+
+.escala-view .escala-date-range {
+    font-size: 1.4rem !important; /* Adjust the value as needed */
+}

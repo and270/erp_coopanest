@@ -4,12 +4,8 @@
 {% block title %}Escala{% endblock %}
 
 {% block content %}
-<div>
-    <p>Template - start_date: {{ start_date }}</p>
-    <p>Template - weeks[0].start_date: {{ weeks.0.start_date }}</p>
-</div>
-<div class="agenda-container">
-    <div class="agenda-header">
+<div class="agenda-container escala-view">
+    <div class="agenda-header escala-header">
         <div class="left-controls">
             <button class="btn btn-primary" id="criar-escala-btn">+ CRIAR ESCALA</button>
             <div id="escala-form-modal" class="modal" style="display:none;">
@@ -29,13 +25,13 @@
         <div class="center-controls">
             <div class="view-switcher">
                 <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
-                <h2 id="current-date-range">{{ start_date|date:"d/m" }} até {{ start_date|add:"27 days"|date:"d/m" }}</h2>
+                <h3 id="current-date-range" class="escala-date-range">{{ start_date|date:"d/m" }} até {{ start_date|add:"27 days"|date:"d/m" }}</h3>
                 <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
             </div>
-            <ul class="event-types">
-                <li><span class="color-indicator plantonista"></span>PLANTONISTA</li>
-                <li><span class="color-indicator substituto"></span>SUBSTITUTO</li>
-                <li><span class="color-indicator ferias"></span>FÉRIAS/LICENÇA</li>
+            <ul class="escala-types">
+                <li class="plantonista">PLANTONISTA</li>
+                <li class="substituto">SUBSTITUTO</li>
+                <li class="ferias">FÉRIAS/LICENÇA</li>
             </ul>
         </div>
 
