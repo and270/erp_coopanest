@@ -233,7 +233,6 @@ def escala_view(request):
     else:
         start_date = date.today() - timedelta(days=(date.today().weekday() + 1) % 7)  # Align to Sunday
 
-
     weeks = get_escala_week_dates(start_date)
 
     escalas = EscalaAnestesiologista.objects.filter(
@@ -242,16 +241,27 @@ def escala_view(request):
         data_fim__gte=start_date
     )
 
+    if request.method == 'POST':
+        form = EscalaForm(request.POST, user=user)
+        if form.is_valid():
+            escala = form.save(commit=False)
+            escala.group = user.group
+            escala.save()
+            return redirect('escala')
+    else:
+        form = EscalaForm(user=user)
+
     context = {
         'weeks': weeks,
         'escalas': escalas,
-        'form': EscalaForm(user=user),
+        'form': form,
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
         'start_date': start_date,
         'end_date': start_date + timedelta(days=27),
+        'form_errors': form.errors if request.method == 'POST' else None,  # Pass form errors to the context
     }
     
     return render(request, 'escala.html', context)
