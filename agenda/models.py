@@ -2,6 +2,7 @@ from django.utils import timezone
 from django.db import models
 from constants import CIRURGIA_PROCEDIMENTO, EXAME_PROCEDIMENTO, FORA_CENTRO_PROCEDIMENTO, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
+from django.contrib.postgres.fields import ArrayField
 
 class Procedimento(models.Model):
 
@@ -49,13 +50,13 @@ class EscalaAnestesiologista(models.Model):
         (FERIAS_ESCALA , 'Férias/Licença'),
     )
     DIAS_DA_SEMANA = (
-        (1, 'Segunda-feira'),
-        (2, 'Terça-feira'),
-        (3, 'Quarta-feira'),
-        (4, 'Quinta-feira'),
-        (5, 'Sexta-feira'),
-        (6, 'Sábado'),
-        (7, 'Domingo'),
+        ('0', 'Domingo'),
+        ('1', 'Segunda-feira'),
+        ('2', 'Terça-feira'),
+        ('3', 'Quarta-feira'),
+        ('4', 'Quinta-feira'),
+        ('5', 'Sexta-feira'),
+        ('6', 'Sábado'),
     )
 
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
@@ -70,7 +71,12 @@ class EscalaAnestesiologista(models.Model):
     data_fim = models.DateField(verbose_name='Escala válida até o dia', default=timezone.now)
     hora_inicio = models.TimeField(verbose_name='Hora de Início do Turno', default=timezone.now().replace(hour=8, minute=0, second=0, microsecond=0))
     hora_fim = models.TimeField(verbose_name='Hora de Fim do Turno', default=timezone.now().replace(hour=17, minute=0, second=0, microsecond=0))
-    dias_da_semana = models.CharField(max_length=20, choices=DIAS_DA_SEMANA, verbose_name='Dias da Semana', default='1')
+    dias_da_semana = ArrayField(
+        models.CharField(max_length=1, choices=DIAS_DA_SEMANA),
+        blank=True,
+        default=list,
+        verbose_name='Dias da Semana'
+    )
     observacoes = models.TextField(blank=True, verbose_name='Observações')
     
     class Meta:

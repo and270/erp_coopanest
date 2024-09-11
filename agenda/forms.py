@@ -82,6 +82,12 @@ class ProcedimentoForm(forms.ModelForm):
 
 class EscalaForm(forms.ModelForm):
 
+    dias_da_semana = forms.MultipleChoiceField(
+        choices=EscalaAnestesiologista.DIAS_DA_SEMANA,
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )
+
     class Meta:
         model = EscalaAnestesiologista
         fields = ['escala_type', 'anestesiologista', 'data_inicio', 'hora_inicio', 'data_fim', 'hora_fim', 'dias_da_semana', 'observacoes']
@@ -97,4 +103,15 @@ class EscalaForm(forms.ModelForm):
         self.fields['data_fim'].widget.attrs.update({'class': 'form-control'})
         self.fields['hora_fim'].widget.attrs.update({'class': 'form-control'})
         self.fields['observacoes'].widget.attrs.update({'class': 'form-control'})
+        self.fields['dias_da_semana'].widget.attrs.pop('class', None)
+
+    def clean_dias_da_semana(self):
+        return self.cleaned_data.get('dias_da_semana', [])
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.dias_da_semana = self.cleaned_data['dias_da_semana']
+        if commit:
+            instance.save()
+        return instance
 
