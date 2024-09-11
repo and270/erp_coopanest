@@ -124,11 +124,15 @@
                         {% for day in week.days %}
                             <div class="escala-day-cell" data-date="{{ day|date:'Y-m-d' }}">
                                 {% for escala in escalas %}
-                                    {% if escala.data_inicio <= day and escala.data_fim >= day and escala.dias_da_semana|stringformat:"s"|slice:":1" == day|date:"w" %}
-                                        <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}">
-                                            {{ escala.anestesiologista.name }}: {{ escala.get_escala_type_display }}
-                                        </div>
-                                    {% endif %}
+                                    {% with day_of_week=day|date:"w" %}
+                                        {% if escala.data_inicio <= day and escala.data_fim >= day and day_of_week in escala.dias_da_semana %}
+                                            <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}">
+                                                <p>{{ escala.anestesiologista.name }}</p>
+                                                <p>{{ escala.hora_inicio|time:"H:i" }} - {{ escala.hora_fim|time:"H:i" }}</p>
+                                                <p>{{ escala.get_escala_type_display }}</p>
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
                                 {% endfor %}
                             </div>
                         {% endfor %}
