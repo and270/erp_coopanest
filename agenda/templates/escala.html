@@ -164,6 +164,16 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
+<script>
+    $(document).ready(function(){
+        // Apply masks
+        $("#id_data_inicio, #id_data_fim").inputmask("99/99/9999");  // dd/mm/yyyy
+        $("#id_hora_inicio, #id_hora_fim").inputmask("99:99");  // hh:mm
+    });
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const criarEscalaBtn = document.getElementById('criar-escala-btn');
@@ -309,7 +319,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 function setInputValue(id, value) {
                     const element = document.getElementById(id);
                     if (element) {
-                        element.value = value;
+                        if (element.inputmask) {
+                            $(element).inputmask("setvalue", value);
+                        } else {
+                            element.value = value;
+                        }
                     } else {
                         console.warn(`Element with id '${id}' not found`);
                     }
