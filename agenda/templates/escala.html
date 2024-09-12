@@ -261,9 +261,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add event listener for the edit button
         const editButton = escalaDetailsModal.querySelector('.edit-escala');
-        editButton.addEventListener('click', function() {
-            loadEscalaDataIntoForm(data.id);
-        });
+        editButton.onclick = function() {
+            console.log('Edit button clicked');
+            openEditForm(data.id);
+        };
 
         // Add event listener for the delete button
         const deleteButton = escalaDetailsModal.querySelector('.delete-escala');
@@ -292,37 +293,62 @@ document.addEventListener('DOMContentLoaded', function() {
         return dias.map(dia => diasMap[dia]).join(', ');
     }
 
+    function openEditForm(escalaId) {
+        console.log('Opening edit form for escala id:', escalaId);
+        loadEscalaDataIntoForm(escalaId);
+    }
+
     function loadEscalaDataIntoForm(escalaId) {
+        console.log('Loading escala data for id:', escalaId);
         fetch(`/get-escala/${escalaId}/`)
             .then(response => response.json())
             .then(data => {
-                document.getElementById('escala_id').value = data.id;
-                document.getElementById('id_escala_type').value = data.escala_type;
-                document.getElementById('id_anestesiologista').value = data.anestesiologista;
-                document.getElementById('id_data_inicio').value = formatDateForInput(data.data_inicio);
-                document.getElementById('id_data_fim').value = formatDateForInput(data.data_fim);
-                document.getElementById('id_hora_inicio').value = data.hora_inicio;
-                document.getElementById('id_hora_fim').value = data.hora_fim;
+                console.log('Received escala data:', data);
                 
-                // Handle dias_da_semana (assuming it's a multiple select)
-                const diasDaSemanaSelect = document.getElementById('id_dias_da_semana');
-                if (diasDaSemanaSelect) {
-                    for (let option of diasDaSemanaSelect.options) {
-                        option.selected = data.dias_da_semana.includes(option.value);
+                // Helper function to safely set input values
+                function setInputValue(id, value) {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.value = value;
+                    } else {
+                        console.warn(`Element with id '${id}' not found`);
                     }
                 }
-                
-                document.getElementById('id_observacoes').value = data.observacoes;
 
+                setInputValue('escala_id', data.id);
+                setInputValue('id_escala_type', data.escala_type);
+                setInputValue('id_anestesiologista', data.anestesiologista);
+                setInputValue('id_data_inicio', formatDateForInput(data.data_inicio));
+                setInputValue('id_data_fim', formatDateForInput(data.data_fim));
+                setInputValue('id_hora_inicio', data.hora_inicio);
+                setInputValue('id_hora_fim', data.hora_fim);
+                setInputValue('id_observacoes', data.observacoes);
+
+                // Handle dias_da_semana (assuming it's rendered as checkboxes or multiple inputs)
+                const diasDaSemana = data.dias_da_semana || [];
+                diasDaSemana.forEach(dia => {
+                    const checkbox = document.getElementById(`id_dias_da_semana_${dia}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+
+                console.log('Form populated, showing form modal');
                 escalaDetailsModal.style.display = 'none';
                 escalaFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Editar Escala';
+            })
+            .catch(error => {
+                console.error('Error loading escala data:', error);
             });
     }
 
     function formatDateForInput(dateString) {
         const date = new Date(dateString);
-        return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
     }
 
     function deleteEscala(escalaId) {
