@@ -141,6 +141,26 @@
         </div>
     </div>    
 </div>
+
+<!-- Escala Details Modal -->
+<div id="escala-details-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Detalhes da Escala</h2>
+        <p><strong>Anestesiologista:</strong> <span id="modal-anestesiologista"></span></p>
+        <p><strong>Tipo:</strong> <span id="modal-escala-type"></span></p>
+        <p><strong>Data Início:</strong> <span id="modal-data-inicio"></span></p>
+        <p><strong>Data Fim:</strong> <span id="modal-data-fim"></span></p>
+        <p><strong>Hora Início:</strong> <span id="modal-hora-inicio"></span></p>
+        <p><strong>Hora Fim:</strong> <span id="modal-hora-fim"></span></p>
+        <p><strong>Dias da Semana:</strong> <span id="modal-dias-da-semana"></span></p>
+        <p><strong>Observações:</strong> <span id="modal-observacoes"></span></p>
+        <div class="modal-actions">
+            <button class="btn btn-primary edit-escala">Editar</button>
+            <button class="btn btn-danger delete-escala">Excluir</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -163,7 +183,6 @@ document.addEventListener('DOMContentLoaded', function() {
         endDate.setUTCDate(endDate.getUTCDate() + 27); // 4 weeks - 1 day
         currentDateRange.textContent = `${formatDate(currentStartDate)} até ${formatDate(endDate)}`;
     }
-
 
     function formatDate(date) {
         return `${date.getUTCDate().toString().padStart(2, '0')}/${(date.getUTCMonth() + 1).toString().padStart(2, '0')}`;
@@ -207,7 +226,179 @@ document.addEventListener('DOMContentLoaded', function() {
     //     }
     // });
 
-    // ... (rest of the JavaScript code remains the same)
+    const escalaItems = document.querySelectorAll('.escala-item');
+    const escalaDetailsModal = document.getElementById('escala-details-modal');
+    const escalaForm = document.getElementById('escala-form');
+    const formSubmitBtn = document.getElementById('form-submit-btn');
+
+    escalaItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const escalaId = this.getAttribute('data-id');
+            fetchEscalaDetails(escalaId);
+        });
+    });
+
+    function fetchEscalaDetails(escalaId) {
+        fetch(`/get-escala/${escalaId}/`)
+            .then(response => response.json())
+            .then(data => {
+                populateEscalaModal(data);
+                escalaDetailsModal.style.display = 'block';
+            });
+    }
+
+    function populateEscalaModal(data) {
+        document.getElementById('modal-anestesiologista').textContent = data.anestesiologista_name;
+        document.getElementById('modal-escala-type').textContent = data.escala_type;
+        document.getElementById('modal-data-inicio').textContent = formatDateFull(data.data_inicio);
+        document.getElementById('modal-data-fim').textContent = formatDateFull(data.data_fim);
+        document.getElementById('modal-hora-inicio').textContent = data.hora_inicio;
+        document.getElementById('modal-hora-fim').textContent = data.hora_fim;
+        document.getElementById('modal-dias-da-semana').textContent = formatDiasDaSemana(data.dias_da_semana);
+        document.getElementById('modal-observacoes').textContent = data.observacoes || 'Nenhuma observação';
+
+        escalaDetailsModal.setAttribute('data-escala-id', data.id);
+
+        // Add event listener for the edit button
+        const editButton = escalaDetailsModal.querySelector('.edit-escala');
+        editButton.addEventListener('click', function() {
+            loadEscalaDataIntoForm(data.id);
+        });
+
+        // Add event listener for the delete button
+        const deleteButton = escalaDetailsModal.querySelector('.delete-escala');
+        deleteButton.addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja excluir esta escala?')) {
+                deleteEscala(data.id);
+            }
+        });
+    }
+
+    function formatDateFull(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
+    }
+
+    function formatDiasDaSemana(dias) {
+        const diasMap = {
+            '0': 'Domingo',
+            '1': 'Segunda-feira',
+            '2': 'Terça-feira',
+            '3': 'Quarta-feira',
+            '4': 'Quinta-feira',
+            '5': 'Sexta-feira',
+            '6': 'Sábado'
+        };
+        return dias.map(dia => diasMap[dia]).join(', ');
+    }
+
+    function loadEscalaDataIntoForm(escalaId) {
+        fetch(`/get-escala/${escalaId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('escala_id').value = data.id;
+                document.getElementById('id_escala_type').value = data.escala_type;
+                document.getElementById('id_anestesiologista').value = data.anestesiologista;
+                document.getElementById('id_data_inicio').value = formatDateForInput(data.data_inicio);
+                document.getElementById('id_data_fim').value = formatDateForInput(data.data_fim);
+                document.getElementById('id_hora_inicio').value = data.hora_inicio;
+                document.getElementById('id_hora_fim').value = data.hora_fim;
+                
+                // Handle dias_da_semana (assuming it's a multiple select)
+                const diasDaSemanaSelect = document.getElementById('id_dias_da_semana');
+                if (diasDaSemanaSelect) {
+                    for (let option of diasDaSemanaSelect.options) {
+                        option.selected = data.dias_da_semana.includes(option.value);
+                    }
+                }
+                
+                document.getElementById('id_observacoes').value = data.observacoes;
+
+                escalaDetailsModal.style.display = 'none';
+                escalaFormModal.style.display = 'block';
+                formSubmitBtn.textContent = 'Editar Escala';
+            });
+    }
+
+    function formatDateForInput(dateString) {
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    }
+
+    function deleteEscala(escalaId) {
+        fetch(`/delete-escala/${escalaId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Falha ao excluir a escala. Por favor, tente novamente.');
+            }
+        });
+    }
+
+    escalaForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const escalaId = document.getElementById('escala_id').value;
+        
+        fetch(escalaId ? `/update-escala/${escalaId}/` : '/create-escala/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao salvar a escala. Verifique os campos e tente novamente.');
+            }
+        });
+    });
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Close modal when clicking on the close button or outside the modal
+    document.querySelector('#escala-details-modal .close').addEventListener('click', function() {
+        escalaDetailsModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', function(e) {
+        if (e.target == escalaDetailsModal) {
+            escalaDetailsModal.style.display = 'none';
+        }
+    });
+
+    // Reset form when opening for a new escala
+    document.getElementById('criar-escala-btn').addEventListener('click', function() {
+        escalaForm.reset();
+        document.getElementById('escala_id').value = '';
+        formSubmitBtn.textContent = 'Criar Escala';
+        escalaFormModal.style.display = 'block';
+    });
 });
 </script>
 

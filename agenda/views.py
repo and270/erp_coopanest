@@ -306,6 +306,16 @@ def update_escala(request, escala_id):
         'message': 'Erro ao atualizar escala.'
     })
 
+@require_http_methods(["POST"])
+def delete_escala(request, escala_id):
+    escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
+    
+    if not request.user.validado or request.user.group != escala.group:
+        return HttpResponseForbidden("You don't have permission to delete this scale.")
+    
+    escala.delete()
+    return JsonResponse({'success': True})
+
 def get_escala(request, escala_id):
     escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
     
@@ -313,8 +323,10 @@ def get_escala(request, escala_id):
         return HttpResponseForbidden("You don't have permission to view this scale.")
     
     data = {
-        'escala_type': escala.escala_type,
+        'id': escala.id,
+        'escala_type': escala.get_escala_type_display(),
         'anestesiologista': escala.anestesiologista.id,
+        'anestesiologista_name': escala.anestesiologista.name,
         'data_inicio': escala.data_inicio.strftime('%Y-%m-%d'),
         'data_fim': escala.data_fim.strftime('%Y-%m-%d'),
         'hora_inicio': escala.hora_inicio.strftime('%H:%M'),
