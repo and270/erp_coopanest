@@ -1446,7 +1446,6 @@ select {
 .escala-view .escala-date-range {
     font-size: 1.4rem !important; /* Adjust the value as needed */
 }
-
 .mini-calendar {
     padding: 10px;
     width: 100%; /* Ensure it fits within the container */
@@ -1478,9 +1477,11 @@ select {
 }
 
 .mini-calendar-header #mini-current-month {
-    font-size: 0.9rem;
+    font-size: 1rem; /* Reduce font size */
     font-weight: bold;
     color: #2c659e; /* Darker blue for the month title */
+    flex-grow: 1; /* Allow the month name to take up available space */
+    text-align: center; /* Center the month name */
 }
 
 .mini-calendar-weekdays {
