@@ -84,7 +84,7 @@ def get_procedure(request, procedure_id):
         'time': procedure.data_horario.strftime('%H:%M'),
         'end_time': procedure.data_horario_fim.strftime('%H:%M'),
         'nome_paciente': procedure.nome_paciente,
-        'telefone_paciente': procedure.telefone_paciente,
+        #'telefone_paciente': procedure.telefone_paciente,
         'email_paciente': procedure.email_paciente,
         'procedimento': procedure.procedimento,
         'hospital': procedure.hospital.id if procedure.hospital else '',

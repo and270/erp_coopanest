@@ -55,9 +55,6 @@
                             {{ form.nome_paciente.label_tag }} {{ form.nome_paciente }}
                         </div>
                         <div class="form-group">
-                            {{ form.telefone_paciente.label_tag }} {{ form.telefone_paciente }}
-                        </div>
-                        <div class="form-group">
                             {{ form.email_paciente.label_tag }} {{ form.email_paciente }}
                         </div>
                         <div class="form-group">
@@ -180,7 +177,6 @@
                                     <div class="procedure-modal-content">
                                         <span class="close-modal">&times;</span>
                                         <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                        <p><span class="modal-phone">{{ procedimento.telefone_paciente|default:"Não informado" }}</span></p>
                                         <p><span class="modal-email">{{ procedimento.email_paciente|default:"Não informado" }}</span></p>
                                         <p><span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
                                         <p><strong>Local:</strong> <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
@@ -232,7 +228,6 @@
                                             <div class="procedure-modal-content">
                                                 <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                                <p><span class="modal-phone">{{ procedimento.telefone_paciente|default:"Não informado" }}</span></p>
                                                 <p><span class="modal-email">{{ procedimento.email_paciente|default:"Não informado" }}</span></p>
                                                 <p><span class="modal-procedure">{{ procedimento.procedimento }}</span></p>
                                                 <p>Local: <span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></p>
@@ -605,7 +600,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_time').value = data.time;
                 document.getElementById('id_end_time').value = data.end_time;
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
-                document.getElementById('id_telefone_paciente').value = data.telefone_paciente;
                 document.getElementById('id_email_paciente').value = data.email_paciente;
                 document.getElementById('id_procedimento').value = data.procedimento;
                 document.getElementById('id_hospital').value = data.hospital;

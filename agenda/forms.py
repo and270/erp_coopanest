@@ -43,7 +43,7 @@ class ProcedimentoForm(forms.ModelForm):
             'time': self.fields['time'],
             'end_time': self.fields['end_time'],
             'nome_paciente': self.fields['nome_paciente'],
-            'telefone_paciente': self.fields['telefone_paciente'],
+            #'telefone_paciente': self.fields['telefone_paciente'],
             'email_paciente': self.fields['email_paciente'],
             'procedimento': self.fields['procedimento'],
             'hospital': self.fields['hospital'],
