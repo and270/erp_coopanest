@@ -804,8 +804,13 @@ select {
     align-items: center; /* Vertically centers the elements */
     justify-content: center; /* Horizontally centers the elements */
     gap: 20px; /* Adds space between elements */
+    width: 100%;
+    max-width: 600px; 
 }
 
+#prev-btn, #next-btn {
+    flex-shrink: 0; /* Prevent buttons from shrinking */
+}
 
 .right-controls {
     display: flex;
@@ -886,7 +891,12 @@ select {
 
 #current-date-range {
     margin: 0;
-    font-size: 2.2rem;
+    font-size: 1.5rem;
+    flex-grow: 1; /* Allow the date range to take up remaining space */
+    text-align: center; /* Center the text */
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden; /* Hide overflow text */
+    text-overflow: ellipsis;
 }
 
 .calendar-search {
