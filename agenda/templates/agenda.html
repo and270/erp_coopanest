@@ -189,6 +189,13 @@
                                         <p><strong>Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
                                         <p><strong>Data da Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
                                         <p><strong>Responsável pela Visita:</strong> <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                        <p><strong>Anexo Visita Pré-Anestésica:</strong> 
+                                            {% if procedimento.foto_anexo %}
+                                                <a href="{{ MEDIA_URL }}{{ procedimento.foto_anexo.name }}" target="_blank" class="modal-attachment">Ver anexo</a>
+                                            {% else %}
+                                                <span class="modal-attachment">Nenhum anexo disponível</span>
+                                            {% endif %}
+                                        </p>
                                         <div class="modal-actions">
                                             <button class="btn btn-primary edit-procedure">Editar</button>
                                             <button class="btn btn-danger delete-procedure">Cancelar</button>
@@ -241,6 +248,13 @@
                                                 <p><strong>Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
                                                 <p><strong>Data da Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
                                                 <p><strong>Responsável pela Visita:</strong> <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
+                                                <p><strong>Anexo Visita Pré-Anestésica:</strong> 
+                                                    {% if procedimento.foto_anexo %}
+                                                        <a href="{{ MEDIA_URL }}{{ procedimento.foto_anexo.name }}" target="_blank" class="modal-attachment">Ver anexo</a>
+                                                    {% else %}
+                                                        <span class="modal-attachment">Nenhum anexo disponível</span>
+                                                    {% endif %}
+                                                </p>
                                                 <div class="modal-actions">
                                                     <button class="btn btn-primary edit-procedure">Editar</button>
                                                     <button class="btn btn-danger delete-procedure">Cancelar</button>
