@@ -681,22 +681,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.classList.contains('close-modal')) {
-                const modal = e.target.closest('.procedure-modal');
+        const procedureModals = document.querySelectorAll('.procedure-modal');
+        const procedureFormModal = document.getElementById('procedimento-form-modal');
+        
+        // Close modal when clicking the "X"
+        procedureModals.forEach(modal => {
+            modal.querySelector('.close-modal').addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent further event propagation
                 modal.style.display = 'none';
-            }
+            });
         });
+
+        // Close modal when clicking outside of it
         window.addEventListener('click', function(e) {
-            const modals = document.querySelectorAll('.procedure-modal');
-            modals.forEach(modal => {
+            procedureModals.forEach(modal => {
                 if (e.target == modal) {
                     modal.style.display = 'none';
                 }
             });
         });
     });
-    </script>
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -801,6 +806,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
     monthViewCells.forEach(cell => {
         cell.addEventListener('click', function() {
+            if (e.target.closest('.procedure-modal')) {
+                return;
+            }
             const date = this.querySelector('span').textContent.trim().padStart(2, '0');
             const month = currentMonth.toString().padStart(2, '0');
             const year = currentYear;
