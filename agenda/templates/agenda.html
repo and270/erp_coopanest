@@ -191,7 +191,7 @@
                                         <p><strong>Responsável pela Visita:</strong> <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
                                         <p><strong>Anexo Visita Pré-Anestésica:</strong> 
                                             {% if procedimento.foto_anexo %}
-                                                <a href="{{ MEDIA_URL }}{{ procedimento.foto_anexo.name }}" target="_blank" class="modal-attachment">Ver anexo</a>
+                                                <a href="{% url 'protected_file' procedimento.foto_anexo.name %}" target="_blank" class="modal-attachment">Ver anexo</a>
                                             {% else %}
                                                 <span class="modal-attachment">Nenhum anexo disponível</span>
                                             {% endif %}
@@ -250,7 +250,7 @@
                                                 <p><strong>Responsável pela Visita:</strong> <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
                                                 <p><strong>Anexo Visita Pré-Anestésica:</strong> 
                                                     {% if procedimento.foto_anexo %}
-                                                        <a href="{{ MEDIA_URL }}{{ procedimento.foto_anexo.name }}" target="_blank" class="modal-attachment">Ver anexo</a>
+                                                        <a href="{% url 'protected_file' procedimento.foto_anexo.name %}" target="_blank" class="modal-attachment">Ver anexo</a>
                                                     {% else %}
                                                         <span class="modal-attachment">Nenhum anexo disponível</span>
                                                     {% endif %}

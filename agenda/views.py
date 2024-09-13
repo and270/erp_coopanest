@@ -13,6 +13,9 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
 from django.forms.utils import ErrorDict
+from django.http import HttpResponse, Http404
+from django.conf import settings
+import os
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -357,3 +360,25 @@ def get_escala_week_dates(start_date):
     print(f"get_escala_week_dates - weeks[0]['start_date']: {weeks[0]['start_date']}")
     
     return weeks
+
+@login_required
+def serve_protected_file(request, file_path):
+    # Check if the user is authenticated and validated
+    if not request.user.is_authenticated or not request.user.validado:
+        raise Http404("You don't have permission to access this file.")
+
+    # Get the procedure associated with this file
+    procedure = get_object_or_404(Procedimento, foto_anexo=file_path)
+
+    # Check if the user belongs to the same group as the procedure
+    if request.user.group != procedure.group:
+        raise Http404("You don't have permission to access this file.")
+
+    # Serve the file
+    file_path = os.path.join(settings.MEDIA_ROOT, file_path)
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type="application/octet-stream")
+            response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+            return response
+    raise Http404
