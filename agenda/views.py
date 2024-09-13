@@ -377,8 +377,14 @@ def serve_protected_file(request, file_path):
     # Serve the file
     file_path = os.path.join(settings.MEDIA_ROOT, file_path)
     if os.path.exists(file_path):
+        import mimetypes
         with open(file_path, 'rb') as fh:
-            response = HttpResponse(fh.read(), content_type="application/octet-stream")
+            # Determine the MIME type of the file
+            content_type, _ = mimetypes.guess_type(file_path)
+            if content_type is None:
+                content_type = 'application/octet-stream'
+            
+            response = HttpResponse(fh.read(), content_type=content_type)
             response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
             return response
     raise Http404
