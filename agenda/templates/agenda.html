@@ -769,7 +769,105 @@ document.addEventListener('DOMContentLoaded', function() {
         updateMiniCalendar();
     });
 
+    // Function to open the form modal with pre-filled data
+    function openFormModal(date, time) {
+        const formModal = document.getElementById('procedimento-form-modal');
+        const dateField = document.getElementById('id_data');
+        const timeField = document.getElementById('id_time');
+        
+        // Pre-fill the date and time fields
+        $(dateField).inputmask("setvalue", date);
+        if (time) {
+            $(timeField).inputmask("setvalue", time);
+        } else {
+            $(timeField).inputmask("setvalue", "");
+        }
+
+        // Show the form modal
+        formModal.style.display = 'block';
+    }
+
+    // Add event listeners to month view cells
+    const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
+    monthViewCells.forEach(cell => {
+        cell.addEventListener('click', function() {
+            const date = this.querySelector('span').textContent.trim().padStart(2, '0');
+            const month = currentMonth.toString().padStart(2, '0');
+            const year = currentYear;
+            const formattedDate = `${date}/${month}/${year}`;
+            openFormModal(formattedDate);
+        });
+    });
+
+    // Add event listeners to mini calendar dates
+    function addMiniCalendarEventListeners() {
+        const miniCalendarDates = document.querySelectorAll('.mini-calendar-date');
+        miniCalendarDates.forEach(cell => {
+            cell.addEventListener('click', function() {
+                const date = this.textContent.trim().padStart(2, '0');
+                const month = (miniCurrentMonthIndex + 1).toString().padStart(2, '0');
+                const year = miniCurrentYear;
+                const formattedDate = `${date}/${month}/${year}`;
+                console.log(`Mini calendar date clicked: ${formattedDate}`); // Debugging line
+                openFormModal(formattedDate);
+            });
+        });
+    }
+
+    // Call the function to add event listeners to mini calendar dates
+    addMiniCalendarEventListeners();
+
+    // Update mini calendar function to re-attach event listeners after updating the calendar
+    function updateMiniCalendar() {
+        const monthName = MONTH_NAMES_PT[miniCurrentMonthIndex];
+        miniCurrentMonth.textContent = `${monthName} ${miniCurrentYear}`;
+
+        const firstDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex, 1);
+        const lastDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex + 1, 0);
+        const firstDayWeekday = firstDayOfMonth.getDay();
+        const lastDate = lastDayOfMonth.getDate();
+
+        miniCalendarDates.innerHTML = '';
+
+        // Fill in the days from the previous month
+        for (let i = 0; i < firstDayWeekday; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.classList.add('mini-calendar-date', 'empty');
+            miniCalendarDates.appendChild(emptyCell);
+        }
+
+        // Fill in the days of the current month
+        for (let date = 1; date <= lastDate; date++) {
+            const dateCell = document.createElement('div');
+            dateCell.classList.add('mini-calendar-date');
+            dateCell.textContent = date;
+            miniCalendarDates.appendChild(dateCell);
+        }
+
+        // Re-attach event listeners to the new mini calendar dates
+        addMiniCalendarEventListeners();
+    }
+
+    miniPrevBtn.addEventListener('click', function() {
+        miniCurrentMonthIndex--;
+        if (miniCurrentMonthIndex < 0) {
+            miniCurrentMonthIndex = 11;
+            miniCurrentYear--;
+        }
+        updateMiniCalendar();
+    });
+
+    miniNextBtn.addEventListener('click', function() {
+        miniCurrentMonthIndex++;
+        if (miniCurrentMonthIndex > 11) {
+            miniCurrentMonthIndex = 0;
+            miniCurrentYear++;
+        }
+        updateMiniCalendar();
+    });
+
     updateMiniCalendar();
 });
 </script>
+
 {% endblock %}
