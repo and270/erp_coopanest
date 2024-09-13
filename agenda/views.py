@@ -194,7 +194,9 @@ def agenda_view(request):
         'view_type': view_type,
         'week_dates': week_dates, 
         'procedimentos': procedimentos,
-        'form': form
+        'form': form,
+        'mini_calendar_year': year,
+        'mini_calendar_month': month,
     }
     
     return render(request, 'agenda.html', context)

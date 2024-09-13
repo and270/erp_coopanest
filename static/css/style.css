@@ -1446,3 +1446,90 @@ select {
 .escala-view .escala-date-range {
     font-size: 1.4rem !important; /* Adjust the value as needed */
 }
+
+.mini-calendar {
+    padding: 10px;
+    width: 100%; /* Ensure it fits within the container */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    background-color: transparent; /* Remove background color */
+    border: none; /* Remove border */
+}
+
+.mini-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.mini-calendar-header .btn-link {
+    background: none;
+    border: none;
+    color: #418FDE;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.mini-calendar-header .btn-link:hover {
+    color: #2c659e;
+}
+
+.mini-calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 0.9rem; /* Adjust font size */
+    color: #000; /* Set color to black */
+}
+
+.mini-calendar-dates {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.mini-calendar-date {
+    text-align: center;
+    padding: 5px 0; /* Adjust padding to ensure alignment */
+    cursor: pointer;
+    font-size: 0.9rem; /* Adjust font size */
+    color: #000; /* Set color to black */
+}
+
+.mini-calendar-date:hover {
+    background-color: #ddd;
+}
+
+.mini-calendar-date.empty {
+    background-color: transparent;
+    cursor: default;
+}
+
+.mini-calendar-date.other-month {
+    color: #aaa; /* Lighter color for days of other months */
+}
+
+.mini-calendar-date.current-day {
+    background-color: #418FDE; /* Highlight current day */
+    color: #fff; /* White text for current day */
+}
+
+.mini-calendar-header .btn-link {
+    background: none;
+    border: none;
+    color: #418FDE;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px; /* Add padding for better click area */
+}
+
+.mini-calendar-header .btn-link:hover {
+    color: #2c659e;
+}
+
+.mini-calendar-header .btn-link:disabled {
+    color: #ccc; /* Disabled state color */
+    cursor: not-allowed;
+}

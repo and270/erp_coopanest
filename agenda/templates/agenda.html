@@ -137,11 +137,19 @@
 
     <div class="calendar-container">
         <div class="calendar-sidebar">
-            <!-- Mini calendar implementation goes here
             <div class="mini-calendar">
-                 
+                <div class="mini-calendar-header">
+                    <span id="mini-current-month"></span>
+                    <button id="mini-prev-btn" class="btn-link">&lt;</button>
+                    <button id="mini-next-btn" class="btn-link">&gt;</button>
+                </div>
+                <div class="mini-calendar-weekdays">
+                    <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                </div>
+                <div class="mini-calendar-dates" id="mini-calendar-dates">
+                    <!-- Dates will be populated here by JavaScript -->
+                </div>
             </div>
-            -->
             <ul class="event-types">
                 <li><button class="btn-cirurgias">CIRURGIAS</button></li>
                 <li><button class="btn-procedimentos">PROCEDIMENTOS FORA DO CENTRO CIRÚRGICO</button></li>
@@ -700,5 +708,68 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const miniPrevBtn = document.getElementById('mini-prev-btn');
+    const miniNextBtn = document.getElementById('mini-next-btn');
+    const miniCurrentMonth = document.getElementById('mini-current-month');
+    const miniCalendarDates = document.getElementById('mini-calendar-dates');
 
+    let miniCurrentYear = new Date().getFullYear();
+    let miniCurrentMonthIndex = new Date().getMonth();
+
+    const MONTH_NAMES_PT = {
+        0: 'Janeiro', 1: 'Fevereiro', 2: 'Março', 3: 'Abril',
+        4: 'Maio', 5: 'Junho', 6: 'Julho', 7: 'Agosto',
+        8: 'Setembro', 9: 'Outubro', 10: 'Novembro', 11: 'Dezembro'
+    };
+
+    function updateMiniCalendar() {
+        const monthName = MONTH_NAMES_PT[miniCurrentMonthIndex];
+        miniCurrentMonth.textContent = `${monthName} ${miniCurrentYear}`;
+
+        const firstDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex, 1);
+        const lastDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex + 1, 0);
+        const firstDayWeekday = firstDayOfMonth.getDay();
+        const lastDate = lastDayOfMonth.getDate();
+
+        miniCalendarDates.innerHTML = '';
+
+        // Fill in the days from the previous month
+        for (let i = 0; i < firstDayWeekday; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.classList.add('mini-calendar-date', 'empty');
+            miniCalendarDates.appendChild(emptyCell);
+        }
+
+        // Fill in the days of the current month
+        for (let date = 1; date <= lastDate; date++) {
+            const dateCell = document.createElement('div');
+            dateCell.classList.add('mini-calendar-date');
+            dateCell.textContent = date;
+            miniCalendarDates.appendChild(dateCell);
+        }
+    }
+
+    miniPrevBtn.addEventListener('click', function() {
+        miniCurrentMonthIndex--;
+        if (miniCurrentMonthIndex < 0) {
+            miniCurrentMonthIndex = 11;
+            miniCurrentYear--;
+        }
+        updateMiniCalendar();
+    });
+
+    miniNextBtn.addEventListener('click', function() {
+        miniCurrentMonthIndex++;
+        if (miniCurrentMonthIndex > 11) {
+            miniCurrentMonthIndex = 0;
+            miniCurrentYear++;
+        }
+        updateMiniCalendar();
+    });
+
+    updateMiniCalendar();
+});
+</script>
 {% endblock %}
