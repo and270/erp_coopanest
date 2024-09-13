@@ -11,4 +11,5 @@ urlpatterns = [
     path('create-escala/', views.create_escala, name='create_escala'),
     path('update-escala/<int:escala_id>/', views.update_escala, name='update_escala'),
     path('get-escala/<int:escala_id>/', views.get_escala, name='get_escala'),
+    path('delete-escala/<int:escala_id>/', views.delete_escala, name='delete_escala'),
 ]
