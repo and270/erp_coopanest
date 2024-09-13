@@ -105,6 +105,19 @@
                 <button id="semana-view" class="btn">SEMANA</button>
                 <button id="mes-view" class="btn active">MÊS</button>
             </div>
+            <div class="search-bar">
+                <div class="radio-group">
+                    <i class="fa fa-search search-icon"></i>
+                    <input type="radio" id="search-data" name="search-type">
+                    <label for="search-data">DATA</label>
+                    <input type="radio" id="search-paciente" name="search-type">
+                    <label for="search-paciente">PACIENTE</label>
+                </div>
+                <div class="input-container">
+                    <input type="text" id="search-input" placeholder="Buscar...">
+                    <button id="search-btn"><i class="fa fa-search"></i></button>
+                </div>
+            </div>
         </div>
 
         <div class="right-controls">
@@ -274,6 +287,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const semanaBtn = document.getElementById('semana-view');
@@ -885,6 +899,107 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     updateMiniCalendar();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchBtn = document.getElementById('search-btn');
+    const searchInput = document.getElementById('search-input');
+    const searchTypeData = document.getElementById('search-data');
+    const searchTypePaciente = document.getElementById('search-paciente');
+    const searchTypeProcedimento = document.getElementById('search-procedimento');
+
+    searchBtn.addEventListener('click', function() {
+        const query = searchInput.value.trim();
+        if (!query) return;
+
+        if (searchTypeData.checked) {
+            // Handle date search
+            const dateParts = query.split('/');
+            if (dateParts.length === 3) {
+                const day = dateParts[0].padStart(2, '0');
+                const month = dateParts[1].padStart(2, '0');
+                const year = dateParts[2];
+                const formattedDate = `${year}-${month}-${day}`;
+                window.location.href = `/agenda/search?date=${formattedDate}`;
+            } else {
+                alert('Formato de data inválido. Use DD/MM/YYYY.');
+            }
+        } else if (searchTypePaciente.checked) {
+            // Handle paciente search
+            window.location.href = `/agenda/search?paciente=${query}`;
+        } else if (searchTypeProcedimento.checked) {
+            // Handle procedimento search
+            window.location.href = `/agenda/search?procedimento=${query}`;
+        }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightDate = urlParams.get('highlight_date');
+
+    if (highlightDate) {
+        const dateElements = document.querySelectorAll(`.calendar-grid .day[data-date="${highlightDate}"]`);
+        dateElements.forEach(el => {
+            el.classList.add('highlight');
+        });
+
+        const procedureCards = document.querySelectorAll(`.procedure-card[data-date="${highlightDate}"]`);
+        procedureCards.forEach(card => {
+            card.classList.add('highlight');
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchDataRadio = document.getElementById('search-data');
+    const searchPacienteRadio = document.getElementById('search-paciente');
+    const inputContainer = document.querySelector('.search-bar .input-container');
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+
+    function updateSearchInput() {
+        if (searchDataRadio.checked || searchPacienteRadio.checked) {
+            inputContainer.style.display = 'block';
+            if (searchDataRadio.checked) {
+                searchInput.placeholder = 'Digite a data (DD/MM/YYYY)';
+                $(searchInput).inputmask("99/99/9999");  // Apply date mask
+            } else {
+                searchInput.placeholder = 'Digite o nome do paciente';
+                $(searchInput).inputmask('remove');  // Remove any existing mask
+            }
+        } else {
+            inputContainer.style.display = 'none';
+        }
+    }
+
+    searchDataRadio.addEventListener('change', updateSearchInput);
+    searchPacienteRadio.addEventListener('change', updateSearchInput);
+
+    searchBtn.addEventListener('click', function() {
+        const query = searchInput.value.trim();
+        if (!query) return;
+
+        if (searchDataRadio.checked) {
+            // Handle date search
+            const dateParts = query.split('/');
+            if (dateParts.length === 3) {
+                const day = dateParts[0].padStart(2, '0');
+                const month = dateParts[1].padStart(2, '0');
+                const year = dateParts[2];
+                const formattedDate = `${year}-${month}-${day}`;
+                window.location.href = `/agenda/search?date=${formattedDate}`;
+            } else {
+                alert('Formato de data inválido. Use DD/MM/YYYY.');
+            }
+        } else if (searchPacienteRadio.checked) {
+            // Handle paciente search
+            window.location.href = `/agenda/search?paciente=${query}`;
+        }
+    });
+
+    updateSearchInput();
 });
 </script>
 

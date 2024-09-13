@@ -1543,3 +1543,88 @@ select {
     color: #ccc; /* Disabled state color */
     cursor: not-allowed;
 }
+
+
+.search-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border-radius: 5px;
+    width: 300px; /* Adjust as needed */
+}
+
+.search-bar .radio-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.search-bar input[type="radio"] {
+    display: none;
+}
+
+.search-bar label {
+    cursor: pointer;
+    padding: 5px 10px;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    color: #000000;
+}
+
+.search-bar input[type="radio"]:checked + label {
+    background-color: #418FDE;
+    color: #ffffff;
+}
+
+.search-bar .input-container {
+    display: block; /* Keep the display as block */
+    width: 100%;
+    position: relative;
+}
+
+.search-bar input[type="text"] {
+    width: 100%;
+    padding: 5px 10px 5px 30px; /* Adjust padding to make space for the icon */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.search-bar .radio-group .search-icon {
+    margin-right: 5px; /* Add some space between the icon and the buttons */
+}
+
+.search-bar .input-container .search-icon {
+    position: absolute;
+    left: 10px; /* Position the icon to the left */
+    top: 50%;
+    transform: translateY(-50%); /* Center the icon vertically */
+    color: #418FDE;
+}
+
+.search-bar button {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #418FDE;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+
+/* Styles to highlight the search results */
+.calendar-grid .day.highlight {
+    border: 2px solid red;
+}
+
+.procedure-card.highlight {
+    border: 2px solid red;
+}

@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('agenda/', views.agenda_view, name='agenda'),
+    path('agenda/search/', views.search_agenda, name='search_agenda'),
     path('update-procedure/<int:procedure_id>/', views.update_procedure, name='update_procedure'),
     path('get-procedure/<int:procedure_id>/', views.get_procedure, name='get_procedure'),
     path('delete-procedure/<int:procedure_id>/', views.delete_procedure, name='delete_procedure'),
