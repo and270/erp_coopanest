@@ -445,9 +445,10 @@ def get_escala(request, escala_id):
     return JsonResponse(data)
 
 def get_escala_week_dates(start_date):
+    
     # Adjust the start date to the previous Sunday if it's not already Sunday
     if start_date.weekday() != 6:
-        start_date -= timedelta(days=start_date.weekday() + 1)
+        start_date -= timedelta(days=(start_date.weekday() + 1) % 7)
 
     weeks = []
     for i in range(4):  # Create four weeks
@@ -458,9 +459,6 @@ def get_escala_week_dates(start_date):
             'end_date': week_end,
             'days': [week_start + timedelta(days=x) for x in range(7)]
         })
-    
-    # Debug information
-    print(f"get_escala_week_dates - weeks[0]['start_date']: {weeks[0]['start_date']}")
     
     return weeks
 

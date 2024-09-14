@@ -129,7 +129,9 @@ class EscalaForm(forms.ModelForm):
         escalas = []
         current_date = data_inicio
         while current_date <= data_fim:
-            if str(current_date.weekday()) in dias_da_semana:
+            # Correctly map Python's weekday to your dias_da_semana keys
+            weekday_key = EscalaAnestesiologista.python_weekday_to_dias_da_semana[current_date.weekday()]
+            if weekday_key in dias_da_semana:
                 escala = EscalaAnestesiologista(
                     escala_type=escala_type,
                     anestesiologista=anestesiologista,

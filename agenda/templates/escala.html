@@ -127,7 +127,7 @@
                             <div class="escala-day-cell" data-date="{{ day|date:'Y-m-d' }}">
                                 {% for escala in escalas %}
                                     {% if escala.data == day %}
-                                        <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}" data-original-date="{{ day|date:'Y-m-d' }}">
+                                        <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}" data-original-date="{{ escala.data|date:'Y-m-d' }}">
                                             <p><b>{{ escala.anestesiologista.name }}</b></p>
                                             <p>{{ escala.hora_inicio|time:"H:i" }} - {{ escala.hora_fim|time:"H:i" }}</p>
                                         </div>
@@ -137,6 +137,7 @@
                         {% endfor %}
                     </div>
                 {% endfor %}
+
             </div>
         </div>
     </div>    
@@ -282,8 +283,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function formatDateFull(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-BR');
+        const date = new Date(dateString + 'T00:00:00Z');  // Append time and 'Z' for UTC
+        return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     }
 
     function openEditForm(escalaId) {
