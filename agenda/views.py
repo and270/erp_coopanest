@@ -329,16 +329,14 @@ def escala_view(request):
 
     escalas = EscalaAnestesiologista.objects.filter(
         group=user.group,
-        data_inicio__lte=start_date + timedelta(days=27),
-        data_fim__gte=start_date
+        data__gte=start_date,
+        data__lte=start_date + timedelta(days=27)
     )
 
     if request.method == 'POST':
         form = EscalaForm(request.POST, user=user)
         if form.is_valid():
-            escala = form.save(commit=False)
-            escala.group = user.group
-            escala.save()
+            form.save(commit=True)  # Save and get the list of created objects
             return redirect('escala')
     else:
         form = EscalaForm(user=user)
@@ -353,7 +351,7 @@ def escala_view(request):
         'ANESTESISTA_USER': ANESTESISTA_USER,
         'start_date': start_date,
         'end_date': start_date + timedelta(days=27),
-        'form_errors': form.errors if request.method == 'POST' else None,  # Pass form errors to the context
+        'form_errors': form.errors if request.method == 'POST' else None,
     }
     
     return render(request, 'escala.html', context)
@@ -369,24 +367,13 @@ def update_escala_date(request, escala_id):
     if request.user.group != escala.group:
         return JsonResponse({"success": False, "message": "Permission denied"}, status=403)
 
-    original_date_str = request.POST.get('original_date')
     new_date_str = request.POST.get('new_date')
-    if not original_date_str or not new_date_str:
-        return JsonResponse({"success": False, "message": "Original or new date not provided"}, status=400)
+    if not new_date_str:
+        return JsonResponse({"success": False, "message": "New date not provided"}, status=400)
 
     try:
-        original_date = datetime.strptime(original_date_str, '%Y-%m-%d').date()
         new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
-
-        original_day_of_week = EscalaAnestesiologista.python_weekday_to_dias_da_semana[original_date.weekday()]
-        new_day_of_week = EscalaAnestesiologista.python_weekday_to_dias_da_semana[new_date.weekday()]\
-
-        # Update dias_da_semana
-        if original_day_of_week in escala.dias_da_semana:
-            escala.dias_da_semana.remove(original_day_of_week)
-        if new_day_of_week not in escala.dias_da_semana:
-            escala.dias_da_semana.append(new_day_of_week)
-        
+        escala.data = new_date
         escala.save()
         return JsonResponse({"success": True, "message": "Escala updated successfully"})
     except ValueError:
@@ -400,12 +387,9 @@ def create_escala(request):
     
     form = EscalaForm(request.POST, user=request.user)
     if form.is_valid():
-        escala = form.save(commit=False)
-        escala.group = request.user.group
-        escala.save()
+        escala = form.save(commit=True)
         return JsonResponse({
             'success': True,
-            'id': escala.id,
             'message': 'Escala criada com sucesso.'
         })
     else:
@@ -453,11 +437,9 @@ def get_escala(request, escala_id):
         'escala_type': escala.get_escala_type_display(),
         'anestesiologista': escala.anestesiologista.id,
         'anestesiologista_name': escala.anestesiologista.name,
-        'data_inicio': escala.data_inicio.strftime('%Y-%m-%d'),
-        'data_fim': escala.data_fim.strftime('%Y-%m-%d'),
+        'data': escala.data.strftime('%Y-%m-%d'),
         'hora_inicio': escala.hora_inicio.strftime('%H:%M'),
         'hora_fim': escala.hora_fim.strftime('%H:%M'),
-        'dias_da_semana': escala.dias_da_semana,
         'observacoes': escala.observacoes,
     }
     return JsonResponse(data)

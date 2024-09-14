@@ -2,7 +2,7 @@ from django import forms
 
 from registration.models import Anesthesiologist, HospitalClinic, Surgeon
 from .models import Procedimento, EscalaAnestesiologista
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class ProcedimentoForm(forms.ModelForm):
 
@@ -81,7 +81,16 @@ class ProcedimentoForm(forms.ModelForm):
         return instance
 
 class EscalaForm(forms.ModelForm):
-
+    data_inicio = forms.DateField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'dd/mm/aaaa'}),
+        input_formats=['%d/%m/%Y'],
+        label="Data de Início"
+    )
+    data_fim = forms.DateField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'dd/mm/aaaa'}),
+        input_formats=['%d/%m/%Y'],
+        label="Data de Fim"
+    )
     dias_da_semana = forms.MultipleChoiceField(
         choices=EscalaAnestesiologista.DIAS_DA_SEMANA,
         widget=forms.CheckboxSelectMultiple,
@@ -90,17 +99,15 @@ class EscalaForm(forms.ModelForm):
 
     class Meta:
         model = EscalaAnestesiologista
-        fields = ['escala_type', 'anestesiologista', 'data_inicio', 'hora_inicio', 'data_fim', 'hora_fim', 'dias_da_semana', 'observacoes']
+        fields = ['escala_type', 'anestesiologista', 'hora_inicio', 'hora_fim', 'dias_da_semana', 'observacoes']
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super(EscalaForm, self).__init__(*args, **kwargs)
         if user:
-            # Filter the ForeignKey fields by the user's group
+            self.user_group = user.group  # Store the user's group
             self.fields['anestesiologista'].queryset = Anesthesiologist.objects.filter(group=user.group)
-        self.fields['data_inicio'].widget.attrs.update({'class': 'form-control'})
         self.fields['hora_inicio'].widget.attrs.update({'class': 'form-control'})
-        self.fields['data_fim'].widget.attrs.update({'class': 'form-control'})
         self.fields['hora_fim'].widget.attrs.update({'class': 'form-control'})
         self.fields['observacoes'].widget.attrs.update({'class': 'form-control'})
         self.fields['dias_da_semana'].widget.attrs.pop('class', None)
@@ -109,9 +116,33 @@ class EscalaForm(forms.ModelForm):
         return self.cleaned_data.get('dias_da_semana', [])
     
     def save(self, commit=True):
-        instance = super().save(commit=False)
-        instance.dias_da_semana = self.cleaned_data['dias_da_semana']
+        data_inicio = self.cleaned_data['data_inicio']
+        data_fim = self.cleaned_data['data_fim']
+        dias_da_semana = self.cleaned_data['dias_da_semana']
+        hora_inicio = self.cleaned_data['hora_inicio']
+        hora_fim = self.cleaned_data['hora_fim']
+        observacoes = self.cleaned_data['observacoes']
+        escala_type = self.cleaned_data['escala_type']
+        anestesiologista = self.cleaned_data['anestesiologista']
+        group = self.user_group  # Use the stored user's group
+
+        escalas = []
+        current_date = data_inicio
+        while current_date <= data_fim:
+            if str(current_date.weekday()) in dias_da_semana:
+                escala = EscalaAnestesiologista(
+                    escala_type=escala_type,
+                    anestesiologista=anestesiologista,
+                    data=current_date,
+                    hora_inicio=hora_inicio,
+                    hora_fim=hora_fim,
+                    observacoes=observacoes,
+                    group=group  # Set the group
+                )
+                escalas.append(escala)
+            current_date += timedelta(days=1)
+
         if commit:
-            instance.save()
-        return instance
+            EscalaAnestesiologista.objects.bulk_create(escalas)
+        return escalas
 

@@ -23,7 +23,6 @@
                                 </div>
                             {% endif %}
                         </div>
-                    
                         <div class="form-group">
                             {{ form.anestesiologista.label_tag }} {{ form.anestesiologista }}
                             {% if form.anestesiologista.errors %}
@@ -32,7 +31,6 @@
                                 </div>
                             {% endif %}
                         </div>
-                    
                         <div class="form-group">
                             {{ form.data_inicio.label_tag }} {{ form.data_inicio }}
                             {% if form.data_inicio.errors %}
@@ -41,7 +39,6 @@
                                 </div>
                             {% endif %}
                         </div>
-                    
                         <div class="form-group">
                             {{ form.data_fim.label_tag }} {{ form.data_fim }}
                             {% if form.data_fim.errors %}
@@ -50,7 +47,6 @@
                                 </div>
                             {% endif %}
                         </div>
-                    
                         <div class="form-group">
                             {{ form.dias_da_semana.label_tag }} {{ form.dias_da_semana }}
                             {% if form.dias_da_semana.errors %}
@@ -59,7 +55,6 @@
                                 </div>
                             {% endif %}
                         </div>
-                    
                         <div class="form-group">
                             {{ form.hora_inicio.label_tag }} {{ form.hora_inicio }}
                             {% if form.hora_inicio.errors %}
@@ -68,12 +63,19 @@
                                 </div>
                             {% endif %}
                         </div>
-                    
                         <div class="form-group">
                             {{ form.hora_fim.label_tag }} {{ form.hora_fim }}
                             {% if form.hora_fim.errors %}
                                 <div class="error-message">
                                     {{ form.hora_fim.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.observacoes.label_tag }} {{ form.observacoes }}
+                            {% if form.observacoes.errors %}
+                                <div class="error-message">
+                                    {{ form.observacoes.errors }}
                                 </div>
                             {% endif %}
                         </div>
@@ -124,14 +126,12 @@
                         {% for day in week.days %}
                             <div class="escala-day-cell" data-date="{{ day|date:'Y-m-d' }}">
                                 {% for escala in escalas %}
-                                    {% with day_of_week=day|date:"w" %}
-                                        {% if escala.data_inicio <= day and escala.data_fim >= day and day_of_week in escala.dias_da_semana %}
-                                            <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}" data-original-date="{{ day|date:'Y-m-d' }}">
-                                                <p><b>{{ escala.anestesiologista.name }}</b></p>
-                                                <p>{{ escala.hora_inicio|time:"H:i" }} - {{ escala.hora_fim|time:"H:i" }}</p>
-                                            </div>
-                                        {% endif %}
-                                    {% endwith %}
+                                    {% if escala.data == day %}
+                                        <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}" data-original-date="{{ day|date:'Y-m-d' }}">
+                                            <p><b>{{ escala.anestesiologista.name }}</b></p>
+                                            <p>{{ escala.hora_inicio|time:"H:i" }} - {{ escala.hora_fim|time:"H:i" }}</p>
+                                        </div>
+                                    {% endif %}
                                 {% endfor %}
                             </div>
                         {% endfor %}
@@ -149,11 +149,9 @@
         <h2>Detalhes da Escala</h2>
         <p><strong>Anestesiologista:</strong> <span id="modal-anestesiologista"></span></p>
         <p><strong>Tipo:</strong> <span id="modal-escala-type"></span></p>
-        <p><strong>Data Início:</strong> <span id="modal-data-inicio"></span></p>
-        <p><strong>Data Fim:</strong> <span id="modal-data-fim"></span></p>
+        <p><strong>Data:</strong> <span id="modal-data"></span></p>
         <p><strong>Hora Início:</strong> <span id="modal-hora-inicio"></span></p>
         <p><strong>Hora Fim:</strong> <span id="modal-hora-fim"></span></p>
-        <p><strong>Dias da Semana:</strong> <span id="modal-dias-da-semana"></span></p>
         <p><strong>Observações:</strong> <span id="modal-observacoes"></span></p>
         <div class="modal-actions">
             <button class="btn btn-primary edit-escala">Editar</button>
@@ -261,11 +259,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function populateEscalaModal(data) {
         document.getElementById('modal-anestesiologista').textContent = data.anestesiologista_name;
         document.getElementById('modal-escala-type').textContent = data.escala_type;
-        document.getElementById('modal-data-inicio').textContent = formatDateFull(data.data_inicio);
-        document.getElementById('modal-data-fim').textContent = formatDateFull(data.data_fim);
+        document.getElementById('modal-data').textContent = formatDateFull(data.data);
         document.getElementById('modal-hora-inicio').textContent = data.hora_inicio;
         document.getElementById('modal-hora-fim').textContent = data.hora_fim;
-        document.getElementById('modal-dias-da-semana').textContent = formatDiasDaSemana(data.dias_da_semana);
         document.getElementById('modal-observacoes').textContent = data.observacoes || 'Nenhuma observação';
 
         escalaDetailsModal.setAttribute('data-escala-id', data.id);
@@ -273,7 +269,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listener for the edit button
         const editButton = escalaDetailsModal.querySelector('.edit-escala');
         editButton.onclick = function() {
-            console.log('Edit button clicked');
             openEditForm(data.id);
         };
 
@@ -291,31 +286,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return date.toLocaleDateString('pt-BR');
     }
 
-    function formatDiasDaSemana(dias) {
-        const diasMap = {
-            '0': 'Domingo',
-            '1': 'Segunda-feira',
-            '2': 'Terça-feira',
-            '3': 'Quarta-feira',
-            '4': 'Quinta-feira',
-            '5': 'Sexta-feira',
-            '6': 'Sábado'
-        };
-        return dias.map(dia => diasMap[dia]).join(', ');
-    }
-
     function openEditForm(escalaId) {
-        console.log('Opening edit form for escala id:', escalaId);
         loadEscalaDataIntoForm(escalaId);
     }
 
     function loadEscalaDataIntoForm(escalaId) {
-        console.log('Loading escala data for id:', escalaId);
         fetch(`/get-escala/${escalaId}/`)
             .then(response => response.json())
             .then(data => {
-                console.log('Received escala data:', data);
-                
                 // Helper function to safely set input values
                 function setInputValue(id, value) {
                     const element = document.getElementById(id);
@@ -333,25 +311,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 setInputValue('escala_id', data.id);
                 setInputValue('id_escala_type', data.escala_type);
                 setInputValue('id_anestesiologista', data.anestesiologista);
-                setInputValue('id_data_inicio', formatDateForInput(data.data_inicio));
-                setInputValue('id_data_fim', formatDateForInput(data.data_fim));
+                setInputValue('id_data', formatDateForInput(data.data));
                 setInputValue('id_hora_inicio', data.hora_inicio);
                 setInputValue('id_hora_fim', data.hora_fim);
                 setInputValue('id_observacoes', data.observacoes);
 
-                // Handle dias_da_semana (assuming it's rendered as checkboxes or multiple inputs)
-                const diasDaSemana = data.dias_da_semana || [];
-                diasDaSemana.forEach(dia => {
-                    const checkbox = document.getElementById(`id_dias_da_semana_${dia}`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                    }
-                });
-
-                console.log('Form populated, showing form modal');
                 escalaDetailsModal.style.display = 'none';
-                escalaFormModal.style.display = 'block';
-                formSubmitBtn.textContent = 'Editar Escala';
+                document.getElementById('escala-form-modal').style.display = 'block';
+                document.getElementById('form-submit-btn').textContent = 'Editar Escala';
             })
             .catch(error => {
                 console.error('Error loading escala data:', error);
@@ -497,10 +464,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const escalaItem = event.relatedTarget;
                 const newCell = event.target;
                 const escalaId = escalaItem.getAttribute('data-id');
-                const originalDate = escalaItem.getAttribute('data-original-date');
                 const newDate = newCell.getAttribute('data-date');
     
-                console.log('Dropping item:', escalaId, 'from original date:', originalDate, 'to new date:', newDate);
+                console.log('Dropping item:', escalaId, 'to new date:', newDate);
     
                 // Move the escala item to the new cell
                 newCell.appendChild(escalaItem);
@@ -509,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 escalaItem.style.transform = 'translate(0px, 0px)';
     
                 // Update the escala on the server
-                updateEscalaDate(escalaId, originalDate, newDate);
+                updateEscalaDate(escalaId, newDate);
             }
         });
     
@@ -528,22 +494,22 @@ document.addEventListener('DOMContentLoaded', function() {
             target.setAttribute('data-y', 0);
         }
     
-        function updateEscalaDate(escalaId, originalDate, newDate) {
-            console.log('Updating escala date for:', escalaId, 'from original date:', originalDate, 'to new date:', newDate);
+        function updateEscalaDate(escalaId, newDate) {
+            console.log('Updating escala date for:', escalaId, 'to new date:', newDate);
             fetch(`/update-escala-date/${escalaId}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': getCookie('csrftoken')
                 },
-                body: `original_date=${originalDate}&new_date=${newDate}`
+                body: `new_date=${newDate}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     console.log('Escala updated successfully');
-                    // Force a full page refresh
                     location.reload();
+                    // Optionally, you can refresh the page or update the UI to reflect the changes
                 } else {
                     console.error('Failed to update escala:', data.message);
                     // You might want to show an error message to the user here

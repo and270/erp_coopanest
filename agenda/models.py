@@ -49,6 +49,7 @@ class EscalaAnestesiologista(models.Model):
         (SUBSTITUTO_ESCALA , 'Substituto'),
         (FERIAS_ESCALA , 'Férias/Licença'),
     )
+
     DIAS_DA_SEMANA = (
         ('0', 'Domingo'),
         ('1', 'Segunda-feira'),
@@ -69,7 +70,7 @@ class EscalaAnestesiologista(models.Model):
             5: '6',  # Saturday -> Sábado
             6: '0',  # Sunday -> Domingo
         }
-
+    
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     escala_type = models.CharField(
         max_length=40,
@@ -78,21 +79,14 @@ class EscalaAnestesiologista(models.Model):
         verbose_name='Tipo de Escala',
     )
     anestesiologista = models.ForeignKey(Anesthesiologist, on_delete=models.CASCADE, verbose_name='Anestesiologista')
-    data_inicio = models.DateField(verbose_name='Escala válida a partir do dia', default=timezone.now)
-    data_fim = models.DateField(verbose_name='Escala válida até o dia', default=timezone.now)
+    data = models.DateField(verbose_name='Data da Escala', default=timezone.now)
     hora_inicio = models.TimeField(verbose_name='Hora de Início do Turno', default=timezone.now().replace(hour=8, minute=0, second=0, microsecond=0))
     hora_fim = models.TimeField(verbose_name='Hora de Fim do Turno', default=timezone.now().replace(hour=17, minute=0, second=0, microsecond=0))
-    dias_da_semana = ArrayField(
-        models.CharField(max_length=1, choices=DIAS_DA_SEMANA),
-        blank=True,
-        default=list,
-        verbose_name='Dias da Semana'
-    )
-    observacoes = models.TextField(blank=True, verbose_name='Observações')
+    observacoes = models.TextField(blank=True, verbose_name='Observações', default='')
     
     class Meta:
         verbose_name = "Escala do Anestesiologista"
         verbose_name_plural = "Escalas dos Anestesiologistas"
 
     def __str__(self):
-        return f'{self.anestesiologista.name} - {self.data_inicio.strftime("%d/%m/%Y %H:%M")}'
+        return f'{self.anestesiologista.name} - {self.data.strftime("%d/%m/%Y %H:%M")}'
