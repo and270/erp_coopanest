@@ -145,16 +145,27 @@ def search_agenda(request):
 
     if not request.user.validado:
         return HttpResponseForbidden("You don't have permission to view this procedure.")
-    
+
+    highlight_date = None
+    search_type = None  # Initialize search_type
+
     if date:
-        procedimentos = Procedimento.objects.filter(data_horario__date=date, group=request.user.group)
+        search_type = 'date'
+        try:
+            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+        except ValueError:
+            # Invalid date format
+            date_obj = datetime.today().date()
+        procedimentos = Procedimento.objects.filter(data_horario__date=date_obj, group=request.user.group)
         view_type = 'week'
-        highlight_date = date
+        highlight_date = date_obj
     elif paciente:
+        search_type = 'paciente'
         procedimentos = Procedimento.objects.filter(nome_paciente__icontains=paciente, group=request.user.group)
         view_type = 'week'
         highlight_date = procedimentos.first().data_horario.date() if procedimentos.exists() else None
     elif procedimento:
+        search_type = 'procedimento'
         procedimentos = Procedimento.objects.filter(procedimento__icontains=procedimento, group=request.user.group)
         view_type = 'week'
         highlight_date = procedimentos.first().data_horario.date() if procedimentos.exists() else None
@@ -163,19 +174,19 @@ def search_agenda(request):
         view_type = 'month'
         highlight_date = None
 
-    today = datetime.today()
-    year = int(request.GET.get('year', today.year))
-    month = int(request.GET.get('month', today.month))
-    week_start_str = request.GET.get('week_start')
-
-    if week_start_str:
-        week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
-        calendar_dates = get_week_dates(week_start)
-        view_type = 'week'
+    today = datetime.today().date()
+    if highlight_date:
+        week_start = highlight_date - timedelta(days=highlight_date.weekday())
     else:
-        calendar_dates = get_calendar_dates(year, month)
-        view_type = 'month'
-        week_start = today.date() - timedelta(days=today.weekday())
+        week_start = today - timedelta(days=today.weekday())
+
+    # Adjust year and month based on highlight_date
+    if highlight_date:
+        year = highlight_date.year
+        month = highlight_date.month
+    else:
+        year = today.year
+        month = today.month
 
     hours = ['06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']
 
@@ -183,15 +194,16 @@ def search_agenda(request):
         week_dates = get_week_dates(week_start)
     else:
         week_dates = []
+        calendar_dates = get_calendar_dates(year, month)
 
     for procedimento in procedimentos:
         if procedimento.data_horario_fim:
             procedimento.duration = (procedimento.data_horario_fim - procedimento.data_horario).total_seconds() // 3600  # Duration in hours
         else:
             procedimento.duration = 1
-    
+
     context = {
-        'calendar_dates': calendar_dates,
+        'calendar_dates': calendar_dates if view_type == 'month' else [],
         'current_year': year,
         'current_month': month,
         'current_week_start': week_start,
@@ -205,8 +217,11 @@ def search_agenda(request):
         'week_dates': week_dates, 
         'procedimentos': procedimentos,
         'highlight_date': highlight_date,
+        'search_type': search_type,  # Pass search_type to the template
     }
     return render(request, 'agenda.html', context)
+
+
 
 @login_required
 def agenda_view(request):

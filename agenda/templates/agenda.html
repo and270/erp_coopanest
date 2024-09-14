@@ -178,11 +178,11 @@
                     <span>SÁB</span>
                 </div>
                 {% for date in calendar_dates %}
-                    <div class="day {% if not date.is_current_month %}other-month{% endif %}">
+                    <div class="day {% if not date.is_current_month %}other-month{% endif %}" data-date="{{ date.day|date:'Y-m-d' }}">
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
                             {% if procedimento.data_horario.date == date.day.date %}
-                                <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
+                                <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                     <span>{{ procedimento.nome_paciente }}</span>
                                     <span>{{ procedimento.procedimento }}</span>
                                 </div>
@@ -224,7 +224,7 @@
                 <div class="calendar-days">
                     <span class="time-column"></span>
                     {% for date in week_dates %}
-                        <span class="day-column">
+                        <span class="day-column" data-date="{{ date.full_date|date:'Y-m-d' }}">
                             {{ date.day_name }}<br>
                             ({{ date.date }})
                         </span>
@@ -236,12 +236,12 @@
                     {% endfor %}
                 </div>
                 {% for date in week_dates %}
-                    <div class="day-column">
+                    <div class="day-column" data-date="{{ date.full_date|date:'Y-m-d' }}">
                         {% for hour in hours %}
                             <div class="hour-slot">
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" and procedimento.data_horario|date:"H" <= hour and procedimento.data_horario_fim|date:"H" > hour %}
-                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}">
+                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                             <span>{{ procedimento.nome_paciente }}</span>
                                             <span>{{ procedimento.procedimento }}</span>
                                         </div>
@@ -933,22 +933,30 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = `/agenda/search?procedimento=${query}`;
         }
     });
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const highlightDate = urlParams.get('highlight_date');
-
-    if (highlightDate) {
-        const dateElements = document.querySelectorAll(`.calendar-grid .day[data-date="${highlightDate}"]`);
-        dateElements.forEach(el => {
-            el.classList.add('highlight');
-        });
-
-        const procedureCards = document.querySelectorAll(`.procedure-card[data-date="${highlightDate}"]`);
-        procedureCards.forEach(card => {
-            card.classList.add('highlight');
-        });
-    }
 });
+</script>
+
+<script>
+    const highlightDate = '{{ highlight_date|date:"Y-m-d" }}';
+    const searchType = '{{ search_type }}';  // Get search_type from the context
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        if (highlightDate) {
+            if (searchType === 'date') {
+                // Highlight the day columns only
+                const dayElements = document.querySelectorAll(`.day[data-date="${highlightDate}"], .day-column[data-date="${highlightDate}"]`);
+                dayElements.forEach(el => {
+                    el.classList.add('highlight');
+                });
+            } else if (searchType === 'paciente' || searchType === 'procedimento') {
+                // Highlight the procedure cards
+                const procedureCards = document.querySelectorAll(`.procedure-card[data-date="${highlightDate}"]`);
+                procedureCards.forEach(card => {
+                    card.classList.add('highlight');
+                });
+            }
+        }
+    });
 </script>
 
 <script>

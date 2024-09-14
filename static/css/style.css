@@ -1637,10 +1637,11 @@ select {
 
 
 /* Styles to highlight the search results */
-.calendar-grid .day.highlight {
-    border: 2px solid red;
+.calendar-grid .day.highlight,
+.calendar-grid .day-column.highlight {
+    border: 2px solid #232376;
 }
 
 .procedure-card.highlight {
-    border: 2px solid red;
+    border: 2px solid #232376;
 }
