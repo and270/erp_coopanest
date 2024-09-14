@@ -938,23 +938,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
     const highlightDate = '{{ highlight_date|date:"Y-m-d" }}';
-    const searchType = '{{ search_type }}';  // Get search_type from the context
     
     document.addEventListener('DOMContentLoaded', function() {
         if (highlightDate) {
-            if (searchType === 'date') {
-                // Highlight the day columns only
-                const dayElements = document.querySelectorAll(`.day[data-date="${highlightDate}"], .day-column[data-date="${highlightDate}"]`);
-                dayElements.forEach(el => {
-                    el.classList.add('highlight');
-                });
-            } else if (searchType === 'paciente' || searchType === 'procedimento') {
-                // Highlight the procedure cards
-                const procedureCards = document.querySelectorAll(`.procedure-card[data-date="${highlightDate}"]`);
-                procedureCards.forEach(card => {
-                    card.classList.add('highlight');
-                });
-            }
+            // Highlight the day columns
+            const dayElements = document.querySelectorAll(`.day[data-date="${highlightDate}"], .day-column[data-date="${highlightDate}"]`);
+            dayElements.forEach(el => {
+                el.classList.add('highlight');
+            });
+    
+            // Highlight the procedure cards
+            const procedureCards = document.querySelectorAll(`.procedure-card[data-date="${highlightDate}"]`);
+            procedureCards.forEach(card => {
+                card.classList.add('highlight');
+            });
         }
     });
 </script>
