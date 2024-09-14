@@ -59,6 +59,17 @@ class EscalaAnestesiologista(models.Model):
         ('6', 'Sábado'),
     )
 
+    #mapeamento adapdatacao para primeiro dia da semana sendo Domingo
+    python_weekday_to_dias_da_semana = {
+            0: '1',  # Monday -> Segunda-feira
+            1: '2',  # Tuesday -> Terça-feira
+            2: '3',  # Wednesday -> Quarta-feira
+            3: '4',  # Thursday -> Quinta-feira
+            4: '5',  # Friday -> Sexta-feira
+            5: '6',  # Saturday -> Sábado
+            6: '0',  # Sunday -> Domingo
+        }
+
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     escala_type = models.CharField(
         max_length=40,

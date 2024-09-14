@@ -377,23 +377,9 @@ def update_escala_date(request, escala_id):
     try:
         original_date = datetime.strptime(original_date_str, '%Y-%m-%d').date()
         new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
-        print(f"Updating escala {escala_id} from original date {original_date} to new date {new_date}")
 
-        # Map Python weekday to DIAS_DA_SEMANA
-        python_weekday_to_dias_da_semana = {
-            0: '1',  # Monday -> Segunda-feira
-            1: '2',  # Tuesday -> Terça-feira
-            2: '3',  # Wednesday -> Quarta-feira
-            3: '4',  # Thursday -> Quinta-feira
-            4: '5',  # Friday -> Sexta-feira
-            5: '6',  # Saturday -> Sábado
-            6: '0',  # Sunday -> Domingo
-        }
-
-        original_day_of_week = python_weekday_to_dias_da_semana[original_date.weekday()]
-        new_day_of_week = python_weekday_to_dias_da_semana[new_date.weekday()]
-        print(f"Original day of week: {original_day_of_week} ({original_date.strftime('%A')})")
-        print(f"New day of week: {new_day_of_week} ({new_date.strftime('%A')})")
+        original_day_of_week = EscalaAnestesiologista.python_weekday_to_dias_da_semana[original_date.weekday()]
+        new_day_of_week = EscalaAnestesiologista.python_weekday_to_dias_da_semana[new_date.weekday()]\
 
         # Update dias_da_semana
         if original_day_of_week in escala.dias_da_semana:
@@ -402,10 +388,8 @@ def update_escala_date(request, escala_id):
             escala.dias_da_semana.append(new_day_of_week)
         
         escala.save()
-        print(f"Escala {escala_id} updated successfully")
         return JsonResponse({"success": True, "message": "Escala updated successfully"})
     except ValueError:
-        print(f"Invalid date format for escala {escala_id}: {original_date_str} or {new_date_str}")
         return JsonResponse({"success": False, "message": "Invalid date format"}, status=400)
 
 
