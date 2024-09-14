@@ -148,3 +148,22 @@ class EscalaForm(forms.ModelForm):
             EscalaAnestesiologista.objects.bulk_create(escalas)
         return escalas
 
+class SingleDayEscalaForm(forms.ModelForm):
+    class Meta:
+        model = EscalaAnestesiologista
+        fields = ['escala_type', 'anestesiologista', 'data', 'hora_inicio', 'hora_fim', 'observacoes']
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(SingleDayEscalaForm, self).__init__(*args, **kwargs)
+        
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
+
+        self.fields['data'].widget = forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        self.fields['hora_inicio'].widget = forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
+        self.fields['hora_fim'].widget = forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
+        
+        if user:
+            self.fields['anestesiologista'].queryset = Anesthesiologist.objects.filter(group=user.group)
+

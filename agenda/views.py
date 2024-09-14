@@ -2,11 +2,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 
 from registration.models import Anesthesiologist, CustomUser
 from .models import Procedimento, EscalaAnestesiologista
-from .forms import ProcedimentoForm, EscalaForm
+from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange, weekday, SUNDAY
 from datetime import datetime, timedelta, date
-from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 from django.http import JsonResponse, HttpResponseForbidden
@@ -340,15 +340,20 @@ def escala_view(request):
             return redirect('escala')
     else:
         form = EscalaForm(user=user)
+        single_day_form = SingleDayEscalaForm(user=user)
 
     context = {
         'weeks': weeks,
         'escalas': escalas,
         'form': form,
+        'single_day_form': single_day_form,
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
+        'PLANTONISTA_ESCALA': PLANTONISTA_ESCALA,
+        'SUBSTITUTO_ESCALA': SUBSTITUTO_ESCALA,
+        'FERIAS_ESCALA': FERIAS_ESCALA,
         'start_date': start_date,
         'end_date': start_date + timedelta(days=27),
         'form_errors': form.errors if request.method == 'POST' else None,
@@ -432,15 +437,18 @@ def get_escala(request, escala_id):
     if not request.user.validado or request.user.group != escala.group:
         return HttpResponseForbidden("You don't have permission to view this scale.")
     
+    anesthesiologists = Anesthesiologist.objects.filter(group=request.user.group).values('id', 'name')
+    
     data = {
         'id': escala.id,
-        'escala_type': escala.get_escala_type_display(),
+        'escala_type': escala.escala_type,
         'anestesiologista': escala.anestesiologista.id,
         'anestesiologista_name': escala.anestesiologista.name,
         'data': escala.data.strftime('%Y-%m-%d'),
         'hora_inicio': escala.hora_inicio.strftime('%H:%M'),
         'hora_fim': escala.hora_fim.strftime('%H:%M'),
         'observacoes': escala.observacoes,
+        'anesthesiologists': list(anesthesiologists),
     }
     return JsonResponse(data)
 
@@ -461,6 +469,25 @@ def get_escala_week_dates(start_date):
         })
     
     return weeks
+
+@require_http_methods(["POST"])
+def edit_single_day_escala(request, escala_id):
+    escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
+    
+    if not request.user.validado or request.user.group != escala.group:
+        return HttpResponseForbidden("You don't have permission to edit this scale.")
+    
+    form = SingleDayEscalaForm(request.POST, instance=escala, user=request.user)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': 'Escala atualizada com sucesso.'})
+    else:
+        print("Form errors:", form.errors)  # Print form errors for debugging
+        return JsonResponse({
+            'success': False,
+            'errors': form.errors.as_json(),
+            'message': 'Erro ao atualizar escala.'
+        })
 
 @login_required
 def serve_protected_file(request, file_path):

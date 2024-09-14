@@ -160,6 +160,49 @@
         </div>
     </div>
 </div>
+
+<!-- Add this new modal for editing single day escala -->
+<div id="edit-escala-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Editar Escala</h2>
+        <form id="edit-escala-form">
+            {% csrf_token %}
+            <input type="hidden" id="edit_escala_id" name="escala_id">
+            <div class="form-group">
+                <label for="edit_escala_type">Tipo de Escala:</label>
+                <select id="edit_escala_type" name="escala_type" class="form-control" required>
+                    <option value="{{ PLANTONISTA_ESCALA }}">Plantonista</option>
+                    <option value="{{ SUBSTITUTO_ESCALA }}">Substituto</option>
+                    <option value="{{ FERIAS_ESCALA }}">Férias/Licença</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="edit_anestesiologista">Anestesiologista:</label>
+                <select id="edit_anestesiologista" name="anestesiologista" class="form-control" required>
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="edit_data">Data:</label>
+                <input type="date" id="edit_data" name="data" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_hora_inicio">Hora Início:</label>
+                <input type="time" id="edit_hora_inicio" name="hora_inicio" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_hora_fim">Hora Fim:</label>
+                <input type="time" id="edit_hora_fim" name="hora_fim" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_observacoes">Observações:</label>
+                <textarea id="edit_observacoes" name="observacoes" class="form-control"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -287,52 +330,87 @@ document.addEventListener('DOMContentLoaded', function() {
         return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     }
 
+    const editEscalaModal = document.getElementById('edit-escala-modal');
+    const editEscalaForm = document.getElementById('edit-escala-form');
+
     function openEditForm(escalaId) {
         loadEscalaDataIntoForm(escalaId);
+        escalaDetailsModal.style.display = 'none';
+        editEscalaModal.style.display = 'block';
     }
 
     function loadEscalaDataIntoForm(escalaId) {
         fetch(`/get-escala/${escalaId}/`)
             .then(response => response.json())
             .then(data => {
-                // Helper function to safely set input values
-                function setInputValue(id, value) {
-                    const element = document.getElementById(id);
-                    if (element) {
-                        if (element.inputmask) {
-                            $(element).inputmask("setvalue", value);
-                        } else {
-                            element.value = value;
-                        }
-                    } else {
-                        console.warn(`Element with id '${id}' not found`);
-                    }
-                }
+                document.getElementById('edit_escala_id').value = data.id;
+                document.getElementById('edit_escala_type').value = data.escala_type;
+                document.getElementById('edit_data').value = data.data;
+                document.getElementById('edit_hora_inicio').value = data.hora_inicio;
+                document.getElementById('edit_hora_fim').value = data.hora_fim;
+                document.getElementById('edit_observacoes').value = data.observacoes;
 
-                setInputValue('escala_id', data.id);
-                setInputValue('id_escala_type', data.escala_type);
-                setInputValue('id_anestesiologista', data.anestesiologista);
-                setInputValue('id_data', formatDateForInput(data.data));
-                setInputValue('id_hora_inicio', data.hora_inicio);
-                setInputValue('id_hora_fim', data.hora_fim);
-                setInputValue('id_observacoes', data.observacoes);
+                // Populate anesthesiologist options
+                const anestesiologistaSelect = document.getElementById('edit_anestesiologista');
+                anestesiologistaSelect.innerHTML = ''; // Clear existing options
+                data.anesthesiologists.forEach(anesthesiologist => {
+                    const option = document.createElement('option');
+                    option.value = anesthesiologist.id;
+                    option.textContent = anesthesiologist.name;
+                    anestesiologistaSelect.appendChild(option);
+                });
+                anestesiologistaSelect.value = data.anestesiologista;
 
-                escalaDetailsModal.style.display = 'none';
-                document.getElementById('escala-form-modal').style.display = 'block';
-                document.getElementById('form-submit-btn').textContent = 'Editar Escala';
+                // Open the edit modal
+                document.getElementById('edit-escala-modal').style.display = 'block';
             })
             .catch(error => {
                 console.error('Error loading escala data:', error);
             });
     }
 
-    function formatDateForInput(dateString) {
-        const date = new Date(dateString);
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-    }
+    editEscalaForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const escalaId = document.getElementById('edit_escala_id').value;
+        
+        fetch(`/edit-single-day-escala/${escalaId}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                console.error('Form errors:', data.errors);
+                let errorMessage = 'Erro ao salvar a escala. Por favor, verifique os seguintes campos:\n';
+                const errors = JSON.parse(data.errors);
+                for (const [field, fieldErrors] of Object.entries(errors)) {
+                    errorMessage += `${field}: ${fieldErrors.join(', ')}\n`;
+                }
+                alert(errorMessage);
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting form:', error);
+            alert('Erro ao enviar o formulário. Por favor, tente novamente.');
+        });
+    });
+
+    // Close edit modal when clicking on the close button or outside the modal
+    document.querySelector('#edit-escala-modal .close').addEventListener('click', function() {
+        editEscalaModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', function(e) {
+        if (e.target == editEscalaModal) {
+            editEscalaModal.style.display = 'none';
+        }
+    });
 
     function deleteEscala(escalaId) {
         fetch(`/delete-escala/${escalaId}/`, {
