@@ -126,7 +126,7 @@
                                 {% for escala in escalas %}
                                     {% with day_of_week=day|date:"w" %}
                                         {% if escala.data_inicio <= day and escala.data_fim >= day and day_of_week in escala.dias_da_semana %}
-                                            <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}">
+                                            <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}" data-original-date="{{ day|date:'Y-m-d' }}">
                                                 <p><b>{{ escala.anestesiologista.name }}</b></p>
                                                 <p>{{ escala.hora_inicio|time:"H:i" }} - {{ escala.hora_fim|time:"H:i" }}</p>
                                             </div>
@@ -166,6 +166,7 @@
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.11/interact.min.js"></script>
 <script>
     $(document).ready(function(){
         // Apply masks
@@ -460,6 +461,114 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = "{% url 'agenda' %}";  // Redirect to agenda view
             }
         });
+    });
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.11/interact.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make escala items draggable
+        interact('.escala-item').draggable({
+            inertia: true,
+            modifiers: [
+                interact.modifiers.restrictRect({
+                    restriction: '.escala-grid',
+                    endOnly: true
+                })
+            ],
+            autoScroll: true,
+            listeners: {
+                move: dragMoveListener,
+                end: dragEndListener
+            }
+        });
+    
+        // Make day cells droppable
+        interact('.escala-day-cell').dropzone({
+            accept: '.escala-item',
+            overlap: 0.75,
+            ondropactivate: function (event) {
+                event.target.classList.add('drop-active');
+            },
+            ondropdeactivate: function (event) {
+                event.target.classList.remove('drop-active');
+            },
+            ondrop: function (event) {
+                const escalaItem = event.relatedTarget;
+                const newCell = event.target;
+                const escalaId = escalaItem.getAttribute('data-id');
+                const originalDate = escalaItem.getAttribute('data-original-date');
+                const newDate = newCell.getAttribute('data-date');
+    
+                console.log('Dropping item:', escalaId, 'from original date:', originalDate, 'to new date:', newDate);
+    
+                // Move the escala item to the new cell
+                newCell.appendChild(escalaItem);
+    
+                // Reset position
+                escalaItem.style.transform = 'translate(0px, 0px)';
+    
+                // Update the escala on the server
+                updateEscalaDate(escalaId, originalDate, newDate);
+            }
+        });
+    
+        function dragMoveListener(event) {
+            var target = event.target;
+            var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+            var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+            target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+            target.setAttribute('data-x', x);
+            target.setAttribute('data-y', y);
+        }
+    
+        function dragEndListener(event) {
+            var target = event.target;
+            target.setAttribute('data-x', 0);
+            target.setAttribute('data-y', 0);
+        }
+    
+        function updateEscalaDate(escalaId, originalDate, newDate) {
+            console.log('Updating escala date for:', escalaId, 'from original date:', originalDate, 'to new date:', newDate);
+            fetch(`/update-escala-date/${escalaId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: `original_date=${originalDate}&new_date=${newDate}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Escala updated successfully');
+                    // Force a full page refresh
+                    location.reload();
+                } else {
+                    console.error('Failed to update escala:', data.message);
+                    // You might want to show an error message to the user here
+                }
+            })
+            .catch(error => {
+                console.error('Error updating escala:', error);
+            });
+        }
+    
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
     });
 </script>
 {% endblock %}

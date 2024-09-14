@@ -16,6 +16,7 @@ from django.forms.utils import ErrorDict
 from django.http import HttpResponse, Http404
 from django.conf import settings
 import os
+from django.views.decorators.http import require_POST
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -356,6 +357,56 @@ def escala_view(request):
     }
     
     return render(request, 'escala.html', context)
+
+@require_POST
+@login_required
+def update_escala_date(request, escala_id):
+    if not request.user.validado:
+        return JsonResponse({"success": False, "message": "User not validated"}, status=403)
+
+    escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
+    
+    if request.user.group != escala.group:
+        return JsonResponse({"success": False, "message": "Permission denied"}, status=403)
+
+    original_date_str = request.POST.get('original_date')
+    new_date_str = request.POST.get('new_date')
+    if not original_date_str or not new_date_str:
+        return JsonResponse({"success": False, "message": "Original or new date not provided"}, status=400)
+
+    try:
+        original_date = datetime.strptime(original_date_str, '%Y-%m-%d').date()
+        new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+        print(f"Updating escala {escala_id} from original date {original_date} to new date {new_date}")
+
+        # Map Python weekday to DIAS_DA_SEMANA
+        python_weekday_to_dias_da_semana = {
+            0: '1',  # Monday -> Segunda-feira
+            1: '2',  # Tuesday -> Terça-feira
+            2: '3',  # Wednesday -> Quarta-feira
+            3: '4',  # Thursday -> Quinta-feira
+            4: '5',  # Friday -> Sexta-feira
+            5: '6',  # Saturday -> Sábado
+            6: '0',  # Sunday -> Domingo
+        }
+
+        original_day_of_week = python_weekday_to_dias_da_semana[original_date.weekday()]
+        new_day_of_week = python_weekday_to_dias_da_semana[new_date.weekday()]
+        print(f"Original day of week: {original_day_of_week} ({original_date.strftime('%A')})")
+        print(f"New day of week: {new_day_of_week} ({new_date.strftime('%A')})")
+
+        # Update dias_da_semana
+        if original_day_of_week in escala.dias_da_semana:
+            escala.dias_da_semana.remove(original_day_of_week)
+        if new_day_of_week not in escala.dias_da_semana:
+            escala.dias_da_semana.append(new_day_of_week)
+        
+        escala.save()
+        print(f"Escala {escala_id} updated successfully")
+        return JsonResponse({"success": True, "message": "Escala updated successfully"})
+    except ValueError:
+        print(f"Invalid date format for escala {escala_id}: {original_date_str} or {new_date_str}")
+        return JsonResponse({"success": False, "message": "Invalid date format"}, status=400)
 
 
 @require_http_methods(["POST"])
