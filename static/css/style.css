@@ -1377,7 +1377,7 @@ select {
 }
 
 .escala-item.plantonista { background-color: #4CAF50; }
-.escala-item.substituto { background-color: #FFA500; }
+.escala-item.substituto { background-color: #DDA0DD; }
 .escala-item.ferias { background-color: #F44336; }
 
 .escala-legend {
