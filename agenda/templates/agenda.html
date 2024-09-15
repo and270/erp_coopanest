@@ -288,7 +288,11 @@
 
 {% block extra_js %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
+
 <script>
+// Main calendar functionality: Handles view switching, navigation, and date range display
 document.addEventListener('DOMContentLoaded', function() {
     const semanaBtn = document.getElementById('semana-view');
     const mesBtn = document.getElementById('mes-view');
@@ -455,6 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Modal display: Shows/hides the procedure form modal
     document.getElementById('agendar-btn').addEventListener('click', function() {
         document.getElementById('procedimento-form-modal').style.display = 'block';
     }); 
@@ -462,9 +467,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('procedimento-form-modal').style.display = 'none';
     });
 </script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
 <script>
+// Input masking: Applies date and time masks to form inputs
     $(document).ready(function(){
         // Apply masks
         $("input[name='data']").inputmask("99/99/9999");  // dd/mm/yyyy
@@ -472,6 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 <script>
+// Conditional fields: Toggles visibility of pre-anesthetic visit fields based on checkbox
     document.addEventListener('DOMContentLoaded', function() {
         const visitaPreAnestesicaCheckbox = document.getElementById('id_visita_pre_anestesica');
         const conditionalContainer = document.querySelector('.conditional-container'); // Change this line
@@ -491,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// CRUD operations: Handles creating, reading, updating, and deleting procedures
 document.addEventListener('DOMContentLoaded', function() {
     const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
     const procedureFormModal = document.getElementById('procedimento-form-modal');
@@ -620,6 +626,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Function to load procedure data into the form
     function loadProcedureDataIntoForm(procedureId) {
         fetch(`/get-procedure/${procedureId}/`)
             .then(response => response.json())
@@ -627,8 +634,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('procedure_id').value = procedureId;
                 document.getElementById('id_procedimento_type').value = data.procedimento_type;
                 document.getElementById('id_data').value = data.data;
+                
+                // Directly use the time strings from the server
                 document.getElementById('id_time').value = data.time;
                 document.getElementById('id_end_time').value = data.end_time;
+                
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
                 document.getElementById('id_email_paciente').value = data.email_paciente;
                 document.getElementById('id_procedimento').value = data.procedimento;
@@ -694,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Modal closing: Adds functionality to close procedure detail modals
     document.addEventListener('DOMContentLoaded', function() {
         const procedureModals = document.querySelectorAll('.procedure-modal');
         const procedureFormModal = document.getElementById('procedimento-form-modal');
@@ -718,6 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// View switching: Handles switching between agenda and scale views
     document.addEventListener('DOMContentLoaded', function() {
         const agendaRadio = document.getElementById('agenda-view');
         const escalaRadio = document.getElementById('scale-view');
@@ -738,6 +750,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 <script>
+// Mini calendar: Implements functionality for the small calendar in the sidebar
 document.addEventListener('DOMContentLoaded', function() {
     const miniPrevBtn = document.getElementById('mini-prev-btn');
     const miniNextBtn = document.getElementById('mini-next-btn');
@@ -902,6 +915,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
+// Search functionality: Handles searching for procedures by date or patient name
 document.addEventListener('DOMContentLoaded', function() {
     const searchBtn = document.getElementById('search-btn');
     const searchInput = document.getElementById('search-input');
@@ -937,6 +951,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Date highlighting: Highlights the searched date in the calendar view
     const highlightDate = '{{ highlight_date|date:"Y-m-d" }}';
     
     document.addEventListener('DOMContentLoaded', function() {
@@ -957,6 +972,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Search input updates: Dynamically updates search input based on selected search type
 document.addEventListener('DOMContentLoaded', function() {
     const searchDataRadio = document.getElementById('search-data');
     const searchPacienteRadio = document.getElementById('search-paciente');

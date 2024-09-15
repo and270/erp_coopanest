@@ -17,7 +17,7 @@ from django.http import HttpResponse, Http404
 from django.conf import settings
 import os
 from django.views.decorators.http import require_POST
-
+from django.utils import timezone
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
     5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
@@ -82,13 +82,17 @@ def get_procedure(request, procedure_id):
     if not request.user.validado or request.user.group != procedure.group:
         return HttpResponseForbidden("You don't have permission to view this procedure.")
     
+    # Convert UTC times to local time
+    local_tz = timezone.get_current_timezone()
+    start_time = procedure.data_horario.astimezone(local_tz)
+    end_time = procedure.data_horario_fim.astimezone(local_tz)
+
     data = {
         'procedimento_type': procedure.procedimento_type,
-        'data': procedure.data_horario.strftime('%d/%m/%Y'),
-        'time': procedure.data_horario.strftime('%H:%M'),
-        'end_time': procedure.data_horario_fim.strftime('%H:%M'),
+        'data': start_time.date().strftime('%d/%m/%Y'),
+        'time': start_time.strftime('%H:%M'),
+        'end_time': end_time.strftime('%H:%M'),
         'nome_paciente': procedure.nome_paciente,
-        #'telefone_paciente': procedure.telefone_paciente,
         'email_paciente': procedure.email_paciente,
         'procedimento': procedure.procedimento,
         'hospital': procedure.hospital.id if procedure.hospital else '',

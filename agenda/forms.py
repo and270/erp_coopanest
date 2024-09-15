@@ -20,7 +20,7 @@ class ProcedimentoForm(forms.ModelForm):
     end_time = forms.TimeField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'hh:mm'}),
         input_formats=['%H:%M'],
-        label="Hora de Término"
+        label="Previsão de Término"
     )
 
     class Meta:
