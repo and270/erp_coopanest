@@ -209,18 +209,16 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.11/interact.min.js"></script>
-<script>
-    $(document).ready(function(){
-        // Apply masks
-        $("#id_data_inicio, #id_data_fim").inputmask("99/99/9999");  // dd/mm/yyyy
-        $("#id_hora_inicio, #id_hora_fim").inputmask("99:99");  // hh:mm
-    });
-</script>
 
 <script>
+$(document).ready(function(){
+    // Apply masks
+    $("#id_data_inicio, #id_data_fim").inputmask("99/99/9999");  // dd/mm/yyyy
+    $("#id_hora_inicio, #id_hora_fim").inputmask("99:99");  // hh:mm
+});
+
 document.addEventListener('DOMContentLoaded', function() {
-    const criarEscalaBtn = document.getElementById('criar-escala-btn');
-    const escalaFormModal = document.getElementById('escala-form-modal');
+    // Calendar navigation
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const currentDateRange = document.getElementById('current-date-range');
@@ -261,28 +259,26 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = `/escala/?start_date=${startDate.toISOString().split('T')[0]}`;
     }
 
+    // Escala form handling
+    const criarEscalaBtn = document.getElementById('criar-escala-btn');
+    const escalaFormModal = document.getElementById('escala-form-modal');
+    const escalaForm = document.getElementById('escala-form');
+    const formSubmitBtn = document.getElementById('form-submit-btn');
+
     criarEscalaBtn.addEventListener('click', function() {
         escalaFormModal.style.display = 'block';
-        document.getElementById('escala-form').reset();
+        escalaForm.reset();
         document.getElementById('escala_id').value = '';
-        document.getElementById('form-submit-btn').textContent = 'Criar Escala';
+        formSubmitBtn.textContent = 'Criar Escala';
     });
     
     document.querySelector('.close').addEventListener('click', function() {
         escalaFormModal.style.display = 'none';
     });
-    
-    // desativa clickout
-    // window.addEventListener('click', function(event) {
-    //     if (event.target == escalaFormModal) {
-    //         escalaFormModal.style.display = 'none';
-    //     }
-    // });
 
+    // Escala item handling
     const escalaItems = document.querySelectorAll('.escala-item');
     const escalaDetailsModal = document.getElementById('escala-details-modal');
-    const escalaForm = document.getElementById('escala-form');
-    const formSubmitBtn = document.getElementById('form-submit-btn');
 
     escalaItems.forEach(item => {
         item.addEventListener('click', function() {
@@ -318,11 +314,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add event listener for the delete button
         const deleteButton = escalaDetailsModal.querySelector('.delete-escala');
-        deleteButton.addEventListener('click', function() {
+        deleteButton.onclick = function() {
             if (confirm('Tem certeza que deseja excluir esta escala?')) {
                 deleteEscala(data.id);
             }
-        });
+        };
     }
 
     function formatDateFull(dateString) {
@@ -330,6 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
     }
 
+    // Edit and delete handlers
     const editEscalaModal = document.getElementById('edit-escala-modal');
     const editEscalaForm = document.getElementById('edit-escala-form');
 
@@ -401,54 +398,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Close edit modal when clicking on the close button or outside the modal
-    document.querySelector('#edit-escala-modal .close').addEventListener('click', function() {
-        editEscalaModal.style.display = 'none';
-    });
-
-    window.addEventListener('click', function(e) {
-        if (e.target == editEscalaModal) {
-            editEscalaModal.style.display = 'none';
-        }
-    });
-
-    function deleteEscala(escalaId) {
-        fetch(`/delete-escala/${escalaId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Falha ao excluir a escala. Por favor, tente novamente.');
-            }
-        });
-    }
-
-    escalaForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const escalaId = document.getElementById('escala_id').value;
-        
-        fetch(escalaId ? `/update-escala/${escalaId}/` : '/create-escala/', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Erro ao salvar a escala. Verifique os campos e tente novamente.');
-            }
+    // Close modals
+    document.querySelectorAll('.close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            this.closest('.modal').style.display = 'none';
         });
     });
 
@@ -468,152 +421,121 @@ document.addEventListener('DOMContentLoaded', function() {
         return cookieValue;
     }
 
-    // Close modal when clicking on the close button or outside the modal
-    document.querySelector('#escala-details-modal .close').addEventListener('click', function() {
-        escalaDetailsModal.style.display = 'none';
-    });
-
-    window.addEventListener('click', function(e) {
-        if (e.target == escalaDetailsModal) {
-            escalaDetailsModal.style.display = 'none';
+    // Drag and drop functionality
+    interact('.escala-item').draggable({
+        inertia: true,
+        modifiers: [
+            interact.modifiers.restrictRect({
+                restriction: '.escala-grid',
+                endOnly: true
+            })
+        ],
+        autoScroll: true,
+        listeners: {
+            move: dragMoveListener,
+            end: dragEndListener
         }
     });
 
-    // Reset form when opening for a new escala
-    document.getElementById('criar-escala-btn').addEventListener('click', function() {
-        escalaForm.reset();
-        document.getElementById('escala_id').value = '';
-        formSubmitBtn.textContent = 'Criar Escala';
-        escalaFormModal.style.display = 'block';
+    interact('.escala-day-cell').dropzone({
+        accept: '.escala-item',
+        overlap: 0.75,
+        ondropactivate: function (event) {
+            event.target.classList.add('drop-active');
+        },
+        ondropdeactivate: function (event) {
+            event.target.classList.remove('drop-active');
+        },
+        ondrop: function (event) {
+            const escalaItem = event.relatedTarget;
+            const newCell = event.target;
+            const escalaId = escalaItem.getAttribute('data-id');
+            const newDate = newCell.getAttribute('data-date');
+
+            newCell.appendChild(escalaItem);
+            escalaItem.style.transform = 'translate(0px, 0px)';
+            updateEscalaDate(escalaId, newDate);
+        }
+    });
+
+    function dragMoveListener(event) {
+        var target = event.target;
+        var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+        var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+        target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+    }
+
+    function dragEndListener(event) {
+        var target = event.target;
+        target.setAttribute('data-x', 0);
+        target.setAttribute('data-y', 0);
+    }
+
+    function updateEscalaDate(escalaId, newDate) {
+        fetch(`/update-escala-date/${escalaId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `new_date=${newDate}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Escala updated successfully');
+                location.reload();
+            } else {
+                console.error('Failed to update escala:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating escala:', error);
+        });
+    }
+
+    function deleteEscala(escalaId) {
+        fetch(`/delete-escala/${escalaId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                escalaDetailsModal.style.display = 'none';
+                location.reload();
+            } else {
+                alert('Erro ao excluir a escala. Por favor, tente novamente.');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting escala:', error);
+            alert('Erro ao excluir a escala. Por favor, tente novamente.');
+        });
+    }
+});
+
+// View switcher
+document.addEventListener('DOMContentLoaded', function() {
+    const agendaRadio = document.getElementById('agenda-view');
+    const escalaRadio = document.getElementById('scale-view');
+    
+    escalaRadio.addEventListener('change', function() {
+        if (escalaRadio.checked) {
+            window.location.href = "{% url 'escala' %}";
+        }
+    });
+
+    agendaRadio.addEventListener('change', function() {
+        if (agendaRadio.checked) {
+            window.location.href = "{% url 'agenda' %}";
+        }
     });
 });
-</script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const agendaRadio = document.getElementById('agenda-view');
-        const escalaRadio = document.getElementById('scale-view');
-        
-        // Add an event listener for the "ESCALA" view
-        escalaRadio.addEventListener('change', function() {
-            if (escalaRadio.checked) {
-                window.location.href = "{% url 'escala' %}";  // Redirect to escala view
-            }
-        });
-
-        // Add an event listener for the "AGENDA" view, in case you need to toggle back
-        agendaRadio.addEventListener('change', function() {
-            if (agendaRadio.checked) {
-                window.location.href = "{% url 'agenda' %}";  // Redirect to agenda view
-            }
-        });
-    });
-</script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.11/interact.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Make escala items draggable
-        interact('.escala-item').draggable({
-            inertia: true,
-            modifiers: [
-                interact.modifiers.restrictRect({
-                    restriction: '.escala-grid',
-                    endOnly: true
-                })
-            ],
-            autoScroll: true,
-            listeners: {
-                move: dragMoveListener,
-                end: dragEndListener
-            }
-        });
-    
-        // Make day cells droppable
-        interact('.escala-day-cell').dropzone({
-            accept: '.escala-item',
-            overlap: 0.75,
-            ondropactivate: function (event) {
-                event.target.classList.add('drop-active');
-            },
-            ondropdeactivate: function (event) {
-                event.target.classList.remove('drop-active');
-            },
-            ondrop: function (event) {
-                const escalaItem = event.relatedTarget;
-                const newCell = event.target;
-                const escalaId = escalaItem.getAttribute('data-id');
-                const newDate = newCell.getAttribute('data-date');
-    
-                console.log('Dropping item:', escalaId, 'to new date:', newDate);
-    
-                // Move the escala item to the new cell
-                newCell.appendChild(escalaItem);
-    
-                // Reset position
-                escalaItem.style.transform = 'translate(0px, 0px)';
-    
-                // Update the escala on the server
-                updateEscalaDate(escalaId, newDate);
-            }
-        });
-    
-        function dragMoveListener(event) {
-            var target = event.target;
-            var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-            var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-            target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
-            target.setAttribute('data-x', x);
-            target.setAttribute('data-y', y);
-        }
-    
-        function dragEndListener(event) {
-            var target = event.target;
-            target.setAttribute('data-x', 0);
-            target.setAttribute('data-y', 0);
-        }
-    
-        function updateEscalaDate(escalaId, newDate) {
-            console.log('Updating escala date for:', escalaId, 'to new date:', newDate);
-            fetch(`/update-escala-date/${escalaId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: `new_date=${newDate}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Escala updated successfully');
-                    location.reload();
-                    // Optionally, you can refresh the page or update the UI to reflect the changes
-                } else {
-                    console.error('Failed to update escala:', data.message);
-                    // You might want to show an error message to the user here
-                }
-            })
-            .catch(error => {
-                console.error('Error updating escala:', error);
-            });
-        }
-    
-        // Helper function to get CSRF token
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    });
 </script>
 {% endblock %}
