@@ -327,16 +327,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadView(year, month, weekStart) {
-        const url = new URL(window.location);
-        url.searchParams.set('year', year);
-        url.searchParams.set('month', month);
-        if (weekStart) {
-            url.searchParams.set('week_start', weekStart.toISOString().split('T')[0]);
-        } else {
-            url.searchParams.delete('week_start');
-        }
-        window.location.href = url.toString();
+    const base_url = '{% url 'agenda' %}';
+    const url = new URL(window.location.origin + base_url);
+    url.searchParams.set('year', year);
+    url.searchParams.set('month', month);
+    if (weekStart) {
+        url.searchParams.set('week_start', weekStart.toISOString().split('T')[0]);
+    } else {
+        url.searchParams.delete('week_start');
     }
+    window.location.href = url.toString();
+}
 
     function updateViewDisplay() {
         if (currentView === 'week') {
