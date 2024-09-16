@@ -48,7 +48,19 @@
                             {% endif %}
                         </div>
                         <div class="form-group">
-                            {{ form.dias_da_semana.label_tag }} {{ form.dias_da_semana }}
+                            {{ form.dias_da_semana.label_tag }}
+                            <div id="dias-da-semana-container">
+                                {% for value, label in form.dias_da_semana.field.choices %}
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="{{ form.dias_da_semana.name }}" value="{{ value }}"
+                                                   {% if value in form.dias_da_semana.value %}checked{% endif %}
+                                                   {% if value == 'todos' %}id="todos-os-dias"{% endif %}>
+                                            {{ label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
                             {% if form.dias_da_semana.errors %}
                                 <div class="error-message">
                                     {{ form.dias_da_semana.errors }}
@@ -516,6 +528,27 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error deleting escala:', error);
             alert('Erro ao excluir a escala. Por favor, tente novamente.');
+        });
+    }
+
+    // Handle "Todos os Dias" checkbox
+    const todosOsDiasCheckbox = document.getElementById('todos-os-dias');
+    const diasDaSemanaContainer = document.getElementById('dias-da-semana-container');
+
+    if (todosOsDiasCheckbox) {
+        todosOsDiasCheckbox.addEventListener('change', function() {
+            const checkboxes = diasDaSemanaContainer.querySelectorAll('input[type="checkbox"]:not(#todos-os-dias)');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+                checkbox.disabled = this.checked;
+            });
+        });
+
+        // Uncheck "Todos os Dias" if any other day is unchecked
+        diasDaSemanaContainer.addEventListener('change', function(event) {
+            if (event.target !== todosOsDiasCheckbox && !event.target.checked) {
+                todosOsDiasCheckbox.checked = false;
+            }
         });
     }
 });

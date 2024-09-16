@@ -81,6 +81,8 @@ class ProcedimentoForm(forms.ModelForm):
         return instance
 
 class EscalaForm(forms.ModelForm):
+    TODOS_OS_DIAS = 'todos'
+    
     data_inicio = forms.DateField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'dd/mm/aaaa'}),
         input_formats=['%d/%m/%Y'],
@@ -92,7 +94,7 @@ class EscalaForm(forms.ModelForm):
         label="Data de Fim"
     )
     dias_da_semana = forms.MultipleChoiceField(
-        choices=EscalaAnestesiologista.DIAS_DA_SEMANA,
+        choices=[(TODOS_OS_DIAS, 'Todos os Dias')] + list(EscalaAnestesiologista.DIAS_DA_SEMANA),
         widget=forms.CheckboxSelectMultiple,
         required=False
     )
@@ -113,7 +115,10 @@ class EscalaForm(forms.ModelForm):
         self.fields['dias_da_semana'].widget.attrs.pop('class', None)
 
     def clean_dias_da_semana(self):
-        return self.cleaned_data.get('dias_da_semana', [])
+        dias = self.cleaned_data.get('dias_da_semana', [])
+        if self.TODOS_OS_DIAS in dias:
+            return [day[0] for day in EscalaAnestesiologista.DIAS_DA_SEMANA]
+        return dias
     
     def save(self, commit=True):
         data_inicio = self.cleaned_data['data_inicio']
