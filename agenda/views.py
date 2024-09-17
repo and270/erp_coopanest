@@ -19,6 +19,7 @@ import os
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 import calendar
+from django.db.models import Q
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -248,6 +249,18 @@ def get_procedimento_details(request, procedimento_id):
         'data_visita_pre_anestesica': procedimento.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedimento.data_visita_pre_anestesica else None,
     }
     return JsonResponse(data)
+
+def search_pacientes(request):
+    query = request.GET.get('query', '')
+    if len(query) >= 2:  # Only search if at least 2 characters are entered
+        pacientes = Procedimento.objects.filter(
+            Q(nome_paciente__icontains=query),
+            group=request.user.group
+        ).values('nome_paciente').distinct()[:10]  # Limit to 10 results
+        results = [paciente['nome_paciente'] for paciente in pacientes]
+        return JsonResponse(results, safe=False)
+    return JsonResponse([], safe=False)
+
 
 @login_required
 def agenda_view(request):
@@ -536,3 +549,4 @@ def serve_protected_file(request, file_path):
             response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
             return response
     raise Http404
+

@@ -16,4 +16,5 @@ urlpatterns = [
     path('update-escala-date/<int:escala_id>/', views.update_escala_date, name='update_escala_date'),
     path('edit-single-day-escala/<int:escala_id>/', views.edit_single_day_escala, name='edit_single_day_escala'),
     re_path(r'^protected-media/(?P<file_path>.*)$', views.serve_protected_file, name='protected_file'),
+    path('search-pacientes/', views.search_pacientes, name='search_pacientes'),
 ]

@@ -1023,4 +1023,67 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script>
+// Autocomplete: Implements autocomplete for patient search
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-input');
+    const searchTypePaciente = document.getElementById('search-paciente');
+    
+    let timeoutId;
+
+    searchInput.addEventListener('input', function() {
+        if (searchTypePaciente.checked) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                const query = this.value.trim();
+                if (query.length >= 2) {
+                    fetch(`/search-pacientes/?query=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Clear previous results
+                            const existingResults = document.getElementById('autocomplete-results');
+                            if (existingResults) {
+                                existingResults.remove();
+                            }
+
+                            // Create and populate results
+                            const resultsDiv = document.createElement('div');
+                            resultsDiv.id = 'autocomplete-results';
+                            resultsDiv.style.position = 'absolute';
+                            resultsDiv.style.zIndex = '1000';
+                            resultsDiv.style.backgroundColor = 'white';
+                            resultsDiv.style.border = '1px solid #ddd';
+                            resultsDiv.style.maxHeight = '200px';
+                            resultsDiv.style.overflowY = 'auto';
+
+                            data.forEach(paciente => {
+                                const item = document.createElement('div');
+                                item.textContent = paciente;
+                                item.style.padding = '5px';
+                                item.style.cursor = 'pointer';
+                                item.addEventListener('click', function() {
+                                    searchInput.value = this.textContent;
+                                    resultsDiv.remove();
+                                });
+                                resultsDiv.appendChild(item);
+                            });
+
+                            searchInput.parentNode.appendChild(resultsDiv);
+                        });
+                }
+            }, 300);  // Debounce for 300ms
+        }
+    });
+
+    // Close autocomplete results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (e.target !== searchInput) {
+            const results = document.getElementById('autocomplete-results');
+            if (results) {
+                results.remove();
+            }
+        }
+    });
+});
+</script>
 {% endblock %}
