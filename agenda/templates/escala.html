@@ -100,7 +100,7 @@
         <div class="center-controls">
             <div class="view-switcher">
                 <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
-                <h3 id="current-date-range" class="escala-date-range">{{ start_date|date:"d/m" }} até {{ start_date|add:"27 days"|date:"d/m" }}</h3>
+                <h3 id="current-date-range" class="escala-date-range">{{ start_date|date:"d/m" }} até {{ end_date|date:"d/m" }}</h3>
                 <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
             </div>
             <ul class="escala-types">
@@ -236,15 +236,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentDateRange = document.getElementById('current-date-range');
     
     // Parse the start date string into year, month, and day components
-    const [year, month, day] = '{{ start_date|date:"Y-m-d" }}'.split('-').map(Number);
-    
-    // Create a Date object using UTC to avoid timezone issues
+    const [year, month, day] = '{{ first_of_month|date:"Y-m-d" }}'.split('-').map(Number);
     let currentStartDate = new Date(Date.UTC(year, month - 1, day));
 
     function updateDateRange() {
-        const endDate = new Date(currentStartDate);
-        endDate.setUTCDate(endDate.getUTCDate() + 27); // 4 weeks - 1 day
-        currentDateRange.textContent = `${formatDate(currentStartDate)} até ${formatDate(endDate)}`;
+        currentDateRange.textContent = formatMonthYear(currentStartDate);
+    }
+
+    function formatMonthYear(date) {
+        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
     }
 
     function formatDate(date) {
@@ -255,17 +255,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     prevBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        currentStartDate.setUTCDate(currentStartDate.getUTCDate() - 28);
+        currentStartDate.setUTCMonth(currentStartDate.getUTCMonth() - 1);
+        currentStartDate.setUTCDate(1);
         updateDateRange();
         loadEscalas(currentStartDate);
     });
 
     nextBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        currentStartDate.setUTCDate(currentStartDate.getUTCDate() + 28);
+        currentStartDate.setUTCMonth(currentStartDate.getUTCMonth() + 1);
+        currentStartDate.setUTCDate(1);
         updateDateRange();
         loadEscalas(currentStartDate);
     });
+
 
     function loadEscalas(startDate) {
         window.location.href = `/escala/?start_date=${startDate.toISOString().split('T')[0]}`;

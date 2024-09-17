@@ -18,6 +18,8 @@ from django.conf import settings
 import os
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+import calendar
+
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
     5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
@@ -325,17 +327,27 @@ def escala_view(request):
     
     start_date_str = request.GET.get('start_date')
     if start_date_str:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        first_of_month = datetime.strptime(start_date_str, '%Y-%m-%d').date()
     else:
-        start_date = date.today() - timedelta(days=(date.today().weekday() + 1) % 7)  # Align to Sunday
+        today = date.today()
+        first_of_month = today.replace(day=1)
 
-    weeks = get_escala_week_dates(start_date)
+    start_date = first_of_month - timedelta(days=(first_of_month.weekday() + 1) % 7)
 
+    last_day = calendar.monthrange(first_of_month.year, first_of_month.month)[1]
+    last_day_of_month = first_of_month.replace(day=last_day)
+
+    days_until_saturday = (5 - last_day_of_month.weekday()) % 7
+    end_date = last_day_of_month + timedelta(days=days_until_saturday)
+
+    # Update escalas query
     escalas = EscalaAnestesiologista.objects.filter(
         group=user.group,
         data__gte=start_date,
-        data__lte=start_date + timedelta(days=27)
+        data__lte=end_date
     )
+
+    weeks = get_escala_week_dates(start_date, end_date)
 
     if request.method == 'POST':
         form = EscalaForm(request.POST, user=user)
@@ -359,7 +371,8 @@ def escala_view(request):
         'SUBSTITUTO_ESCALA': SUBSTITUTO_ESCALA,
         'FERIAS_ESCALA': FERIAS_ESCALA,
         'start_date': start_date,
-        'end_date': start_date + timedelta(days=27),
+        'end_date': end_date,
+        'first_of_month': first_of_month,
         'form_errors': form.errors if request.method == 'POST' else None,
     }
     
@@ -456,23 +469,26 @@ def get_escala(request, escala_id):
     }
     return JsonResponse(data)
 
-def get_escala_week_dates(start_date):
-    
-    # Adjust the start date to the previous Sunday if it's not already Sunday
-    if start_date.weekday() != 6:
-        start_date -= timedelta(days=(start_date.weekday() + 1) % 7)
-
+def get_escala_week_dates(start_date, end_date):
     weeks = []
-    for i in range(4):  # Create four weeks
-        week_start = start_date + timedelta(days=i * 7)
-        week_end = week_start + timedelta(days=6)
+    current_date = start_date
+
+    while current_date <= end_date:
+        week_start = current_date
+        week_end = week_start + timedelta(days=6)  # Saturday
+
+        days = [week_start + timedelta(days=i) for i in range(7)]
+
         weeks.append({
             'start_date': week_start,
             'end_date': week_end,
-            'days': [week_start + timedelta(days=x) for x in range(7)]
+            'days': days
         })
-    
+
+        current_date += timedelta(days=7)
+
     return weeks
+
 
 @require_http_methods(["POST"])
 def edit_single_day_escala(request, escala_id):
