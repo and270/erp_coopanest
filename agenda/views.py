@@ -251,6 +251,10 @@ def get_procedimento_details(request, procedimento_id):
     return JsonResponse(data)
 
 def search_pacientes(request):
+
+    if not request.user.validado:
+        return JsonResponse({"error": "User not validated"}, status=403)
+    
     query = request.GET.get('query', '')
     if len(query) >= 2:  # Only search if at least 2 characters are entered
         pacientes = Procedimento.objects.filter(
