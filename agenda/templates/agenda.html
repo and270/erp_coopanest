@@ -652,8 +652,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
                 
-                toggleConditionalFields();
-                // Show the form modal for editing
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Editar Agendamento';
             });
