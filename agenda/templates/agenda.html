@@ -926,7 +926,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchTypePaciente = document.getElementById('search-paciente');
     const searchTypeProcedimento = document.getElementById('search-procedimento');
 
-    searchBtn.addEventListener('click', function() {
+    function performSearch() {
         const query = searchInput.value.trim();
         if (!query) return;
 
@@ -948,6 +948,15 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (searchTypeProcedimento.checked) {
             // Handle procedimento search
             window.location.href = `/agenda/search?procedimento=${query}`;
+        }
+    }
+
+    searchBtn.addEventListener('click', performSearch);
+
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent form submission if inside a form
+            performSearch();
         }
     });
 });
