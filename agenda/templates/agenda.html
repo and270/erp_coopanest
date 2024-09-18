@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentView = '{{ view_type }}';
     let currentYear = {{ current_year }};
     let currentMonth = {{ current_month }};
-    let currentWeekStart = new Date('{{ current_week_start|date:"Y-m-d" }}');
+    let currentWeekStart = new Date('{{ current_week_start|date:"Y-m-d" }}T00:00:00');
 
     const MONTH_NAMES_PT = {
         1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -321,9 +321,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentView === 'month') {
             currentDateRange.textContent = `${currentYear} ${MONTH_NAMES_PT[currentMonth]}`;
         } else {
-            const weekEnd = new Date(currentWeekStart);
+            const weekStartCopy = new Date(currentWeekStart.getTime());
+            const weekEnd = new Date(currentWeekStart.getTime());
             weekEnd.setDate(weekEnd.getDate() + 6);
-            const startDateFormatted = currentWeekStart.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' });
+            const startDateFormatted = weekStartCopy.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' });
             const endDateFormatted = weekEnd.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' });
 
             currentDateRange.textContent = `${startDateFormatted} a ${endDateFormatted}`;
@@ -361,15 +362,18 @@ document.addEventListener('DOMContentLoaded', function() {
     updateDateRange();
 
     function getFirstDayOfWeek(date) {
-        const day = date.getDay();
-        const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-        return new Date(date.setDate(diff));
+        const dateCopy = new Date(date.getTime());
+        const day = dateCopy.getDay(); // 0 for Sunday
+        const diff = dateCopy.getDate() - day;
+        dateCopy.setDate(diff);
+        return dateCopy;
     }
 
     semanaBtn.addEventListener('click', function() {
         currentView = 'week';
-        const firstDayOfMonth = new Date(currentYear, currentMonth - 1, 1);
-        currentWeekStart = getFirstDayOfWeek(firstDayOfMonth);
+        currentWeekStart = getFirstDayOfWeek(new Date());
+        currentYear = currentWeekStart.getFullYear();
+        currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
         updateViewDisplay();
         updateDateRange();
         loadView(currentYear, currentMonth, currentWeekStart);
@@ -392,6 +396,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            currentYear = currentWeekStart.getFullYear();
+            currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
         }
         updateDateRange();
         loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
@@ -407,10 +413,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            currentYear = currentWeekStart.getFullYear();
+            currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
         }
         updateDateRange();
         loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
     });
+
 
     // Function to open the form modal with pre-filled data
     function openFormModal(date, time) {

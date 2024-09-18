@@ -134,14 +134,12 @@ def get_calendar_dates(year, month):
     return calendar_dates
 
 def get_week_dates(week_start):
-    # Ensure week_start is a Sunday
-    week_start -= timedelta(days=week_start.weekday() + 1)
-    days_order = [0, 1, 2, 3, 4, 5, 6, ]  # Sunday to Saturday
+    days_order = [0, 1, 2, 3, 4, 5, 6]  # Sunday to Saturday
     return [
         {
-            'day_name': _(date_format(week_start + timedelta(days=days_order[i]), 'D')).upper(),
-            'date': (week_start + timedelta(days=days_order[i])).strftime('%d/%m'),
-            'full_date': week_start + timedelta(days=days_order[i])
+            'day_name': _(date_format(week_start + timedelta(days=i), 'D')).upper(),
+            'date': (week_start + timedelta(days=i)).strftime('%d/%m'),
+            'full_date': week_start + timedelta(days=i)
         } for i in range(7)
     ]
 
@@ -184,9 +182,11 @@ def search_agenda(request):
 
     today = datetime.today().date()
     if highlight_date:
-        week_start = highlight_date - timedelta(days=highlight_date.weekday())
+        week_day = (highlight_date.weekday() + 1) % 7
+        week_start = highlight_date - timedelta(days=week_day)
     else:
-        week_start = today - timedelta(days=today.weekday())
+        week_day = (today.weekday() + 1) % 7
+        week_start = today - timedelta(days=week_day)
 
     # Adjust year and month based on highlight_date
     if highlight_date:
@@ -290,18 +290,19 @@ def agenda_view(request):
 
     if week_start_str:
         week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
-        calendar_dates = get_week_dates(week_start)
         view_type = 'week'
     else:
-        calendar_dates = get_calendar_dates(year, month)
         view_type = 'month'
-        week_start = today.date() - timedelta(days=today.weekday())
+        week_day = (today.weekday() + 1) % 7
+        week_start = today.date() - timedelta(days=week_day)
 
     hours = ['06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']
 
     if view_type == 'week':
         week_dates = get_week_dates(week_start)
+        calendar_dates = []
     else:
+        calendar_dates = get_calendar_dates(year, month)
         week_dates = []
 
     procedimentos = Procedimento.objects.filter(group=user.group)
