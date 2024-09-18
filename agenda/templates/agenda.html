@@ -213,7 +213,7 @@
                                         </p>
                                         <div class="modal-actions">
                                             <button class="btn btn-primary edit-procedure">Editar</button>
-                                            <button class="btn btn-danger delete-procedure">Cancelar</button>
+                                            <button class="btn btn-danger delete-procedure">Excluir</button>
                                         </div>
                                     </div>
                                 </div>
@@ -274,7 +274,7 @@
                                                 </p>
                                                 <div class="modal-actions">
                                                     <button class="btn btn-primary edit-procedure">Editar</button>
-                                                    <button class="btn btn-danger delete-procedure">Cancelar</button>
+                                                    <button class="btn btn-danger delete-procedure">Excluir</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -632,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const modal = e.target.closest('.procedure-modal');
             const procedureId = modal.getAttribute('data-procedure-id');
             
-            if (confirm('Tem certeza que deseja cancelar este procedimento?')) {
+            if (confirm('Tem certeza que deseja excluir este agendamento?')) {
                 deleteProcedure(procedureId);
             }
         }
