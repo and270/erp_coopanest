@@ -240,7 +240,7 @@
                 {% for date in week_dates %}
                     <div class="day-column" data-date="{{ date.full_date|date:'Y-m-d' }}">
                         {% for hour in hours %}
-                            <div class="hour-slot">
+                            <div class="hour-slot" data-hour="{{ hour }}">
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" and procedimento.data_horario|date:"H" <= hour and procedimento.data_horario_fim|date:"H" > hour %}
                                         <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
@@ -296,7 +296,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
 
 <script>
-// Main calendar functionality: Handles view switching, navigation, and date range display
 document.addEventListener('DOMContentLoaded', function() {
     const semanaBtn = document.getElementById('semana-view');
     const mesBtn = document.getElementById('mes-view');
@@ -439,33 +438,36 @@ document.addEventListener('DOMContentLoaded', function() {
         formModal.style.display = 'block';
     }
 
-    // Add event listeners to month view cells
-    const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
-    monthViewCells.forEach(cell => {
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        // Adjust for local time zone
+        date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    // Month view event listener
+    document.querySelectorAll('.calendar-grid.month-view .day').forEach(cell => {
         cell.addEventListener('click', function() {
-            const date = this.querySelector('span').textContent.trim().padStart(2, '0');
-            const month = currentMonth.toString().padStart(2, '0');
-            const year = currentYear;
-            const formattedDate = `${date}/${month}/${year}`;
-            openFormModal(formattedDate);
+            const date = this.getAttribute('data-date');
+            if (date) {
+                const formattedDate = formatDate(date);
+                openFormModal(formattedDate);
+            }
         });
     });
 
-    const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
-    const procedureFormModal = document.getElementById('procedimento-form-modal');
-    const formSubmitBtn = document.getElementById('form-submit-btn');
-    const procedimentoForm = document.getElementById('procedimento-form');
-
-    // Add event listeners to week view cells
-    const weekViewCells = document.querySelectorAll('.calendar-grid.week-view .hour-slot');
-    weekViewCells.forEach(cell => {
+    // Week view event listener
+    document.querySelectorAll('.calendar-grid.week-view .hour-slot').forEach(cell => {
         cell.addEventListener('click', function(e) {
-            // Prevent opening the form if clicking on an existing procedure card
             if (!e.target.closest('.procedure-card')) {
-                procedureFormModal.style.display = 'block';
-                procedimentoForm.reset();
-                document.getElementById('procedure_id').value = '';
-                formSubmitBtn.textContent = 'Criar Agendamento';
+                const dayColumn = this.closest('.day-column');
+                const date = dayColumn.getAttribute('data-date');
+                const hour = this.getAttribute('data-hour');
+                if (date && hour) {
+                    const formattedDate = formatDate(date);
+                    const formattedTime = `${hour}:00`;
+                    openFormModal(formattedDate, formattedTime);
+                }
             }
         });
     });
@@ -473,7 +475,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Modal display: Shows/hides the procedure form modal
     document.getElementById('agendar-btn').addEventListener('click', function() {
         document.getElementById('procedimento-form-modal').style.display = 'block';
     }); 
@@ -482,7 +483,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 <script>
-// Input masking: Applies date and time masks to form inputs
     $(document).ready(function(){
         // Apply masks
         $("input[name='data']").inputmask("99/99/9999");  // dd/mm/yyyy
@@ -490,7 +490,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 <script>
-// Conditional fields: Toggles visibility of pre-anesthetic visit fields based on checkbox
     document.addEventListener('DOMContentLoaded', function() {
         const visitaPreAnestesicaCheckbox = document.getElementById('id_visita_pre_anestesica');
         const conditionalContainer = document.querySelector('.conditional-container'); // Change this line
@@ -510,7 +509,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// CRUD operations: Handles creating, reading, updating, and deleting procedures
 document.addEventListener('DOMContentLoaded', function() {
     const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
     const procedureFormModal = document.getElementById('procedimento-form-modal');
@@ -716,7 +714,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Modal closing: Adds functionality to close procedure detail modals
     document.addEventListener('DOMContentLoaded', function() {
         const procedureModals = document.querySelectorAll('.procedure-modal');
         const procedureFormModal = document.getElementById('procedimento-form-modal');
@@ -741,7 +738,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// View switching: Handles switching between agenda and scale views
     document.addEventListener('DOMContentLoaded', function() {
         const agendaRadio = document.getElementById('agenda-view');
         const escalaRadio = document.getElementById('scale-view');
@@ -845,14 +841,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
     monthViewCells.forEach(cell => {
         cell.addEventListener('click', function() {
-            if (e.target.closest('.procedure-modal')) {
-                return;
-            }
             const date = this.querySelector('span').textContent.trim().padStart(2, '0');
             const month = currentMonth.toString().padStart(2, '0');
             const year = currentYear;
             const formattedDate = `${date}/${month}/${year}`;
             openFormModal(formattedDate);
+        });
+    });
+
+    // Add event listeners to week view cells
+    const weekViewCells = document.querySelectorAll('.calendar-grid.week-view .hour-slot');
+    weekViewCells.forEach(cell => {
+        cell.addEventListener('click', function(e) {
+            // Prevent opening the form if clicking on an existing procedure card
+            if (!e.target.closest('.procedure-card')) {
+                const dayColumn = this.closest('.day-column');
+                const date = dayColumn.getAttribute('data-date');
+                const hour = this.closest('.time-slot').textContent.trim().split(':')[0];
+                const formattedDate = new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const formattedTime = `${hour}:00`;
+                openFormModal(formattedDate, formattedTime);
+            }
         });
     });
 
