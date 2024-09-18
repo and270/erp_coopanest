@@ -183,8 +183,10 @@
                         {% for procedimento in procedimentos %}
                             {% if procedimento.data_horario.date == date.day.date %}
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
-                                    <span>{{ procedimento.nome_paciente }}</span>
-                                    <span>{{ procedimento.procedimento }}</span>
+                                    <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
+                                    <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                    <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                    <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span>
                                 </div>
                                 <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                     <div class="procedure-modal-content">
@@ -242,8 +244,10 @@
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" and procedimento.data_horario|date:"H" <= hour and procedimento.data_horario_fim|date:"H" > hour %}
                                         <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
-                                            <span>{{ procedimento.nome_paciente }}</span>
-                                            <span>{{ procedimento.procedimento }}</span>
+                                            <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
+                                            <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                            <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                            <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span>
                                         </div>
                                         <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                             <div class="procedure-modal-content">
