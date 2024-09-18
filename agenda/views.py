@@ -155,6 +155,9 @@ def search_agenda(request):
     highlight_date = None
     search_type = None  # Initialize search_type
 
+    user = CustomUser.objects.get(id=request.user.id)
+    form = ProcedimentoForm(user=user)  # Initialize the form here
+
     if date:
         search_type = 'date'
         try:
@@ -225,7 +228,8 @@ def search_agenda(request):
         'week_dates': week_dates, 
         'procedimentos': procedimentos,
         'highlight_date': highlight_date,
-        'search_type': search_type,  # Pass search_type to the template
+        'search_type': search_type,
+        'form': form,
     }
     return render(request, 'agenda.html', context)
 
