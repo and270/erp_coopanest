@@ -108,6 +108,18 @@
                     </div>
                 {% endif %}
             </div>
+            <div class="form-group">
+                <input type="checkbox" id="agree-terms" name="agree_terms" required>
+                <label for="agree-terms">
+                    Concordo com os <a href="{% url 'terms_of_service' %}" target="_blank">Termos de Serviço</a>
+                </label>
+            </div>
+            <div class="form-group">
+                <input type="checkbox" id="agree-privacy" name="agree_privacy" required>
+                <label for="agree-privacy">
+                    Concordo com a <a href="{% url 'privacy_policy' %}" target="_blank">Política de Privacidade</a>
+                </label>
+            </div>
             <button type="submit" name="register" class="auth-button">Criar conta</button>
         </form>
     </div>

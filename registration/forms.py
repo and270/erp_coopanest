@@ -11,26 +11,18 @@ class CustomUserCreationForm(UserCreationForm):
     group = forms.ModelChoiceField(queryset=Groups.objects.all(), required=False, label='Selecione seu Grupo')
     new_group = forms.CharField(required=False, label='Registre o nome do seu Grupo')
     create_new_group = forms.BooleanField(required=False, label='Criar novo grupo')
+    agree_terms = forms.BooleanField(required=True, label='Concordo com os Termos de Serviço')
+    agree_privacy = forms.BooleanField(required=True, label='Concordo com a Política de Privacidade')
 
     class Meta:
         model = CustomUser
-        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'password1', 'password2')
+        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'password1', 'password2', 'agree_terms', 'agree_privacy')
         labels = {
             'email': 'E-mail',
             'user_type': 'Tipo de usuário',
             'password1': 'Senha',
             'password2': 'Confirme a senha',
         }
-
-    def __init__(self, *args, **kwargs):
-        super(CustomUserCreationForm, self).__init__(*args, **kwargs)
-
-        user_type_choices = [
-            (SECRETARIA_USER, 'Secretária'),
-            (GESTOR_USER, 'Gestor'),
-            (ANESTESISTA_USER, 'Anestesista')
-        ]
-        self.fields['user_type'].choices = user_type_choices
 
     def clean(self):
         cleaned_data = super().clean()

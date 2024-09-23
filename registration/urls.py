@@ -12,4 +12,6 @@ urlpatterns = [
     path('edit/<str:model_name>/<int:object_id>/', views.edit_view, name='edit'),
     path('profile/', views.profile_view, name='profile'),
     path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
+    path('termos-de-servico/', views.terms_of_service, name='terms_of_service'),
+    path('politica-de-privacidade/', views.privacy_policy, name='privacy_policy'),
 ]
