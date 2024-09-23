@@ -217,6 +217,37 @@ main {
     color: #ffffff;
 }
 
+.form-group-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.form-group-checkbox input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.form-group-checkbox label {
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.form-group-checkbox label a {
+    display: inline;  /* Ensure the anchor is inline */
+    color: #418FDE;
+    text-decoration: none;
+    margin-left: 5px;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    vertical-align: baseline;
+}
+
+.form-group-checkbox label a:hover {
+    text-decoration: underline;
+}
+
 .form-group label {
     margin-bottom: 5px;
     font-weight: bold;
@@ -286,6 +317,15 @@ main {
 }
 
 .auth-box a {
+    color: #418FDE;
+    text-align: right;
+    display: block;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.auth-box .form-group > a {
     color: #418FDE;
     text-align: right;
     display: block;
