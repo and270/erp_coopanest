@@ -67,9 +67,11 @@
                     </div>
                 {% endif %}
             </div>
-            <div class="form-group" id="create-new-group-option">
-                <label for="register-create-new-group"><span>&#x1F6A7;</span> Criar novo grupo</label>
+            <div class="form-group-checkbox" id="create-new-group-option">
                 {{ register_form.create_new_group }}
+                <label for="{{ register_form.create_new_group.id_for_label }}">
+                    <span>&#x1F6A7;</span> Criar novo grupo
+                </label>
             </div>
             <div class="form-group" id="group-selection">
                 <label for="register-group"><span>&#x1F3E2;</span> Grupo</label>

@@ -10,7 +10,11 @@ from django.utils.translation import gettext_lazy as _
 class CustomUserCreationForm(UserCreationForm):
     group = forms.ModelChoiceField(queryset=Groups.objects.all(), required=False, label='Selecione seu Grupo')
     new_group = forms.CharField(required=False, label='Registre o nome do seu Grupo')
-    create_new_group = forms.BooleanField(required=False, label='Criar novo grupo')
+    create_new_group = forms.BooleanField(
+        required=False, 
+        label='Criar novo grupo',
+        widget=forms.CheckboxInput(attrs={'id': 'id_create_new_group'})
+    )
     agree_terms = forms.BooleanField(required=True, label='Concordo com os Termos de Serviço')
     agree_privacy = forms.BooleanField(required=True, label='Concordo com a Política de Privacidade')
 
