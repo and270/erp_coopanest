@@ -25,36 +25,33 @@ class ProcedimentoForm(forms.ModelForm):
 
     class Meta:
         model = Procedimento
-        exclude = ['group', 'data_horario', 'data_horario_fim']
+        exclude = ['group', 'data_horario', 'data_horario_fim', 'nps_token', 'csat_score', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca', 'comentario_adicional']
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
 
         super(ProcedimentoForm, self).__init__(*args, **kwargs)
-        # Reorder fields: set the order manually
+
         self.fields['procedimento_type'].label = 'Tipo de Procedimento'
         self.fields['data'].label = 'Data do Procedimento'
         self.fields['time'].label = 'Hora do Procedimento'
 
-        # Set the order explicitly: first procedimento_type, then data and time
         self.fields = {
             'procedimento_type': self.fields['procedimento_type'],
             'data': self.fields['data'],
             'time': self.fields['time'],
             'end_time': self.fields['end_time'],
             'nome_paciente': self.fields['nome_paciente'],
-            #'telefone_paciente': self.fields['telefone_paciente'],
             'email_paciente': self.fields['email_paciente'],
             'procedimento': self.fields['procedimento'],
             'hospital': self.fields['hospital'],
             'outro_local': self.fields['outro_local'],
             'cirurgiao': self.fields['cirurgiao'],
             'anestesista_responsavel': self.fields['anestesista_responsavel'],
-            'link_nps': self.fields['link_nps'],
             'visita_pre_anestesica': self.fields['visita_pre_anestesica'],
             'data_visita_pre_anestesica': self.fields['data_visita_pre_anestesica'],
             'foto_anexo': self.fields['foto_anexo'],
-            'nome_responsavel_visita': self.fields['nome_responsavel_visita']
+            'nome_responsavel_visita': self.fields['nome_responsavel_visita'],
         }
 
         if user:
@@ -76,6 +73,37 @@ class ProcedimentoForm(forms.ModelForm):
         end_time = self.cleaned_data['end_time']
         instance.data_horario = datetime.combine(date, time)
         instance.data_horario_fim = datetime.combine(date, end_time)
+        if commit:
+            instance.save()
+        return instance
+class SurveyForm(forms.ModelForm):
+    class Meta:
+        model = Procedimento
+        fields = ['satisfacao_geral', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca', 'comentario_adicional']
+        widgets = {
+            'satisfacao_geral': forms.RadioSelect(attrs={'class': 'satisfaction-radio'}),
+            'clareza_informacoes': forms.RadioSelect(attrs={'class': 'satisfaction-radio'}),
+            'comunicacao_disponibilidade': forms.RadioSelect(attrs={'class': 'satisfaction-radio'}),
+            'conforto_seguranca': forms.RadioSelect(attrs={'class': 'satisfaction-radio'}),
+            'comentario_adicional': forms.Textarea(attrs={'class': 'form-control'}),
+        }
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Calculate CSAT score
+        total_responses = 4
+        satisfied_responses = sum(
+            1 for score in [
+                self.cleaned_data['satisfacao_geral'],
+                self.cleaned_data['clareza_informacoes'],
+                self.cleaned_data['comunicacao_disponibilidade'],
+                self.cleaned_data['conforto_seguranca']
+            ] if score in [4, 5]  # Count 'Satisfeito' and 'Muito Satisfeito'
+        )
+        
+        instance.csat_score = (satisfied_responses / total_responses) * 100
+        
         if commit:
             instance.save()
         return instance

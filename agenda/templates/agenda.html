@@ -72,9 +72,6 @@
                         <div class="form-group">
                             {{ form.anestesista_responsavel.label_tag }} {{ form.anestesista_responsavel }}
                         </div>
-                        <div class="form-group">
-                            {{ form.link_nps.label_tag }} {{ form.link_nps }}
-                        </div>
                         <div class="form-group-inline">
                             {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
                         </div>
@@ -200,7 +197,6 @@
                                         <p><strong>Previsão de Término:</strong> <span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                         <p><strong>Cirurgião:</strong> <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
                                         <p><strong>Anestesista:</strong> <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
-                                        <p><strong>Link NPS:</strong> <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
                                         <p><strong>Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
                                         <p><strong>Data da Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
                                         <p><strong>Responsável pela Visita:</strong> <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
@@ -261,7 +257,6 @@
                                                 <p><strong>Previsão de Término:</strong> <span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                                 <p><strong>Cirurgião:</strong> <span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></p>
                                                 <p><strong>Anestesista:</strong> <span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></p>
-                                                <p><strong>Link NPS:</strong> <span class="modal-nps-link">{{ procedimento.link_nps|default:"Não disponível" }}</span></p>
                                                 <p><strong>Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></p>
                                                 <p><strong>Data da Visita Pré-Anestésica:</strong> <span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></p>
                                                 <p><strong>Responsável pela Visita:</strong> <span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></p>
@@ -520,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         const procedureId = document.getElementById('procedure_id').value;
         
-         // Reset previous error messages
+        // Reset previous error messages
         document.querySelectorAll('.error-message').forEach(el => el.remove());
         document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
 
@@ -534,6 +529,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                let message = data.message;
+                if (!data.email_sent) {
+                    message += ` Porém, não foi possível enviar o link de pesquisa para o email do usuário devido a: ${data.email_error}`;
+                }
+                alert(message);
                 location.reload();  // Reload the page to show the updated data
             } else {
                 const errors = JSON.parse(data.errors);
@@ -658,7 +658,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_outro_local').value = data.outro_local;
                 document.getElementById('id_cirurgiao').value = data.cirurgiao;
                 document.getElementById('id_anestesista_responsavel').value = data.anestesista_responsavel;
-                document.getElementById('id_link_nps').value = data.link_nps;
                 document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;

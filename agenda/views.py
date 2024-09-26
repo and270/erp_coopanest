@@ -1,8 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
-
 from registration.models import Anesthesiologist, CustomUser
 from .models import Procedimento, EscalaAnestesiologista
-from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm
+from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange, weekday, SUNDAY
 from datetime import datetime, timedelta, date
@@ -20,6 +19,8 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 import calendar
 from django.db.models import Q
+from django.core.mail import send_mail
+from django.urls import reverse
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -51,14 +52,34 @@ def create_procedure(request):
         return HttpResponseForbidden("You don't have permission to update this procedure.")
     
     form = ProcedimentoForm(request.POST, request.FILES, user=request.user)
+
     if form.is_valid():
         procedure = form.save(commit=False)
         procedure.group = request.user.group
         procedure.save()
+
+        email_sent = True
+        email_error = None
+
+        if procedure.email_paciente:
+            try:
+                survey_url = request.build_absolute_uri(reverse('survey', args=[procedure.nps_token]))
+                subject = 'Pesquisa de Satisfação'
+                message = f'Olá {procedure.nome_paciente},\n\nPor favor, responda nossa pesquisa de satisfação através do link abaixo:\n{survey_url}'
+                from_email = settings.DEFAULT_FROM_EMAIL
+                recipient_list = [procedure.email_paciente]
+                send_mail(subject, message, from_email, recipient_list)
+            except Exception as e:
+                email_sent = False
+                email_error = str(e)
+                print(f"xxxxxx Error sending email to patient {procedure.email_paciente}: ", e)
+
         return JsonResponse({
             'success': True,
             'id': procedure.id,
-            'message': 'Procedimento criado com sucesso.'
+            'message': 'Procedimento criado com sucesso.',
+            'email_sent': email_sent,
+            'email_error': email_error
         })
     else:
         return JsonResponse({
@@ -102,7 +123,6 @@ def get_procedure(request, procedure_id):
         'outro_local': procedure.outro_local,
         'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
         'anestesista_responsavel': procedure.anestesista_responsavel.id if procedure.anestesista_responsavel else '',
-        'link_nps': procedure.link_nps,
         'visita_pre_anestesica': procedure.visita_pre_anestesica,
         'data_visita_pre_anestesica': procedure.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedure.data_visita_pre_anestesica else '',
         'nome_responsavel_visita': procedure.nome_responsavel_visita,
@@ -248,7 +268,6 @@ def get_procedimento_details(request, procedimento_id):
         'data_horario': procedimento.data_horario.strftime('%d/%m/%Y %H:%M'),
         'cirurgiao': procedimento.cirurgiao.name,
         'anestesista_responsavel': procedimento.anestesista_responsavel.name,
-        'link_nps': procedimento.link_nps,
         'visita_pre_anestesica': procedimento.visita_pre_anestesica,
         'data_visita_pre_anestesica': procedimento.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedimento.data_visita_pre_anestesica else None,
     }
@@ -269,6 +288,23 @@ def search_pacientes(request):
         return JsonResponse(results, safe=False)
     return JsonResponse([], safe=False)
 
+def survey_view(request, nps_token):
+    procedimento = get_object_or_404(Procedimento, nps_token=nps_token)
+
+    if request.method == 'POST':
+        form = SurveyForm(request.POST, instance=procedimento)
+        if form.is_valid():
+            form.save()
+            # TODO: Send email to the group with the patient's response
+            return render(request, 'survey_thanks.html')
+    else:
+        form = SurveyForm(instance=procedimento)
+
+    context = {
+        'form': form,
+        'procedimento': procedimento,
+    }
+    return render(request, 'survey_form.html', context)
 
 @login_required
 def agenda_view(request):

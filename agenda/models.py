@@ -3,6 +3,7 @@ from django.db import models
 from constants import CIRURGIA_PROCEDIMENTO, EXAME_PROCEDIMENTO, FORA_CENTRO_PROCEDIMENTO, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
 from django.contrib.postgres.fields import ArrayField
+import uuid
 
 class Procedimento(models.Model):
 
@@ -29,12 +30,47 @@ class Procedimento(models.Model):
     outro_local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Outro Local')
     cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião')
     anestesista_responsavel = models.ForeignKey(Anesthesiologist, on_delete=models.CASCADE, verbose_name='Anestesista Responsável')
-    link_nps = models.URLField(blank=True, null=True, verbose_name='Link de Pesquisa de Satisfação')
+    nps_token = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True, null=True, blank=True)
     visita_pre_anestesica = models.BooleanField(default=False, verbose_name='Visita Pré-Anestésica Realizada')
     data_visita_pre_anestesica = models.DateField(blank=True, null=True, verbose_name='Data da Visita Pré-Anestésica')
     foto_anexo = models.ImageField(upload_to='anexos/', blank=True, null=True, verbose_name='Anexo Visita Pré-Anestésica')
     nome_responsavel_visita = models.CharField(max_length=255, blank=True, verbose_name='Nome do Responsável pela Visita', default='')
     
+    # New survey fields
+    SATISFACTION_CHOICES = [
+        (1, 'Muito Insatisfeito'),
+        (2, 'Insatisfeito'),
+        (3, 'Neutro'),
+        (4, 'Satisfeito'),
+        (5, 'Muito Satisfeito'),
+    ]
+    satisfacao_geral = models.IntegerField(
+        choices=SATISFACTION_CHOICES,
+        null=True, 
+        blank=True, 
+        verbose_name='Satisfação geral'
+    )
+    clareza_informacoes = models.IntegerField(
+        choices=SATISFACTION_CHOICES,
+        null=True, 
+        blank=True, 
+        verbose_name='Clareza das informações'
+    )
+    comunicacao_disponibilidade = models.IntegerField(
+        choices=SATISFACTION_CHOICES,
+        null=True, 
+        blank=True, 
+        verbose_name='Comunicação e disponibilidade'
+    )
+    conforto_seguranca = models.IntegerField(
+        choices=SATISFACTION_CHOICES,
+        null=True, 
+        blank=True, 
+        verbose_name='Conforto e segurança'
+    )
+    comentario_adicional = models.TextField(blank=True, null=True, verbose_name='Comentário adicional')
+    csat_score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='CSAT Score')
+
     class Meta:
         verbose_name = "Procedimento"
         verbose_name_plural = "Procedimentos"

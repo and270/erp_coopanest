@@ -141,3 +141,13 @@ LOGIN_URL = '/login/'
 
 MEDIA_URL = '/protected-media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+#PARA DESENVOLVIMENTO:
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+#PARA PRODUÇÃO:
+EMAIL_BACKEND = 'django_ses.SESBackend'
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+DEFAULT_FROM_EMAIL = 'coopahub@coopanestrio.org.br'
+EMAIL_FROM = 'coopahub@coopanestrio.org.br'
