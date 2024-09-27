@@ -81,7 +81,23 @@
         <p>Olá {{ procedimento.nome_paciente }}, por favor, responda a pesquisa abaixo.</p>
         <form method="post">
             {% csrf_token %}
-            {{ form.as_p }}
+            {{ form.satisfacao_geral.label_tag }}<br>
+            {{ form.satisfacao_geral }}<br><br>
+            
+            <p>Por favor, avalie os seguintes aspectos do serviço de anestesia:</p>
+            
+            {{ form.clareza_informacoes.label_tag }}<br>
+            {{ form.clareza_informacoes }}<br><br>
+            
+            {{ form.comunicacao_disponibilidade.label_tag }}<br>
+            {{ form.comunicacao_disponibilidade }}<br><br>
+            
+            {{ form.conforto_seguranca.label_tag }}<br>
+            {{ form.conforto_seguranca }}<br><br>
+            
+            {{ form.comentario_adicional.label_tag }}<br>
+            {{ form.comentario_adicional }}<br><br>
+            
             <button type="submit">Enviar</button>
         </form>
     </div>

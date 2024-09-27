@@ -87,6 +87,13 @@ class SurveyForm(forms.ModelForm):
             'conforto_seguranca': forms.RadioSelect(attrs={'class': 'satisfaction-radio'}),
             'comentario_adicional': forms.Textarea(attrs={'class': 'form-control'}),
         }
+        labels = {
+            'satisfacao_geral': 'Em uma escala de 1 a 5, quão satisfeito você está com o serviço de anestesia que recebeu?',
+            'clareza_informacoes': 'Clareza das informações fornecidas pelo anestesista',
+            'comunicacao_disponibilidade': 'Comunicação e disponibilidade do anestesista',
+            'conforto_seguranca': 'Conforto e segurança durante o procedimento',
+            'comentario_adicional': 'Você gostaria de deixar algum comentário adicional sobre sua experiência?'
+        }
 
     def save(self, commit=True):
         instance = super().save(commit=False)

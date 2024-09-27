@@ -288,14 +288,44 @@ def search_pacientes(request):
         return JsonResponse(results, safe=False)
     return JsonResponse([], safe=False)
 
+from django.core.mail import send_mail
+from django.conf import settings
+
 def survey_view(request, nps_token):
     procedimento = get_object_or_404(Procedimento, nps_token=nps_token)
 
     if request.method == 'POST':
         form = SurveyForm(request.POST, instance=procedimento)
         if form.is_valid():
-            form.save()
-            # TODO: Send email to the group with the patient's response
+            survey_response = form.save()
+            
+            # Send email to the group with the patient's response
+            group_email = procedimento.group.email
+            subject = f'Coopahub - Pesquisa de Satisfação - {procedimento.nome_paciente}'
+            message = f"""
+            Um paciente acabou de responder a pesquisa de satisfação!
+
+            Paciente: {procedimento.nome_paciente}
+            
+            Respostas da pesquisa:
+            1. Satisfação geral: {survey_response.get_satisfacao_geral_display()}
+            2. Clareza das informações: {survey_response.get_clareza_informacoes_display()}
+            3. Comunicação e disponibilidade: {survey_response.get_comunicacao_disponibilidade_display()}
+            4. Conforto e segurança: {survey_response.get_conforto_seguranca_display()}
+            
+            Comentário adicional: {survey_response.comentario_adicional}
+            
+            CSAT Score: {survey_response.csat_score:.2f}%
+            """
+            
+            from_email = settings.DEFAULT_FROM_EMAIL
+            recipient_list = [group_email]
+            
+            try:
+                send_mail(subject, message, from_email, recipient_list)
+            except Exception as e:
+                print(f"Error sending email to group {group_email}: ", e)
+            
             return render(request, 'survey_thanks.html')
     else:
         form = SurveyForm(instance=procedimento)
