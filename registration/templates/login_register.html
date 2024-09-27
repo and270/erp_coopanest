@@ -92,6 +92,15 @@
                     </div>
                 {% endif %}
             </div>
+            <div class="form-group" id="new-group-email">
+                <label for="register-new-group-email"><span>&#x2709;</span> E-mail do Novo Grupo</label>
+                {{ register_form.new_group_email }}
+                {% if register_form.new_group_email.errors %}
+                    <div class="error-message">
+                        {{ register_form.new_group_email.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
             <div class="form-group">
                 <label for="register-password1"><span>&#x1F512;</span> Crie uma senha</label>
                 {{ register_form.password1 }}
@@ -134,6 +143,7 @@
         const createNewGroupField = document.querySelector('#id_create_new_group');
         const groupSelection = document.querySelector('#group-selection');
         const newGroup = document.querySelector('#new-group');
+        const newGroupEmail = document.querySelector('#new-group-email');
         const createNewGroupOption = document.querySelector('#create-new-group-option');
         
         function toggleFields() {
@@ -145,14 +155,17 @@
                 if (createNewGroupChecked) {
                     groupSelection.style.display = 'none';
                     newGroup.style.display = 'block';
+                    newGroupEmail.style.display = 'block';
                 } else {
                     groupSelection.style.display = 'block';
                     newGroup.style.display = 'none';
+                    newGroupEmail.style.display = 'none';
                 }
             } else {
                 createNewGroupOption.style.display = 'none';
                 groupSelection.style.display = 'block';
                 newGroup.style.display = 'none';
+                newGroupEmail.style.display = 'none';
             }
         }
     
