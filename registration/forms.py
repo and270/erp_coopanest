@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 class CustomUserCreationForm(UserCreationForm):
     group = forms.ModelChoiceField(queryset=Groups.objects.all(), required=False, label='Selecione seu Grupo')
     new_group = forms.CharField(required=False, label='Registre o nome do seu Grupo')
+    new_group_email = forms.EmailField(required=False, label='E-mail do Grupo')
     create_new_group = forms.BooleanField(
         required=False, 
         label='Criar novo grupo',
@@ -20,7 +21,7 @@ class CustomUserCreationForm(UserCreationForm):
 
     class Meta:
         model = CustomUser
-        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'password1', 'password2', 'agree_terms', 'agree_privacy')
+        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'new_group_email', 'password1', 'password2', 'agree_terms', 'agree_privacy')
         labels = {
             'email': 'E-mail',
             'user_type': 'Tipo de usuário',
@@ -34,10 +35,13 @@ class CustomUserCreationForm(UserCreationForm):
         create_new_group = cleaned_data.get("create_new_group")
         group = cleaned_data.get("group")
         new_group = cleaned_data.get("new_group")
+        new_group_email = cleaned_data.get("new_group_email")
 
         if user_type == GESTOR_USER:
             if create_new_group and not new_group:
                 raise forms.ValidationError("Por favor, insira o nome do novo grupo.")
+            elif create_new_group and not new_group_email:
+                raise forms.ValidationError("Por favor, insira o e-mail do novo grupo.")
             elif not create_new_group and not group:
                 raise forms.ValidationError("Por favor, selecione um grupo.")
 
@@ -52,10 +56,14 @@ class CustomUserCreationForm(UserCreationForm):
         create_new_group = self.cleaned_data.get("create_new_group")
         group = self.cleaned_data.get("group")
         new_group = self.cleaned_data.get("new_group")
+        new_group_email = self.cleaned_data.get("new_group_email")
 
         if user_type == GESTOR_USER:
             if create_new_group:
-                group, created = Groups.objects.get_or_create(name=new_group)
+                group, created = Groups.objects.get_or_create(
+                    name=new_group,
+                    defaults={'email': new_group_email}
+                )
                 user.group = group
             else:
                 user.group = group
