@@ -937,10 +937,6 @@ select {
     color: #000000;
 }
 
-.view-type-switcher .btn:hover {
-    background-color: #2c659e;
-    color: #ffffff;
-}
 
 .calendar-top-bar {
     display: flex;
