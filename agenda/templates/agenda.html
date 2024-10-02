@@ -782,51 +782,6 @@ document.addEventListener('DOMContentLoaded', function() {
         8: 'Setembro', 9: 'Outubro', 10: 'Novembro', 11: 'Dezembro'
     };
 
-    function updateMiniCalendar() {
-        const monthName = MONTH_NAMES_PT[miniCurrentMonthIndex];
-        miniCurrentMonth.textContent = `${monthName} ${miniCurrentYear}`;
-
-        const firstDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex, 1);
-        const lastDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex + 1, 0);
-        const firstDayWeekday = firstDayOfMonth.getDay();
-        const lastDate = lastDayOfMonth.getDate();
-
-        miniCalendarDates.innerHTML = '';
-
-        // Fill in the days from the previous month
-        for (let i = 0; i < firstDayWeekday; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.classList.add('mini-calendar-date', 'empty');
-            miniCalendarDates.appendChild(emptyCell);
-        }
-
-        // Fill in the days of the current month
-        for (let date = 1; date <= lastDate; date++) {
-            const dateCell = document.createElement('div');
-            dateCell.classList.add('mini-calendar-date');
-            dateCell.textContent = date;
-            miniCalendarDates.appendChild(dateCell);
-        }
-    }
-
-    miniPrevBtn.addEventListener('click', function() {
-        miniCurrentMonthIndex--;
-        if (miniCurrentMonthIndex < 0) {
-            miniCurrentMonthIndex = 11;
-            miniCurrentYear--;
-        }
-        updateMiniCalendar();
-    });
-
-    miniNextBtn.addEventListener('click', function() {
-        miniCurrentMonthIndex++;
-        if (miniCurrentMonthIndex > 11) {
-            miniCurrentMonthIndex = 0;
-            miniCurrentYear++;
-        }
-        updateMiniCalendar();
-    });
-
     // Function to open the form modal with pre-filled data
     function openFormModal(date, time) {
         const formModal = document.getElementById('procedimento-form-modal');
