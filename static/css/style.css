@@ -878,8 +878,46 @@ select {
 
 
 .view-type-switcher {
-    display: flex;
-    gap: 5px; /* Space between the Semana and Mês buttons */
+    display: inline-block;
+    position: relative;
+}
+
+.view-type-switcher select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #ffffff;
+    border: none;
+    font-size: 0.9rem;
+    color: #000000;
+    cursor: pointer;
+    padding: 5px 20px 5px 10px;
+    font-weight: bold;
+}
+
+.view-type-switcher::after {
+    content: "\25BC";
+    font-size: 0.7rem;
+    color: #000000;
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.view-type-switcher select:focus {
+    outline: none;
+}
+
+/* Remove default styling for IE */
+.view-type-switcher select::-ms-expand {
+    display: none;
+}
+
+/* Ensure the dropdown options have a white background */
+.view-type-switcher select option {
+    background-color: #ffffff;
 }
 
 .view-type-switcher .btn {
@@ -895,7 +933,7 @@ select {
 }
 
 .view-type-switcher .btn.active {
-    background-color: #ccc; /* Grey background for active button */
+    background-color: #ffffff; /* Grey background for active button */
     color: #000000;
 }
 
