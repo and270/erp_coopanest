@@ -30,66 +30,7 @@
 <div class="agenda-container">
     <div class="agenda-header">
         <div class="left-controls">
-            <button class="btn btn-primary" id="agendar-btn">+ AGENDAR</button>
-            <div id="procedimento-form-modal" class="modal" style="display:none;">
-                <div class="modal-content">
-                    <span class="close">&times;</span>
-                    <br>
-                    <form method="POST" enctype="multipart/form-data" id="procedimento-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="procedure_id" id="procedure_id">
-                        {{ form.non_field_errors }}
-                        <div class="form-group">
-                            {{ form.procedimento_type.label_tag }} {{ form.procedimento_type }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.data.label_tag }} {{ form.data }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.time.label_tag }} {{ form.time }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.end_time.label_tag }} {{ form.end_time }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.nome_paciente.label_tag }} {{ form.nome_paciente }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.email_paciente.label_tag }} {{ form.email_paciente }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.procedimento.label_tag }} {{ form.procedimento }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.hospital.label_tag }} {{ form.hospital }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.outro_local.label_tag }} {{ form.outro_local }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.cirurgiao.label_tag }} {{ form.cirurgiao }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.anestesista_responsavel.label_tag }} {{ form.anestesista_responsavel }}
-                        </div>
-                        <div class="form-group-inline">
-                            {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
-                        </div>
-                        <div class="conditional-container" style="display:none;">
-                            <div class="form-group">
-                                {{ form.data_visita_pre_anestesica.label_tag }} {{ form.data_visita_pre_anestesica }}
-                            </div>
-                            <div class="form-group">
-                                {{ form.foto_anexo.label_tag }} {{ form.foto_anexo }}
-                            </div>
-                            <div class="form-group">
-                                {{ form.nome_responsavel_visita.label_tag }} {{ form.nome_responsavel_visita }}
-                            </div>
-                        </div>
-                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Agendamento</button>
-                    </form>
-                </div>
-            </div>
+            Agenda
         </div>
 
         <div class="center-controls">
@@ -119,10 +60,10 @@
 
         <div class="right-controls">
             <div class="agenda-scale">
-                <input type="radio" id="agenda-view" name="view-toggle" checked>
-                <label for="agenda-view"><b>AGENDA</b></label>
                 <input type="radio" id="scale-view" name="view-toggle">
-                <label for="scale-view"><b>ESCALA</b></label>
+                <label for="scale-view"><b>Escala</b></label>
+                <input type="radio" id="agenda-view" name="view-toggle" checked>
+                <label for="agenda-view"><b>Agenda</b></label>
             </div>
         </div>
     </div>
@@ -283,6 +224,68 @@
         </div>
     </div>
 </div>
+
+<button class="btn btn-primary" id="agendar-btn">Agendar</button>
+<div id="procedimento-form-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <br>
+                    <form method="POST" enctype="multipart/form-data" id="procedimento-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="procedure_id" id="procedure_id">
+                        {{ form.non_field_errors }}
+                        <div class="form-group">
+                            {{ form.procedimento_type.label_tag }} {{ form.procedimento_type }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.data.label_tag }} {{ form.data }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.time.label_tag }} {{ form.time }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.end_time.label_tag }} {{ form.end_time }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.nome_paciente.label_tag }} {{ form.nome_paciente }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.email_paciente.label_tag }} {{ form.email_paciente }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.procedimento.label_tag }} {{ form.procedimento }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.hospital.label_tag }} {{ form.hospital }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.outro_local.label_tag }} {{ form.outro_local }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.cirurgiao.label_tag }} {{ form.cirurgiao }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.anestesista_responsavel.label_tag }} {{ form.anestesista_responsavel }}
+                        </div>
+                        <div class="form-group-inline">
+                            {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
+                        </div>
+                        <div class="conditional-container" style="display:none;">
+                            <div class="form-group">
+                                {{ form.data_visita_pre_anestesica.label_tag }} {{ form.data_visita_pre_anestesica }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.foto_anexo.label_tag }} {{ form.foto_anexo }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.nome_responsavel_visita.label_tag }} {{ form.nome_responsavel_visita }}
+                            </div>
+                        </div>
+                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Agendamento</button>
+                    </form>
+                </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
