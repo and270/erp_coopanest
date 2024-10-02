@@ -914,11 +914,15 @@ select {
 #prev-btn, #next-btn {
     background: none;
     border: none;
-    color: #418FDE; /* Set color to blue */
-    font-size: 2rem; /* Increase size */
+    color: #626262;
+    font-size: 1.2rem;
     cursor: pointer;
-    margin: 0 5px; /* Adjust spacing */
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    text-decoration: none;
 }
+
 
 #prev-btn:hover, #next-btn:hover {
     color: #2c659e;
@@ -926,17 +930,17 @@ select {
 
 .view-switcher {
     display: flex;
-    align-items: center; /* Ensures alignment of arrows and date */
-    gap: 10px; /* Space between arrows and date */
+    align-items: center;
+    gap: 5px;
 }
 
 #current-date-range {
-    margin: 0;
-    font-size: 1.5rem;
-    flex-grow: 1; /* Allow the date range to take up remaining space */
-    text-align: center; /* Center the text */
-    white-space: nowrap; /* Prevent text from wrapping */
-    overflow: hidden; /* Hide overflow text */
+    margin: 0 10px;
+    font-size: 20px;
+    flex-grow: 1; 
+    text-align: center; 
+    white-space: nowrap;
+    overflow: hidden;
     text-overflow: ellipsis;
 }
 

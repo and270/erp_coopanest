@@ -75,8 +75,8 @@
             <div class="sub-controls">
                 <div class="view-switcher">
                     <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
-                    <h2 id="current-date-range"></h2>
                     <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
+                    <h2 id="current-date-range"></h2>
                 </div>
                 <div class="view-type-switcher">
                     <button id="semana-view" class="btn">SEMANA</button>
@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateDateRange() {
         if (currentView === 'month') {
-            currentDateRange.textContent = `${currentYear} ${MONTH_NAMES_PT[currentMonth]}`;
+            currentDateRange.textContent = `${MONTH_NAMES_PT[currentMonth]} de ${currentYear}`;
         } else {
             const weekStartCopy = new Date(currentWeekStart.getTime());
             const weekEnd = new Date(currentWeekStart.getTime());
