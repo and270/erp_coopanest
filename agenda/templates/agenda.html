@@ -79,8 +79,10 @@
                     <h2 id="current-date-range"></h2>
                 </div>
                 <div class="view-type-switcher">
-                    <button id="semana-view" class="btn">SEMANA</button>
-                    <button id="mes-view" class="btn active">MÊS</button>
+                    <select id="view-select" class="btn">
+                        <option value="mes" {% if view_type == 'month' %}selected{% endif %}>MÊS</option>
+                        <option value="semana" {% if view_type == 'week' %}selected{% endif %}>SEMANA</option>
+                    </select>
                 </div>
                 <div class="search-bar">
                     <div class="radio-group">
@@ -320,27 +322,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadView(year, month, weekStart) {
-    const base_url = '{% url 'agenda' %}';
-    const url = new URL(window.location.origin + base_url);
-    url.searchParams.set('year', year);
-    url.searchParams.set('month', month);
-    if (weekStart) {
-        url.searchParams.set('week_start', weekStart.toISOString().split('T')[0]);
-    } else {
-        url.searchParams.delete('week_start');
+        const base_url = '{% url 'agenda' %}';
+        const url = new URL(window.location.origin + base_url);
+        url.searchParams.set('year', year);
+        url.searchParams.set('month', month);
+        if (weekStart) {
+            url.searchParams.set('week_start', weekStart.toISOString().split('T')[0]);
+        } else {
+            url.searchParams.delete('week_start');
+        }
+        window.location.href = url.toString();
     }
-    window.location.href = url.toString();
-}
 
     function updateViewDisplay() {
         if (currentView === 'week') {
-            semanaBtn.classList.add('active');
-            mesBtn.classList.remove('active');
             monthView.style.display = 'none';
             weekView.style.display = 'grid';
         } else {
-            mesBtn.classList.add('active');
-            semanaBtn.classList.remove('active');
             monthView.style.display = 'grid';
             weekView.style.display = 'none';
         }
@@ -357,21 +355,21 @@ document.addEventListener('DOMContentLoaded', function() {
         return dateCopy;
     }
 
-    semanaBtn.addEventListener('click', function() {
-        currentView = 'week';
-        currentWeekStart = getFirstDayOfWeek(new Date());
-        currentYear = currentWeekStart.getFullYear();
-        currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
+    const viewSelect = document.getElementById('view-select');
+    // Event listener for the dropdown
+    viewSelect.addEventListener('change', function() {
+        const selectedView = this.value;
+        if (selectedView === 'semana') {
+            currentView = 'week';
+            currentWeekStart = getFirstDayOfWeek(new Date());
+            currentYear = currentWeekStart.getFullYear();
+            currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
+        } else if (selectedView === 'mes') {
+            currentView = 'month';
+        }
         updateViewDisplay();
         updateDateRange();
-        loadView(currentYear, currentMonth, currentWeekStart);
-    });
-
-    mesBtn.addEventListener('click', function() {
-        currentView = 'month';
-        updateViewDisplay();
-        updateDateRange();
-        loadView(currentYear, currentMonth, null);
+        loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
     });
 
     prevBtn.addEventListener('click', function(e) {
