@@ -415,7 +415,7 @@ hr {
 }
 
 .validation-status.validated {
-    background-color: #4CAF50;
+    background-color: #33B679;
     color: white;
 }
 
@@ -1022,24 +1022,54 @@ select {
 .event-types {
     list-style-type: none;
     padding: 0;
+    margin: 0;
+}
+
+.event-types-container {
+    margin-bottom: 15px;
+}
+
+.event-types-legend {
+    font-size: 12px;
+    color: #737373;
+    margin-bottom: 10px;
+    padding-left: 10px;
 }
 
 .event-types li {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
 }
 
 .event-types button {
+    display: flex;
+    align-items: center;
     width: 100%;
-    padding: 10px;
+    padding: 4px 8px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    color: #ffffff;
+    font-size: 12px;
+    color: #0D0D0D;
+    background-color: transparent;
+    text-align: left;
 }
 
-.btn-cirurgias { background-color: #4CAF50; }
-.btn-procedimentos { background-color: #FFA500; }
-.btn-exames { background-color: #FFD700; }
+.event-types button::before {
+    content: '';
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    min-width: 13px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+
+.btn-cirurgias::before { background-color: #33B679; }
+.btn-procedimentos::before { background-color: #F4511E; }
+.btn-exames::before { background-color: #F6BF26; }
 
 .calendar-main {
     flex-grow: 1;
@@ -1310,15 +1340,15 @@ select {
 
 /* Specific colors based on procedimento_type */
 .cirurgia {
-    background-color: #4CAF50; /* Green for CIRURGIA_PROCEDIMENTO */
+    background-color: #33B679; /* Green for CIRURGIA_PROCEDIMENTO */
 }
 
 .fora-centro {
-    background-color: #FFA500; /* Orange for FORA_CENTRO_PROCEDIMENTO */
+    background-color: #F4511E; /* Orange for FORA_CENTRO_PROCEDIMENTO */
 }
 
 .exame {
-    background-color: #FFD700; /* Gold for EXAME_PROCEDIMENTO */
+    background-color: #F6BF26; /* Gold for EXAME_PROCEDIMENTO */
 }
 
 .close-modal {
@@ -1478,7 +1508,7 @@ select {
     margin: 0.1em; /* Remove default paragraph margins */
 }
 
-.escala-item.plantonista { background-color: #4CAF50; }
+.escala-item.plantonista { background-color: #33B679; }
 .escala-item.substituto { background-color: #DDA0DD; }
 .escala-item.ferias { background-color: #F44336; }
 
@@ -1502,8 +1532,8 @@ select {
     margin-right: 5px;
 }
 
-.escala-color-indicator.plantonista { background-color: #4CAF50; }
-.escala-color-indicator.substituto { background-color: #FFA500; }
+.escala-color-indicator.plantonista { background-color: #33B679; }
+.escala-color-indicator.substituto { background-color: #F4511E; }
 .escala-color-indicator.ferias { background-color: #F44336; }
 
 
@@ -1527,7 +1557,7 @@ select {
 }
 
 .escala-types .plantonista {
-    background-color: #4CAF50; /* Green */
+    background-color: #33B679; /* Green */
 }
 
 .escala-types .substituto {
