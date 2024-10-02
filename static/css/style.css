@@ -1075,6 +1075,14 @@ select {
     flex-grow: 1;
 }
 
+.sub-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
 .calendar-grid {
     display: grid;
     gap: 1px;

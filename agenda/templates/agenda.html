@@ -34,28 +34,7 @@
         </div>
 
         <div class="center-controls">
-            <div class="view-switcher">
-                <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
-                <h2 id="current-date-range"></h2>
-                <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
-            </div>
-            <div class="view-type-switcher">
-                <button id="semana-view" class="btn">SEMANA</button>
-                <button id="mes-view" class="btn active">MÊS</button>
-            </div>
-            <div class="search-bar">
-                <div class="radio-group">
-                    <i class="fa fa-search search-icon"></i>
-                    <input type="radio" id="search-data" name="search-type">
-                    <label for="search-data">DATA</label>
-                    <input type="radio" id="search-paciente" name="search-type">
-                    <label for="search-paciente">PACIENTE</label>
-                </div>
-                <div class="input-container">
-                    <input type="text" id="search-input" placeholder="Buscar...">
-                    <button id="search-btn"><i class="fa fa-search"></i></button>
-                </div>
-            </div>
+            <!-- This div is now empty but still maintains the space -->
         </div>
 
         <div class="right-controls">
@@ -108,6 +87,30 @@
             </div>
         </div>
         <div class="calendar-main">
+            <div class="sub-controls">
+                <div class="view-switcher">
+                    <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
+                    <h2 id="current-date-range"></h2>
+                    <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
+                </div>
+                <div class="view-type-switcher">
+                    <button id="semana-view" class="btn">SEMANA</button>
+                    <button id="mes-view" class="btn active">MÊS</button>
+                </div>
+                <div class="search-bar">
+                    <div class="radio-group">
+                        <i class="fa fa-search search-icon"></i>
+                        <input type="radio" id="search-data" name="search-type">
+                        <label for="search-data">DATA</label>
+                        <input type="radio" id="search-paciente" name="search-type">
+                        <label for="search-paciente">PACIENTE</label>
+                    </div>
+                    <div class="input-container">
+                        <input type="text" id="search-input" placeholder="Buscar...">
+                        <button id="search-btn"><i class="fa fa-search"></i></button>
+                    </div>
+                </div>
+            </div>
             <div class="calendar-grid month-view">
                 <div class="calendar-days">
                     <span>DOM</span>
