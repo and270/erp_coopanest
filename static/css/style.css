@@ -1589,11 +1589,11 @@ select {
 }
 
 .mini-calendar-header #mini-current-month {
-    font-size: 1rem; /* Reduce font size */
+    font-size: 0.8em;
     font-weight: bold;
-    color: #2c659e; /* Darker blue for the month title */
-    flex-grow: 1; /* Allow the month name to take up available space */
-    text-align: center; /* Center the month name */
+    color: #505050;
+    flex-grow: 1;
+    text-align: center;
 }
 
 .mini-calendar-weekdays {
@@ -1602,8 +1602,8 @@ select {
     text-align: center;
     font-weight: bold;
     margin-bottom: 5px;
-    font-size: 0.9rem; /* Adjust font size */
-    color: #418FDE; /* Lighter blue for weekdays */
+    font-size: 0.7rem; 
+    color: #505050;
 }
 
 .mini-calendar-dates {
@@ -1616,7 +1616,7 @@ select {
     text-align: center;
     padding: 5px 0; /* Adjust padding to ensure alignment */
     cursor: pointer;
-    font-size: 0.9rem; /* Adjust font size */
+    font-size: 0.7rem; /* Adjust font size */
     color: #000; /* Set color to black */
 }
 
@@ -1634,15 +1634,16 @@ select {
 }
 
 .mini-calendar-date.current-day {
-    background-color: #418FDE; /* Highlight current day */
-    color: #fff; /* White text for current day */
+    background-color: #1A73E8; 
+    color: #fff; 
+    border-radius: 50%; 
 }
 
 .mini-calendar-header .btn-link {
     background: none;
     border: none;
-    color: #418FDE;
-    font-size: 1.2rem;
+    color: #505050;
+    font-size: 1.0rem;
     cursor: pointer;
     padding: 5px; /* Add padding for better click area */
 }
