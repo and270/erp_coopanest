@@ -278,17 +278,51 @@ main {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between; /* Optional: can also use flex-start */
     margin-bottom: 15px;
 }
 
 .form-group-inline label {
-    margin-right: 10px; /* Add space between label and input */
+    order: 2;
+    margin-left: 10px;
+    font-weight: normal;
+    color: #000000;
 }
-
 .form-group label span {
     margin-right: 10px;
     font-size: 1.2rem;
+}
+
+.form-group-inline input[type="checkbox"] {
+    order: 1;
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 2px solid #CACACA;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+}
+
+.form-group-inline input[type="checkbox"]:checked {
+    background-color: #CACACA;
+}
+
+.form-group-inline input[type="checkbox"]:checked::after {
+    content: '\2714';
+    font-size: 14px;
+    color: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.form-group-inline input[type="checkbox"]:hover {
+    border-color: #CACACA;
 }
 
 .form-group input {
@@ -1312,6 +1346,8 @@ select {
     width: 80%;
     max-width: 500px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    padding-bottom: 60px;
 }
 
 #procedimento-form-modal .modal-content h2 {
@@ -1337,7 +1373,6 @@ select {
 #procedimento-form-modal input[type="email"],
 #procedimento-form-modal input[type="date"],
 #procedimento-form-modal input[type="time"],
-#procedimento-form-modal select,
 #procedimento-form-modal textarea {
     width: 100%;
     padding: 8px 12px;
@@ -1347,6 +1382,21 @@ select {
     background-color: #ffffff;
     color: #000000;
     box-sizing: border-box;
+}
+
+#procedimento-form-modal select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z' fill='%23000000'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
 }
 
 #procedimento-form-modal .time-inputs {
@@ -1363,14 +1413,19 @@ select {
     background-color: #1A73E8;
     color: #ffffff;
     border: none;
-    padding: 10px 20px;
+    padding: 8px 16px;
     border-radius: 4px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.3s;
-    width: 100%;
     margin-top: 15px;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: auto;
+    padding: 8px 16px;
+    font-size: 14px;
 }
 
 #procedimento-form-modal .cadastrar-btn:hover {
