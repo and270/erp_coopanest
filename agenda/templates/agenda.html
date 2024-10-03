@@ -624,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('edit-procedure')) {
             const modal = e.target.closest('.procedure-modal');
-            const procedureId = modal.getAttribute('data-procedure-id');
+            const procedureId = modal.id.split('-').pop();
             
             // Hide the details modal
             modal.style.display = 'none';

@@ -5,96 +5,9 @@
 
 {% block content %}
 <div class="agenda-container escala-view">
-    <div class="agenda-header escala-header">
+    <div class="agenda-header">
         <div class="left-controls">
-            <button class="btn btn-primary" id="criar-escala-btn">+ CRIAR ESCALA</button>
-            <div id="escala-form-modal" class="modal" style="display: {% if form_errors %}block{% else %}none{% endif %};">
-                <div class="modal-content">
-                    <span class="close">&times;</span>
-                    <br>
-                    <form method="POST" enctype="multipart/form-data" id="escala-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="escala_id" id="escala_id">
-                        <div class="form-group">
-                            {{ form.escala_type.label_tag }} {{ form.escala_type }}
-                            {% if form.escala_type.errors %}
-                                <div class="error-message">
-                                    {{ form.escala_type.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.anestesiologista.label_tag }} {{ form.anestesiologista }}
-                            {% if form.anestesiologista.errors %}
-                                <div class="error-message">
-                                    {{ form.anestesiologista.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.data_inicio.label_tag }} {{ form.data_inicio }}
-                            {% if form.data_inicio.errors %}
-                                <div class="error-message">
-                                    {{ form.data_inicio.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.data_fim.label_tag }} {{ form.data_fim }}
-                            {% if form.data_fim.errors %}
-                                <div class="error-message">
-                                    {{ form.data_fim.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.dias_da_semana.label_tag }}
-                            <div id="dias-da-semana-container">
-                                {% for value, label in form.dias_da_semana.field.choices %}
-                                    <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" name="{{ form.dias_da_semana.name }}" value="{{ value }}"
-                                                   {% if value in form.dias_da_semana.value %}checked{% endif %}
-                                                   {% if value == 'todos' %}id="todos-os-dias"{% endif %}>
-                                            {{ label }}
-                                        </label>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            {% if form.dias_da_semana.errors %}
-                                <div class="error-message">
-                                    {{ form.dias_da_semana.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.hora_inicio.label_tag }} {{ form.hora_inicio }}
-                            {% if form.hora_inicio.errors %}
-                                <div class="error-message">
-                                    {{ form.hora_inicio.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.hora_fim.label_tag }} {{ form.hora_fim }}
-                            {% if form.hora_fim.errors %}
-                                <div class="error-message">
-                                    {{ form.hora_fim.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.observacoes.label_tag }} {{ form.observacoes }}
-                            {% if form.observacoes.errors %}
-                                <div class="error-message">
-                                    {{ form.observacoes.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Escala</button>
-                    </form>
-                </div>
-            </div>
+            Escala
         </div>
 
         <div class="center-controls">
@@ -215,6 +128,96 @@
         </form>
     </div>
 </div>
+
+<button class="btn btn-primary" id="criar-escala-btn">Nova Escala</button>
+<div id="escala-form-modal" class="modal" style="display: {% if form_errors %}block{% else %}none{% endif %};">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <br>
+                    <form method="POST" enctype="multipart/form-data" id="escala-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="escala_id" id="escala_id">
+                        <div class="form-group">
+                            {{ form.escala_type.label_tag }} {{ form.escala_type }}
+                            {% if form.escala_type.errors %}
+                                <div class="error-message">
+                                    {{ form.escala_type.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.anestesiologista.label_tag }} {{ form.anestesiologista }}
+                            {% if form.anestesiologista.errors %}
+                                <div class="error-message">
+                                    {{ form.anestesiologista.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.data_inicio.label_tag }} {{ form.data_inicio }}
+                            {% if form.data_inicio.errors %}
+                                <div class="error-message">
+                                    {{ form.data_inicio.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.data_fim.label_tag }} {{ form.data_fim }}
+                            {% if form.data_fim.errors %}
+                                <div class="error-message">
+                                    {{ form.data_fim.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.dias_da_semana.label_tag }}
+                            <div id="dias-da-semana-container">
+                                {% for value, label in form.dias_da_semana.field.choices %}
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="{{ form.dias_da_semana.name }}" value="{{ value }}"
+                                                   {% if value in form.dias_da_semana.value %}checked{% endif %}
+                                                   {% if value == 'todos' %}id="todos-os-dias"{% endif %}>
+                                            {{ label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.dias_da_semana.errors %}
+                                <div class="error-message">
+                                    {{ form.dias_da_semana.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.hora_inicio.label_tag }} {{ form.hora_inicio }}
+                            {% if form.hora_inicio.errors %}
+                                <div class="error-message">
+                                    {{ form.hora_inicio.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.hora_fim.label_tag }} {{ form.hora_fim }}
+                            {% if form.hora_fim.errors %}
+                                <div class="error-message">
+                                    {{ form.hora_fim.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.observacoes.label_tag }} {{ form.observacoes }}
+                            {% if form.observacoes.errors %}
+                                <div class="error-message">
+                                    {{ form.observacoes.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Escala</button>
+                    </form>
+                </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -282,24 +285,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     criarEscalaBtn.addEventListener('click', function() {
         escalaFormModal.style.display = 'block';
-        escalaForm.reset();
-        document.getElementById('escala_id').value = '';
-        formSubmitBtn.textContent = 'Criar Escala';
     });
-    
-    document.querySelector('.close').addEventListener('click', function() {
+
+    closeBtn.addEventListener('click', function() {
         escalaFormModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target == escalaFormModal) {
+            escalaFormModal.style.display = 'none';
+        }
     });
 
     // Escala item handling
     const escalaItems = document.querySelectorAll('.escala-item');
     const escalaDetailsModal = document.getElementById('escala-details-modal');
+    const closeDetailsBtn = escalaDetailsModal.querySelector('.close');
 
     escalaItems.forEach(item => {
         item.addEventListener('click', function() {
             const escalaId = this.getAttribute('data-id');
             fetchEscalaDetails(escalaId);
         });
+    });
+
+    closeDetailsBtn.addEventListener('click', function() {
+        escalaDetailsModal.style.display = 'none';
     });
 
     function fetchEscalaDetails(escalaId) {
