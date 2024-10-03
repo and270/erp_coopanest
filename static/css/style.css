@@ -2041,7 +2041,8 @@ select {
 }
 
 /* Styles for the Escala form modal */
-#escala-form-modal .modal-content {
+#escala-form-modal .modal-content,
+#edit-escala-modal .modal-content {
     background-color: #ffffff;
     color: #000000;
     margin: 15% auto;
@@ -2062,22 +2063,31 @@ select {
     margin-bottom: 5px;
 }
 
+#edit-escala-modal .modal-content h2{
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A73E8;
+    margin-bottom: 5px;
+}
+
 #escala-form-modal .required-field-text {
     font-size: 10px;
     color: #3D3D3D;
     margin-bottom: 30px;
 }
 
-#escala-form-modal label {
+#escala-form-modal label,
+#edit-escala-modal label {
     display: block;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     margin-bottom: 5px;
     color: #3D3D3D;
 }
 
-#escala-form-modal .form-group {
-    margin-bottom: 15px;
+#escala-form-modal .form-group,
+#edit-escala-modal .form-group {
+    margin-bottom: 20px;
 }
 
 
@@ -2087,7 +2097,13 @@ select {
 #escala-form-modal input[type="date"],
 #escala-form-modal input[type="time"],
 #escala-form-modal textarea,
-#escala-form-modal select {
+#escala-form-modal select,
+#edit-escala-modal input[type="text"],
+#edit-escala-modal input[type="email"],
+#edit-escala-modal input[type="date"],
+#edit-escala-modal input[type="time"],
+#edit-escala-modal select,
+#edit-escala-modal textarea {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #e0e0e0;
@@ -2097,7 +2113,8 @@ select {
     color: #000000;
     box-sizing: border-box;
 }
-#escala-form-modal select {
+#escala-form-modal select,
+#edit-escala-modal select {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -2107,7 +2124,8 @@ select {
     padding-right: 30px;
 }
 
-#escala-form-modal .cadastrar-btn {
+#escala-form-modal .cadastrar-btn,
+#edit-escala-modal .cadastrar-btn {
     background-color: #1A73E8;
     color: #ffffff;
     border: none;
@@ -2124,11 +2142,13 @@ select {
     width: auto;
 }
 
-#escala-form-modal .cadastrar-btn:hover {
+#escala-form-modal .cadastrar-btn:hover,
+#edit-escala-modal .cadastrar-btn:hover {
     background-color: #1557b0;
 }
 
-#escala-form-modal .close {
+#escala-form-modal .close,
+#edit-escala-modal .close {
     color: #646464;
     float: right;
     font-size: 28px;
@@ -2136,7 +2156,91 @@ select {
     cursor: pointer;
 }
 
-#escala-form-modal .close:hover {
+#escala-form-modal .close:hover,
+#edit-escala-modal .close:hover {
+    color: #000000;
+}
+
+
+#escala-details-modal .modal-content {
+    background-color: #ffffff;
+    color: #000000;
+    margin: 15% auto;
+    padding: 30px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+#escala-details-modal h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A73E8;
+    margin-bottom: 20px;
+}
+
+#escala-details-modal p {
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #3D3D3D;
+}
+
+#escala-details-modal strong {
+    font-weight: 500;
+    color: #000000;
+}
+
+#escala-details-modal .modal-actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+#escala-details-modal .edit-escala,
+#escala-details-modal .delete-escala {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#escala-details-modal .edit-escala {
+    background-color: #1A73E8;
+    color: #ffffff;
+    border: none;
+}
+
+#escala-details-modal .edit-escala:hover {
+    background-color: #1557b0;
+}
+
+#escala-details-modal .delete-escala {
+    background-color: #ffffff;
+    color: #d32f2f;
+    border: 1px solid #d32f2f;
+}
+
+#escala-details-modal .delete-escala:hover {
+    background-color: #ffebee;
+}
+
+#escala-details-modal .close {
+    color: #646464;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#escala-details-modal .close:hover {
     color: #000000;
 }
 
