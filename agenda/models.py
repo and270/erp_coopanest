@@ -29,7 +29,7 @@ class Procedimento(models.Model):
     hospital = models.ForeignKey(HospitalClinic, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hospital/Clínica')
     outro_local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Outro Local')
     cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião')
-    anestesista_responsavel = models.ForeignKey(Anesthesiologist, on_delete=models.CASCADE, verbose_name='Anestesista Responsável')
+    anestesista_responsavel = models.ForeignKey(Anesthesiologist, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Anestesista Responsável')
     nps_token = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True, null=True, blank=True)
     visita_pre_anestesica = models.BooleanField(default=False, verbose_name='Visita Pré-Anestésica Realizada')
     data_visita_pre_anestesica = models.DateField(blank=True, null=True, verbose_name='Data da Visita Pré-Anestésica')
