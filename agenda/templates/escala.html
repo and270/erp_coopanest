@@ -133,12 +133,14 @@
 <div id="escala-form-modal" class="modal" style="display: {% if form_errors %}block{% else %}none{% endif %};">
                 <div class="modal-content">
                     <span class="close">&times;</span>
+                    <h2>Nova Escala</h2>
                     <br>
                     <form method="POST" enctype="multipart/form-data" id="escala-form">
                         {% csrf_token %}
                         <input type="hidden" name="escala_id" id="escala_id">
                         <div class="form-group">
-                            {{ form.escala_type.label_tag }} {{ form.escala_type }}
+                            <label for="{{ form.escala_type.id_for_label }}">{{ form.escala_type.label }}</label>
+                            {{ form.escala_type }}
                             {% if form.escala_type.errors %}
                                 <div class="error-message">
                                     {{ form.escala_type.errors }}
@@ -146,28 +148,31 @@
                             {% endif %}
                         </div>
                         <div class="form-group">
-                            {{ form.anestesiologista.label_tag }} {{ form.anestesiologista }}
+                            <label for="{{ form.anestesiologista.id_for_label }}">{{ form.anestesiologista.label }}</label>
+                            {{ form.anestesiologista }}
                             {% if form.anestesiologista.errors %}
                                 <div class="error-message">
                                     {{ form.anestesiologista.errors }}
                                 </div>
                             {% endif %}
                         </div>
-                        <div class="form-group">
-                            {{ form.data_inicio.label_tag }} {{ form.data_inicio }}
-                            {% if form.data_inicio.errors %}
-                                <div class="error-message">
-                                    {{ form.data_inicio.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="form-group">
-                            {{ form.data_fim.label_tag }} {{ form.data_fim }}
-                            {% if form.data_fim.errors %}
-                                <div class="error-message">
-                                    {{ form.data_fim.errors }}
-                                </div>
-                            {% endif %}
+                        <div class="form-row">
+                            <div class="form-group half-width">
+                                {{ form.data_inicio.label_tag }} {{ form.data_inicio }}
+                                {% if form.data_inicio.errors %}
+                                    <div class="error-message">
+                                        {{ form.data_inicio.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="form-group half-width">
+                                {{ form.data_fim.label_tag }} {{ form.data_fim }}
+                                {% if form.data_fim.errors %}
+                                    <div class="error-message">
+                                        {{ form.data_fim.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="form-group">
                             {{ form.dias_da_semana.label_tag }}

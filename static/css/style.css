@@ -2076,6 +2076,8 @@ select {
     margin-bottom: 15px;
 }
 
+
+
 #escala-form-modal input[type="text"],
 #escala-form-modal input[type="email"],
 #escala-form-modal input[type="date"],
@@ -2091,7 +2093,6 @@ select {
     color: #000000;
     box-sizing: border-box;
 }
-
 #escala-form-modal select {
     appearance: none;
     -webkit-appearance: none;
