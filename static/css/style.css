@@ -1176,6 +1176,10 @@ select {
 .btn-procedimentos::before { background-color: #F4511E; }
 .btn-exames::before { background-color: #F6BF26; }
 
+.btn-plantonista::before { background-color: #7986CB; }
+.btn-substituto::before { background-color: #C440EB; }
+.btn-ferias::before { background-color: #FD5151; }
+
 .calendar-main {
     flex-grow: 1;
 }

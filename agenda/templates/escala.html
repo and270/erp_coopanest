@@ -11,16 +11,7 @@
         </div>
 
         <div class="center-controls">
-            <div class="view-switcher">
-                <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
-                <h3 id="current-date-range" class="escala-date-range">{{ start_date|date:"d/m" }} até {{ end_date|date:"d/m" }}</h3>
-                <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
-            </div>
-            <ul class="escala-types">
-                <li class="plantonista">PLANTONISTA</li>
-                <li class="substituto">SUBSTITUTO</li>
-                <li class="ferias">FÉRIAS/LICENÇA</li>
-            </ul>
+
         </div>
 
         <div class="right-controls">
@@ -34,7 +25,24 @@
     </div>
 
     <div class="calendar-container">
+        <div class="calendar-sidebar">
+            <div class="event-types-container">
+                <div class="event-types-legend">Legenda</div>
+                <ul class="event-types">
+                    <li><button class="btn-cirurgias">Plantonista</button></li>
+                    <li><button class="btn-procedimentos">Substituto</button></li>
+                    <li><button class="btn-exames">Férias/Licença</button></li>
+                </ul>
+            </div>
+        </div>
         <div class="calendar-main">
+            <div class="sub-controls">
+                <div class="view-switcher">
+                    <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
+                    <h3 id="current-date-range" class="escala-date-range">{{ start_date|date:"d/m" }} até {{ end_date|date:"d/m" }}</h3>
+                    <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
+                </div>
+            </div>
             <div class="escala-grid">
                 <div class="escala-days">
                     <span>DOM</span>
