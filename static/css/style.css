@@ -274,6 +274,18 @@ main {
     font-size: 1rem;
 }
 
+.form-group label::after {
+    color: #1A73E8;
+    margin-left: 2px;
+    font-size: 0.5em;
+    vertical-align: super;
+}
+
+.required-asterisk {
+    color: #1A73E8;
+    margin-left: 2px;
+}
+
 .form-group-inline {
     display: flex;
     flex-direction: row;
@@ -1354,7 +1366,13 @@ select {
     font-size: 16px;
     font-weight: 600;
     color: #1A73E8;
-    margin-bottom: 20px;
+    margin-bottom: 5px;
+}
+
+#procedimento-form-modal .required-field-text {
+    font-size: 10px;
+    color: #3D3D3D;
+    margin-bottom: 30px;
 }
 
 #procedimento-form-modal label {

@@ -220,45 +220,46 @@
     <div class="modal-content">
         <span class="close">&times;</span>
         <h2>Novo Agendamento</h2>
+        <span class="required-field-text"><span class="required-asterisk">*</span>Campo de preenchimento obrigatório</span><br><br>
         <form method="POST" enctype="multipart/form-data" id="procedimento-form">
             {% csrf_token %}
             <input type="hidden" name="procedure_id" id="procedure_id">
             {{ form.non_field_errors }}
             
             <div class="form-group">
-                <label for="{{ form.procedimento_type.id_for_label }}">{{ form.procedimento_type.label }}</label>
+                <label for="{{ form.procedimento_type.id_for_label }}">{{ form.procedimento_type.label }}<span class="required-asterisk">*</span></label>
                 {{ form.procedimento_type }}
             </div>
             
             <div class="form-group">
-                <label for="{{ form.data.id_for_label }}">{{ form.data.label }}</label>
+                <label for="{{ form.data.id_for_label }}">{{ form.data.label }}<span class="required-asterisk">*</span></label>
                 {{ form.data }}
             </div>
             
             <div class="time-inputs">
                 <div class="form-group">
-                    <label for="{{ form.time.id_for_label }}">{{ form.time.label }}</label>
+                    <label for="{{ form.time.id_for_label }}">{{ form.time.label }}<span class="required-asterisk">*</span></label>
                     {{ form.time }}
                 </div>
                 
                 <div class="form-group">
-                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}</label>
+                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}<span class="required-asterisk">*</span></label>
                     {{ form.end_time }}
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="{{ form.nome_paciente.id_for_label }}">{{ form.nome_paciente.label }}</label>
+                <label for="{{ form.nome_paciente.id_for_label }}">{{ form.nome_paciente.label }}<span class="required-asterisk">*</span></label>
                 {{ form.nome_paciente }}
             </div>
             
             <div class="form-group">
-                <label for="{{ form.email_paciente.id_for_label }}">{{ form.email_paciente.label }}</label>
+                <label for="{{ form.email_paciente.id_for_label }}">{{ form.email_paciente.label }}<span class="required-asterisk">*</span></label>
                 {{ form.email_paciente }}
             </div>
             
             <div class="form-group">
-                <label for="{{ form.procedimento.id_for_label }}">{{ form.procedimento.label }}</label>
+                <label for="{{ form.procedimento.id_for_label }}">{{ form.procedimento.label }}<span class="required-asterisk">*</span></label>
                 {{ form.procedimento }}
             </div>
             
