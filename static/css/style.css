@@ -1566,6 +1566,7 @@ select {
     transition: background-color 0.3s ease;
     min-height: 20px;
     position: relative;
+    font-size: 10px;
 }
 
 .week-view-card {
@@ -1573,7 +1574,7 @@ select {
     flex-shrink: 0;
     padding: 5px;
     box-sizing: border-box;
-    margin-bottom: 5px; /* Add space between cards */
+    margin-bottom: 5px;
     background-color: #f5f5f5;
     border-radius: 5px;
 }
@@ -1589,9 +1590,7 @@ select {
     text-overflow: ellipsis;
 }
 
-.procedure-card span:first-child {
-    font-weight: bold;
-}
+
 
 /* Specific colors based on procedimento_type */
 .cirurgia {
@@ -1997,4 +1996,44 @@ select {
 
 .procedure-card.highlight {
     border: 2px solid #232376;
+}
+
+.spinner {
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.custom-alert {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 1000;
+    display: none;
+}
+
+.custom-alert.success {
+    background-color: #D7FFDF;
+    color: #328234;
+}
+
+.custom-alert.error {
+    background-color: #FFDCDB;
+    color: #A92626;
 }

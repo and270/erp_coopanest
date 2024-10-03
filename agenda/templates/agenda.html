@@ -111,8 +111,7 @@
                         {% for procedimento in procedimentos %}
                             {% if procedimento.data_horario.date == date.day.date %}
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
-                                    <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
-                                    <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                    <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento }}</span>
                                     <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span>
                                 </div>
@@ -171,8 +170,10 @@
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
                                         <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
-                                            <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
-                                            <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                            <div class="procedure-first-row">
+                                                <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                                <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
+                                            </div>
                                             <span class="procedure-name">{{ procedimento.procedimento }}</span>
                                             <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span>
                                         </div>
@@ -307,6 +308,7 @@
         </form>
     </div>
 </div>
+<div id="customAlert" class="custom-alert"></div>
 
 {% endblock %}
 
@@ -314,7 +316,18 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
-
+<script>
+    function showCustomAlert(message, type) {
+        const alertElement = document.getElementById('customAlert');
+        alertElement.textContent = message;
+        alertElement.className = `custom-alert ${type}`;
+        alertElement.style.display = 'block';
+        
+        setTimeout(() => {
+            alertElement.style.display = 'none';
+        }, 3500);  // Hide after 5 seconds
+    }
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const semanaBtn = document.getElementById('semana-view');
@@ -535,6 +548,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     procedimentoForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        // Change button text to spinner
+        const originalText = formSubmitBtn.textContent;
+        formSubmitBtn.innerHTML = '<span class="spinner"></span> Processando...';
+        formSubmitBtn.disabled = true;
+
         const formData = new FormData(this);
         const procedureId = document.getElementById('procedure_id').value;
         
@@ -556,8 +575,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!data.email_sent) {
                     message += ` Porém, não foi possível enviar o link de pesquisa para o email do usuário devido a: ${data.email_error}`;
                 }
-                alert(message);
-                location.reload();  // Reload the page to show the updated data
+                showCustomAlert(message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
             } else {
                 const errors = JSON.parse(data.errors);
                 Object.keys(errors).forEach(fieldName => {
@@ -570,8 +591,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         field.parentNode.appendChild(errorMessage);
                     }
                 });
-                alert('Erro ao salvar o procedimento. Verifique os campos e tente novamente.');
+                showCustomAlert('Erro ao salvar o procedimento. Verifique os campos e tente novamente.', 'error');
+                
+                // Reset button state
+                formSubmitBtn.innerHTML = originalText;
+                formSubmitBtn.disabled = false;
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showCustomAlert('Ocorreu um erro ao processar a solicitação. Por favor, tente novamente.', 'error');
+            
+            // Reset button state
+            formSubmitBtn.innerHTML = originalText;
+            formSubmitBtn.disabled = false;
         });
     });
 
@@ -605,13 +638,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('delete-procedure')) {
             const modal = e.target.closest('.procedure-modal');
-            const procedureId = modal.getAttribute('data-procedure-id');
+            const procedureId = modal.getAttribute('id').split('-').pop();
             
             if (confirm('Tem certeza que deseja excluir este agendamento?')) {
                 deleteProcedure(procedureId);
             }
         }
     });
+
     
     // Function to load procedure data into the form
     function loadProcedureDataIntoForm(procedureId) {
@@ -644,6 +678,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to delete a procedure
     function deleteProcedure(procedureId) {
+        if (!procedureId) {
+            console.error('Invalid procedure ID');
+            return;
+        }
+
         fetch(`/delete-procedure/${procedureId}/`, {
             method: 'POST',
             headers: {
@@ -651,13 +690,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Content-Type': 'application/json',
             },
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Failed to delete the procedure. Please try again.');
+                showCustomAlert('Falha ao deletar o procedimento. Por favor, tente novamente.', 'error');
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showCustomAlert('Ocorreu um erro ao deletar o procedimento. Por favor, tente novamente.', 'error');
         });
     }
     
@@ -891,7 +939,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formattedDate = `${year}-${month}-${day}`;
             window.location.href = `/agenda/search?date=${formattedDate}`;
         } else {
-            alert('Formato de data inválido. Use DD/MM/YYYY.');
+            showCustomAlert('Formato de data inválido. Use DD/MM/YYYY.', 'error');
         }
     }
 
