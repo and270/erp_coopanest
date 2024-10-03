@@ -1731,12 +1731,12 @@ select {
 }
 
 .escala-days span {
-    background-color: #418FDE; /* Blue background */
-    color: #ffffff; /* White text */
-    height: 30px; /* Adjust the height as needed */
-    display: flex; /* Ensure content is centered */
-    align-items: center; /* Vertically center the content */
-    justify-content: center; /* Horizontally center the content */
+    background-color: #ffffff; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: #505050;
 }
 
 .escala-week-row {
@@ -1747,6 +1747,8 @@ select {
     padding: 10px;
     background-color: white;
     font-weight: bold;
+    font-size: 14px;
+    color: #505050;
 }
 
 .escala-day-cell {
