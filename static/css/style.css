@@ -1759,28 +1759,45 @@ select {
     flex: 1;
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
 }
 
 .search-bar .input-group {
+    position: relative;
     display: flex;
     align-items: center;
-    margin-left: 10px;
 }
 
 .search-bar .input-group input[type="text"] {
-    padding: 5px 10px;
-    border: 1px solid #ccc;
+    width: 157px;
+    padding: 8px 30px 8px 10px;
+    border: 1px solid #CDCDCD;
     border-radius: 5px;
+    font-size: 14px;
+}
+
+.search-bar .input-group input[type="text"]::placeholder {
+    font-size: 14px;
+    color: #505050;
 }
 
 .search-bar .input-group button {
-    margin-left: 5px;
-    background-color: #418FDE;
-    color: #ffffff;
+    position: absolute;
+    right: 10px;
+    background: none;
     border: none;
-    border-radius: 5px;
-    padding: 5px 10px;
+    color: #505050;
     cursor: pointer;
+    padding: 0;
+}
+
+.search-bar .input-group button i {
+    font-size: 15px;
+}
+
+/* Hide the default button styles */
+.search-bar .input-group button:focus {
+    outline: none;
 }
 
 
