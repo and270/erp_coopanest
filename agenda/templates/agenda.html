@@ -217,63 +217,94 @@
 
 <button class="btn btn-primary" id="agendar-btn">Agendar</button>
 <div id="procedimento-form-modal" class="modal" style="display:none;">
-                <div class="modal-content">
-                    <span class="close">&times;</span>
-                    <br>
-                    <form method="POST" enctype="multipart/form-data" id="procedimento-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="procedure_id" id="procedure_id">
-                        {{ form.non_field_errors }}
-                        <div class="form-group">
-                            {{ form.procedimento_type.label_tag }} {{ form.procedimento_type }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.data.label_tag }} {{ form.data }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.time.label_tag }} {{ form.time }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.end_time.label_tag }} {{ form.end_time }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.nome_paciente.label_tag }} {{ form.nome_paciente }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.email_paciente.label_tag }} {{ form.email_paciente }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.procedimento.label_tag }} {{ form.procedimento }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.hospital.label_tag }} {{ form.hospital }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.outro_local.label_tag }} {{ form.outro_local }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.cirurgiao.label_tag }} {{ form.cirurgiao }}
-                        </div>
-                        <div class="form-group">
-                            {{ form.anestesista_responsavel.label_tag }} {{ form.anestesista_responsavel }}
-                        </div>
-                        <div class="form-group-inline">
-                            {{ form.visita_pre_anestesica.label_tag }} {{ form.visita_pre_anestesica }}
-                        </div>
-                        <div class="conditional-container" style="display:none;">
-                            <div class="form-group">
-                                {{ form.data_visita_pre_anestesica.label_tag }} {{ form.data_visita_pre_anestesica }}
-                            </div>
-                            <div class="form-group">
-                                {{ form.foto_anexo.label_tag }} {{ form.foto_anexo }}
-                            </div>
-                            <div class="form-group">
-                                {{ form.nome_responsavel_visita.label_tag }} {{ form.nome_responsavel_visita }}
-                            </div>
-                        </div>
-                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Agendamento</button>
-                    </form>
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Novo Agendamento</h2>
+        <form method="POST" enctype="multipart/form-data" id="procedimento-form">
+            {% csrf_token %}
+            <input type="hidden" name="procedure_id" id="procedure_id">
+            {{ form.non_field_errors }}
+            
+            <div class="form-group">
+                <label for="{{ form.procedimento_type.id_for_label }}">{{ form.procedimento_type.label }}</label>
+                {{ form.procedimento_type }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.data.id_for_label }}">{{ form.data.label }}</label>
+                {{ form.data }}
+            </div>
+            
+            <div class="time-inputs">
+                <div class="form-group">
+                    <label for="{{ form.time.id_for_label }}">{{ form.time.label }}</label>
+                    {{ form.time }}
                 </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}</label>
+                    {{ form.end_time }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.nome_paciente.id_for_label }}">{{ form.nome_paciente.label }}</label>
+                {{ form.nome_paciente }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.email_paciente.id_for_label }}">{{ form.email_paciente.label }}</label>
+                {{ form.email_paciente }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.procedimento.id_for_label }}">{{ form.procedimento.label }}</label>
+                {{ form.procedimento }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.hospital.id_for_label }}">{{ form.hospital.label }}</label>
+                {{ form.hospital }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.outro_local.id_for_label }}">{{ form.outro_local.label }}</label>
+                {{ form.outro_local }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.cirurgiao.id_for_label }}">{{ form.cirurgiao.label }}</label>
+                {{ form.cirurgiao }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.anestesista_responsavel.id_for_label }}">{{ form.anestesista_responsavel.label }}</label>
+                {{ form.anestesista_responsavel }}
+            </div>
+            
+            <div class="form-group-inline">
+                <label for="{{ form.visita_pre_anestesica.id_for_label }}">{{ form.visita_pre_anestesica.label }}</label>
+                {{ form.visita_pre_anestesica }}
+            </div>
+            
+            <div class="conditional-container" style="display:none;">
+                <div class="form-group">
+                    <label for="{{ form.data_visita_pre_anestesica.id_for_label }}">{{ form.data_visita_pre_anestesica.label }}</label>
+                    {{ form.data_visita_pre_anestesica }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.foto_anexo.id_for_label }}">{{ form.foto_anexo.label }}</label>
+                    {{ form.foto_anexo }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.nome_responsavel_visita.id_for_label }}">{{ form.nome_responsavel_visita.label }}</label>
+                    {{ form.nome_responsavel_visita }}
+                </div>
+            </div>
+            
+            <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Agendamento</button>
+        </form>
+    </div>
 </div>
 
 {% endblock %}

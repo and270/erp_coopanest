@@ -1302,6 +1302,93 @@ select {
     max-width: 600px;
 }
 
+#procedimento-form-modal .modal-content {
+    background-color: #ffffff;
+    color: #000000;
+    margin: 15% auto;
+    padding: 30px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#procedimento-form-modal .modal-content h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A73E8;
+    margin-bottom: 20px;
+}
+
+#procedimento-form-modal label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #3D3D3D;
+}
+
+#procedimento-form-modal .form-group {
+    margin-bottom: 15px;
+}
+
+#procedimento-form-modal input[type="text"],
+#procedimento-form-modal input[type="email"],
+#procedimento-form-modal input[type="date"],
+#procedimento-form-modal input[type="time"],
+#procedimento-form-modal select,
+#procedimento-form-modal textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #ffffff;
+    color: #000000;
+    box-sizing: border-box;
+}
+
+#procedimento-form-modal .time-inputs {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+#procedimento-form-modal .time-inputs .form-group {
+    flex: 1;
+}
+
+#procedimento-form-modal .cadastrar-btn {
+    background-color: #1A73E8;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%;
+    margin-top: 15px;
+}
+
+#procedimento-form-modal .cadastrar-btn:hover {
+    background-color: #1557b0;
+}
+
+#procedimento-form-modal .close {
+    color: #646464;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#procedimento-form-modal .close:hover {
+    color: #000000;
+}
+
 .close {
     color: #aaa;
     float: right;
