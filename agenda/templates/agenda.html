@@ -169,7 +169,7 @@
                         {% for hour in hours %}
                             <div class="hour-slot" data-hour="{{ hour }}">
                                 {% for procedimento in procedimentos %}
-                                    {% if procedimento.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" and procedimento.data_horario|date:"H" <= hour and procedimento.data_horario_fim|date:"H" > hour %}
+                                    {% if procedimento.data_horario|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
                                         <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                             <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
