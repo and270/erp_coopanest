@@ -888,11 +888,12 @@ select {
     -moz-appearance: none;
     background-color: #ffffff;
     border: none;
-    font-size: 0.9rem;
+    font-size: 0.7rem;
     color: #000000;
     cursor: pointer;
-    padding: 5px 20px 5px 10px;
-    font-weight: bold;
+    padding: 5px 20px 5px 5px;
+    text-align: left;
+    text-indent: 0px;
 }
 
 .view-type-switcher::after {
@@ -908,6 +909,7 @@ select {
 
 .view-type-switcher select:focus {
     outline: none;
+    border-color: #464747;
 }
 
 /* Remove default styling for IE */
@@ -918,25 +920,29 @@ select {
 /* Ensure the dropdown options have a white background */
 .view-type-switcher select option {
     background-color: #ffffff;
+    font-size: 0.8rem;
+}
+
+.view-type-switcher select.btn {
+    background-color: #ffffff; /* Sets background to white */
 }
 
 .view-type-switcher .btn {
-    background-color: #f0f0f0;
+    background-color: #ffffff;
     color: #000000;
     border: 2px solid #ccc;
-    padding: 5px 20px; /* Increased padding for bigger size */
-    border-radius: 10px; /* Rounded corners */
-    font-size: 1.1rem; /* Adjusted font size */
-    font-weight: bold; /* Bold font */
+    border-radius: 5px;
+    font-size: 0.8rem;
     cursor: pointer;
+    padding: 5px 20px 5px 5px;
+    text-align: left;
+    text-indent: 0px;
     transition: background-color 0.3s, border-color 0.3s;
 }
 
-.view-type-switcher .btn.active {
-    background-color: #ffffff; /* Grey background for active button */
-    color: #000000;
+.view-type-switcher select::-webkit-calendar-picker-indicator {
+    display: none;
 }
-
 
 .calendar-top-bar {
     display: flex;
