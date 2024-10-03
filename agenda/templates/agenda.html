@@ -455,7 +455,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
 });
+
 </script>
 
 <script>
@@ -540,63 +542,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     procedureCards.forEach(card => {
         card.addEventListener('click', function(e) {
             e.stopPropagation();
             const procedureId = this.getAttribute('data-id');
             const modal = document.getElementById(`procedure-details-modal-${procedureId}`);
-            
+
             if (modal) {
-                // Get the position of the clicked card
-                const rect = this.getBoundingClientRect();
-                
-                // Show the modal to get its dimensions
-                modal.style.display = 'block';
-                const modalRect = modal.getBoundingClientRect();
-                
-                // Calculate available space
-                const spaceRight = window.innerWidth - rect.right;
-                const spaceBottom = window.innerHeight - rect.bottom;
-                
-                // Determine horizontal position
-                if (spaceRight >= modalRect.width) {
-                    // Enough space on the right
-                    modal.style.left = rect.left + 'px';
-                    modal.style.right = 'auto';
-                } else if (rect.left >= modalRect.width) {
-                    // Not enough space on the right, but enough on the left
-                    modal.style.left = (rect.right - modalRect.width) + 'px';
-                    modal.style.right = 'auto';
-                } else {
-                    // Not enough space on either side, center it
-                    modal.style.left = Math.max(0, (window.innerWidth - modalRect.width) / 2) + 'px';
-                    modal.style.right = 'auto';
-                }
-                
-                // Determine vertical position
-                if (spaceBottom >= modalRect.height) {
-                    // Enough space below
-                    modal.style.top = (rect.bottom + window.scrollY) + 'px';
-                } else if (rect.top >= modalRect.height) {
-                    // Not enough space below, but enough above
-                    modal.style.top = (rect.top + window.scrollY - modalRect.height) + 'px';
-                } else {
-                    // Not enough space above or below, position at top of viewport
-                    modal.style.top = window.scrollY + 'px';
-                }
-                
-                // Ensure the modal doesn't exceed viewport boundaries
-                const updatedModalRect = modal.getBoundingClientRect();
-                if (updatedModalRect.right > window.innerWidth) {
-                    modal.style.left = (window.innerWidth - modalRect.width) + 'px';
-                }
-                if (updatedModalRect.bottom > window.innerHeight + window.scrollY) {
-                    modal.style.top = (window.innerHeight + window.scrollY - modalRect.height) + 'px';
-                }
-                
-                // Set the procedure ID as a data attribute on the modal
-                modal.setAttribute('data-procedure-id', procedureId);
+                modal.style.display = 'block'; // Show the modal
             }
         });
     });
