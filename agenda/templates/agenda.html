@@ -85,16 +85,13 @@
                     </select>
                 </div>
                 <div class="search-bar">
-                    <div class="radio-group">
-                        <i class="fa fa-search search-icon"></i>
-                        <input type="radio" id="search-data" name="search-type">
-                        <label for="search-data">DATA</label>
-                        <input type="radio" id="search-paciente" name="search-type">
-                        <label for="search-paciente">PACIENTE</label>
+                    <div class="input-group">
+                        <input type="text" id="search-date-input" placeholder="Buscar por data (DD/MM/YYYY)">
+                        <button id="search-date-btn"><i class="fa fa-search"></i></button>
                     </div>
-                    <div class="input-container">
-                        <input type="text" id="search-input" placeholder="Buscar...">
-                        <button id="search-btn"><i class="fa fa-search"></i></button>
+                    <div class="input-group">
+                        <input type="text" id="search-patient-input" placeholder="Buscar por paciente">
+                        <button id="search-patient-btn"><i class="fa fa-search"></i></button>
                     </div>
                 </div>
             </div>
@@ -881,46 +878,58 @@ document.addEventListener('DOMContentLoaded', function() {
     updateMiniCalendar();
 });
 </script>
-<script>
-// Search functionality: Handles searching for procedures by date or patient name
-document.addEventListener('DOMContentLoaded', function() {
-    const searchBtn = document.getElementById('search-btn');
-    const searchInput = document.getElementById('search-input');
-    const searchTypeData = document.getElementById('search-data');
-    const searchTypePaciente = document.getElementById('search-paciente');
-    const searchTypeProcedimento = document.getElementById('search-procedimento');
 
-    function performSearch() {
-        const query = searchInput.value.trim();
+<script>
+    $(document).ready(function(){
+    $("input[name='data'], #search-date-input").inputmask("99/99/9999");  // dd/mm/yyyy
+    $("input[name='time'], input[name='end_time']").inputmask("99:99");  // hh:mm
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchDateBtn = document.getElementById('search-date-btn');
+    const searchPatientBtn = document.getElementById('search-patient-btn');
+    const searchDateInput = document.getElementById('search-date-input');
+    const searchPatientInput = document.getElementById('search-patient-input');
+
+    function performDateSearch() {
+        const query = searchDateInput.value.trim();
         if (!query) return;
 
-        if (searchTypeData.checked) {
-            // Handle date search
-            const dateParts = query.split('/');
-            if (dateParts.length === 3) {
-                const day = dateParts[0].padStart(2, '0');
-                const month = dateParts[1].padStart(2, '0');
-                const year = dateParts[2];
-                const formattedDate = `${year}-${month}-${day}`;
-                window.location.href = `/agenda/search?date=${formattedDate}`;
-            } else {
-                alert('Formato de data inválido. Use DD/MM/YYYY.');
-            }
-        } else if (searchTypePaciente.checked) {
-            // Handle paciente search
-            window.location.href = `/agenda/search?paciente=${query}`;
-        } else if (searchTypeProcedimento.checked) {
-            // Handle procedimento search
-            window.location.href = `/agenda/search?procedimento=${query}`;
+        const dateParts = query.split('/');
+        if (dateParts.length === 3) {
+            const day = dateParts[0].padStart(2, '0');
+            const month = dateParts[1].padStart(2, '0');
+            const year = dateParts[2];
+            const formattedDate = `${year}-${month}-${day}`;
+            window.location.href = `/agenda/search?date=${formattedDate}`;
+        } else {
+            alert('Formato de data inválido. Use DD/MM/YYYY.');
         }
     }
 
-    searchBtn.addEventListener('click', performSearch);
+    function performPatientSearch() {
+        const query = searchPatientInput.value.trim();
+        if (!query) return;
 
-    searchInput.addEventListener('keypress', function(e) {
+        window.location.href = `/agenda/search?paciente=${encodeURIComponent(query)}`;
+    }
+
+    searchDateBtn.addEventListener('click', performDateSearch);
+    searchPatientBtn.addEventListener('click', performPatientSearch);
+
+    searchDateInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            e.preventDefault(); // Prevent form submission if inside a form
-            performSearch();
+            e.preventDefault();
+            performDateSearch();
+        }
+    });
+
+    searchPatientInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performPatientSearch();
         }
     });
 });
@@ -948,113 +957,54 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Search input updates: Dynamically updates search input based on selected search type
-document.addEventListener('DOMContentLoaded', function() {
-    const searchDataRadio = document.getElementById('search-data');
-    const searchPacienteRadio = document.getElementById('search-paciente');
-    const inputContainer = document.querySelector('.search-bar .input-container');
-    const searchInput = document.getElementById('search-input');
-    const searchBtn = document.getElementById('search-btn');
-
-    function updateSearchInput() {
-        if (searchDataRadio.checked || searchPacienteRadio.checked) {
-            inputContainer.style.display = 'block';
-            if (searchDataRadio.checked) {
-                searchInput.placeholder = 'Digite a data (DD/MM/YYYY)';
-                $(searchInput).inputmask("99/99/9999");  // Apply date mask
-            } else {
-                searchInput.placeholder = 'Digite o nome do paciente';
-                $(searchInput).inputmask('remove');  // Remove any existing mask
-            }
-        } else {
-            inputContainer.style.display = 'none';
-        }
-    }
-
-    searchDataRadio.addEventListener('change', updateSearchInput);
-    searchPacienteRadio.addEventListener('change', updateSearchInput);
-
-    searchBtn.addEventListener('click', function() {
-        const query = searchInput.value.trim();
-        if (!query) return;
-
-        if (searchDataRadio.checked) {
-            // Handle date search
-            const dateParts = query.split('/');
-            if (dateParts.length === 3) {
-                const day = dateParts[0].padStart(2, '0');
-                const month = dateParts[1].padStart(2, '0');
-                const year = dateParts[2];
-                const formattedDate = `${year}-${month}-${day}`;
-                window.location.href = `/agenda/search?date=${formattedDate}`;
-            } else {
-                alert('Formato de data inválido. Use DD/MM/YYYY.');
-            }
-        } else if (searchPacienteRadio.checked) {
-            // Handle paciente search
-            window.location.href = `/agenda/search?paciente=${query}`;
-        }
-    });
-
-    updateSearchInput();
-});
-</script>
-
-<script>
 // Autocomplete: Implements autocomplete for patient search
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('search-input');
-    const searchTypePaciente = document.getElementById('search-paciente');
-    
+    const searchPatientInput = document.getElementById('search-patient-input');
+
     let timeoutId;
 
-    searchInput.addEventListener('input', function() {
-        if (searchTypePaciente.checked) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                const query = this.value.trim();
-                if (query.length >= 2) {
-                    fetch(`/search-pacientes/?query=${encodeURIComponent(query)}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            // Clear previous results
-                            const existingResults = document.getElementById('autocomplete-results');
-                            if (existingResults) {
-                                existingResults.remove();
-                            }
+    searchPatientInput.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            const query = this.value.trim();
+            if (query.length >= 2) {
+                fetch(`/search-pacientes/?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const existingResults = document.getElementById('autocomplete-results');
+                        if (existingResults) {
+                            existingResults.remove();
+                        }
 
-                            // Create and populate results
-                            const resultsDiv = document.createElement('div');
-                            resultsDiv.id = 'autocomplete-results';
-                            resultsDiv.style.position = 'absolute';
-                            resultsDiv.style.zIndex = '1000';
-                            resultsDiv.style.backgroundColor = 'white';
-                            resultsDiv.style.border = '1px solid #ddd';
-                            resultsDiv.style.maxHeight = '200px';
-                            resultsDiv.style.overflowY = 'auto';
+                        const resultsDiv = document.createElement('div');
+                        resultsDiv.id = 'autocomplete-results';
+                        resultsDiv.style.position = 'absolute';
+                        resultsDiv.style.zIndex = '1000';
+                        resultsDiv.style.backgroundColor = 'white';
+                        resultsDiv.style.border = '1px solid #ddd';
+                        resultsDiv.style.maxHeight = '200px';
+                        resultsDiv.style.overflowY = 'auto';
 
-                            data.forEach(paciente => {
-                                const item = document.createElement('div');
-                                item.textContent = paciente;
-                                item.style.padding = '5px';
-                                item.style.cursor = 'pointer';
-                                item.addEventListener('click', function() {
-                                    searchInput.value = this.textContent;
-                                    resultsDiv.remove();
-                                });
-                                resultsDiv.appendChild(item);
+                        data.forEach(paciente => {
+                            const item = document.createElement('div');
+                            item.textContent = paciente;
+                            item.style.padding = '5px';
+                            item.style.cursor = 'pointer';
+                            item.addEventListener('click', function() {
+                                searchPatientInput.value = this.textContent;
+                                resultsDiv.remove();
                             });
-
-                            searchInput.parentNode.appendChild(resultsDiv);
+                            resultsDiv.appendChild(item);
                         });
-                }
-            }, 300);  // Debounce for 300ms
-        }
+
+                        searchPatientInput.parentNode.appendChild(resultsDiv);
+                    });
+            }
+        }, 300);  // Debounce for 300ms
     });
 
-    // Close autocomplete results when clicking outside
     document.addEventListener('click', function(e) {
-        if (e.target !== searchInput) {
+        if (e.target !== searchPatientInput) {
             const results = document.getElementById('autocomplete-results');
             if (results) {
                 results.remove();
@@ -1062,5 +1012,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 </script>
 {% endblock %}
