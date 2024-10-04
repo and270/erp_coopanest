@@ -1482,19 +1482,21 @@ select {
 
 
 .procedure-modal {
-    position: fixed; /* Changed from absolute to fixed */
+    position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%); /* Centers the modal */
+    transform: translate(-50%, -50%);
     z-index: 1000;
-    display: none; /* Ensure it's hidden by default */
-    /* Optional: Add styling for the modal background and content */
+    display: none;
     background-color: #fff;
     padding: 20px;
     border: 1px solid #ccc;
-    max-width: 500px;
+    max-width: 300px; 
     width: 90%;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    border-radius: 10px;
 }
 
 .procedure-modal.right-aligned {
@@ -1512,8 +1514,10 @@ select {
     margin: 5px 0;
 }
 
-.procedure-patient-name {
+.modal-patient-name {
     font-weight: bold;
+    font-size: 22px;
+    margin-bottom: 5px;
 }
 
 .pdf-link {
@@ -1653,12 +1657,13 @@ select {
 }
 
 .btn-danger {
-    background-color: #dc3545;
-    color: white;
+    background-color: #FFFFFF;
+    color: #FF0004;
+    border: 1px solid #FF0004;
 }
 
 .btn-danger:hover {
-    background-color: #c82333;
+    background-color: #FFEBEE;
 }
 
 #agendar-btn {

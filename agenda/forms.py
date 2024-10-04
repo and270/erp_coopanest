@@ -95,6 +95,11 @@ class SurveyForm(forms.ModelForm):
             'comentario_adicional': 'Você gostaria de deixar algum comentário adicional sobre sua experiência?'
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ['satisfacao_geral', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca']:
+            self.fields[field_name].empty_label = None
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         
