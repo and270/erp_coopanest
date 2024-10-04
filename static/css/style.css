@@ -1718,7 +1718,30 @@ select {
     display: grid;
     grid-template-columns: auto repeat(7, 1fr);
     gap: 1px;
-    background-color: #e0e0e0;
+    background-color: #ffffff;
+}
+
+.escala-week-row, .escala-week-dates, .escala-day-cell {
+    border-top: 1px solid #E6E6E6; /* Only top border */
+    border-left: 1px solid #E6E6E6; /* Only left border */
+    background-color: #ffffff;
+}
+
+/* Remove the border from the first column (week dates) */
+.escala-week-dates {
+    border-left: none; /* No left border for the first column */
+}
+
+/* Remove left border from first cell in each week row */
+.escala-week-row .escala-day-cell:first-child {
+    border-left: none; /* No left border for the first cell in each row */
+}
+
+/* No right or bottom border for any cell */
+.escala-week-row .escala-day-cell,
+.escala-week-dates {
+    border-right: none; /* Remove right border */
+    border-bottom: none; /* Remove bottom border */
 }
 
 .escala-days {
