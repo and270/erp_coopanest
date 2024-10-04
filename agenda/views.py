@@ -64,8 +64,23 @@ def create_procedure(request):
         if procedure.email_paciente:
             try:
                 survey_url = request.build_absolute_uri(reverse('survey', args=[procedure.nps_token]))
-                subject = 'Pesquisa de Satisfação'
-                message = f'Olá {procedure.nome_paciente},\n\nPor favor, responda nossa pesquisa de satisfação através do link abaixo:\n{survey_url}'
+                subject = 'Pesquisa de Satisfação com Atendimento Anestésico em procedimento cirúrgico'
+                message = f"""Prezado(a) {procedure.nome_paciente},
+
+Estamos entrando em contato para solicitar sua colaboração em um processo importante de melhoria contínua do nosso atendimento.
+Você foi submetido(a) recentemente a um procedimento cirúrgico, ou está prestes a passar por um, e gostaríamos de conhecer sua opinião sobre o atendimento anestésico que recebeu ou receberá. 
+
+Sua experiência é fundamental para nós, e seu feedback nos ajudará a aprimorar nossos serviços.
+
+Pedimos, gentilmente, que responda a um breve questionário de avaliação de satisfação após a realização do procedimento anestésico. 
+
+{survey_url}
+
+Suas respostas serão tratadas com total confidencialidade e utilizadas exclusivamente para fins de melhoria do atendimento.
+
+Agradecemos antecipadamente por sua disponibilidade e colaboração. 
+
+Sua opinião é extremamente valiosa para nós."""
                 from_email = settings.DEFAULT_FROM_EMAIL
                 recipient_list = [procedure.email_paciente]
                 send_mail(subject, message, from_email, recipient_list)
