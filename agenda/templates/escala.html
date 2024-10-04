@@ -80,12 +80,10 @@
 <div id="escala-details-modal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2>Detalhes da Escala</h2>
-        <p><strong>Anestesiologista:</strong> <span id="modal-anestesiologista"></span></p>
-        <p><strong>Tipo:</strong> <span id="modal-escala-type"></span></p>
-        <p><strong>Data:</strong> <span id="modal-data"></span></p>
-        <p><strong>Hora Início:</strong> <span id="modal-hora-inicio"></span></p>
-        <p><strong>Hora Fim:</strong> <span id="modal-hora-fim"></span></p>
+        <span id="modal-escala-type"></span>
+        <span id="modal-anestesiologista"></span>
+        <p><span id="modal-data"></span></p>
+        <p>De <span id="modal-hora-inicio"></span> até <span id="modal-hora-fim"></span></p>
         <p><strong>Observações:</strong> <span id="modal-observacoes"></span></p>
         <div class="modal-actions">
             <button class="btn btn-primary edit-escala">Editar</button>
@@ -337,6 +335,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function populateEscalaModal(data) {
+        const escalaTypeSpan = document.getElementById('modal-escala-type');
+        escalaTypeSpan.textContent = data.escala_type;
+        escalaTypeSpan.className = data.escala_type.toLowerCase(); // This sets the correct class for styling
         document.getElementById('modal-anestesiologista').textContent = data.anestesiologista_name;
         document.getElementById('modal-escala-type').textContent = data.escala_type;
         document.getElementById('modal-data').textContent = formatDateFull(data.data);

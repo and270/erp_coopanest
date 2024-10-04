@@ -1796,9 +1796,9 @@ select {
     margin: 0.1em; /* Remove default paragraph margins */
 }
 
-.escala-item.plantonista { background-color: #33B679; }
-.escala-item.substituto { background-color: #DDA0DD; }
-.escala-item.ferias { background-color: #F44336; }
+.escala-item.plantonista { background-color: #7986CB; }
+.escala-item.substituto { background-color: #C440EB; }
+.escala-item.ferias { background-color: #FD5151; }
 
 .escala-legend {
     display: flex;
@@ -1820,9 +1820,9 @@ select {
     margin-right: 5px;
 }
 
-.escala-color-indicator.plantonista { background-color: #33B679; }
-.escala-color-indicator.substituto { background-color: #F4511E; }
-.escala-color-indicator.ferias { background-color: #F44336; }
+.escala-color-indicator.plantonista { background-color: #7986CB; }
+.escala-color-indicator.substituto { background-color: #C440EB; }
+.escala-color-indicator.ferias { background-color: #FD5151; }
 
 
 .escala-types {
@@ -1845,15 +1845,15 @@ select {
 }
 
 .escala-types .plantonista {
-    background-color: #33B679; /* Green */
+    background-color: #7986CB; /* Green */
 }
 
 .escala-types .substituto {
-    background-color: #DDA0DD; /* Plum */
+    background-color: #C440EB; /* Plum */
 }
 
 .escala-types .ferias {
-    background-color: #FF0000; /* Red */
+    background-color: #FD5151; /* Red */
 }
 
 
@@ -2198,9 +2198,9 @@ select {
     margin: 15% auto;
     padding: 30px;
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    border-radius: 10px;
     width: 80%;
-    max-width: 500px;
+    max-width: 200px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
 }
@@ -2216,6 +2216,36 @@ select {
     margin-bottom: 10px;
     font-size: 14px;
     color: #3D3D3D;
+}
+
+#escala-details-modal #modal-anestesiologista {
+    font-size: 23px;
+    font-weight: bold;
+    color: #000000;
+    display: block;
+    margin-bottom: 15px;
+}
+
+#escala-details-modal #modal-escala-type {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #ffffff;
+    font-weight: bold;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+#escala-details-modal #modal-escala-type.plantonista {
+    background-color: #7986CB;
+}
+
+#escala-details-modal #modal-escala-type.substituto {
+    background-color: #C440EB;
+}
+
+#escala-details-modal #modal-escala-type.ferias {
+    background-color: #FD5151;
 }
 
 #escala-details-modal strong {
