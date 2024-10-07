@@ -868,6 +868,37 @@ select {
 
     .calendar-main {
         width: 100%;
+        overflow-x: auto; /* Allow horizontal scrolling for the main calendar */
+    }
+
+    /* Set fixed width for week view columns and allow horizontal scrolling */
+    .calendar-grid.week-view {
+        grid-template-columns: auto repeat(7, 120px); /* Adjust the width as needed */
+        overflow-x: auto;
+    }
+
+    /* Set fixed width for month view columns */
+    .calendar-grid.month-view {
+        grid-template-columns: repeat(7, 120px); /* Adjust the width as needed */
+        overflow-x: auto;
+    }
+
+    /* Adjust calendar days headers */
+    .calendar-days {
+        grid-template-columns: repeat(7, 120px); /* Match the column widths */
+    }
+
+    /* Prevent event cards from expanding columns */
+    .procedure-card {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .procedure-card span {
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Stack sub-controls vertically */
@@ -885,10 +916,6 @@ select {
         justify-content: space-between;
     }
 
-    .view-switcher h2 {
-        font-size: 18px;
-    }
-
     /* Adjust the search bar */
     .search-bar {
         width: 100%;
@@ -904,21 +931,6 @@ select {
     /* Adjust font sizes */
     .left-controls {
         font-size: 24px;
-    }
-
-    /* Adjust calendar grid */
-    .calendar-grid {
-        width: 100%;
-        overflow-x: auto;
-    }
-
-    .day {
-        min-width: 100px; /* Ensure days have a minimum width */
-    }
-
-    /* Optional: adjust procedure card font sizes */
-    .procedure-card {
-        font-size: 12px;
     }
 }
 
