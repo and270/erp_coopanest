@@ -860,7 +860,66 @@ select {
     .edit-button {
         margin-top: 10px;
     }
-      
+
+    /* Hide the mini-calendar and sidebar */
+    .calendar-sidebar {
+        display: none;
+    }
+
+    .calendar-main {
+        width: 100%;
+    }
+
+    /* Stack sub-controls vertically */
+    .sub-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .view-switcher, .view-type-switcher {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .view-switcher {
+        justify-content: space-between;
+    }
+
+    .view-switcher h2 {
+        font-size: 18px;
+    }
+
+    /* Adjust the search bar */
+    .search-bar {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .search-bar .input-group {
+        flex: 1 1 100%;
+    }
+
+    /* Adjust font sizes */
+    .left-controls {
+        font-size: 24px;
+    }
+
+    /* Adjust calendar grid */
+    .calendar-grid {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .day {
+        min-width: 100px; /* Ensure days have a minimum width */
+    }
+
+    /* Optional: adjust procedure card font sizes */
+    .procedure-card {
+        font-size: 12px;
+    }
 }
 
 /* For screens larger than 768px, show the nav-links */
