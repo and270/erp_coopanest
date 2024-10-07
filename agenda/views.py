@@ -32,18 +32,59 @@ MONTH_NAMES_PT = {
 def update_procedure(request, procedure_id):
     procedure = get_object_or_404(Procedimento, id=procedure_id)
     
-    # Check if user belongs to the same group as the procedure
     if not request.user.validado or request.user.group != procedure.group:
         return HttpResponseForbidden("You don't have permission to update this procedure.")
     
+    old_email = procedure.email_paciente
     form = ProcedimentoForm(request.POST, request.FILES, instance=procedure, user=request.user)
     if form.is_valid():
-        form.save()
-        return JsonResponse({'success': True, 'message': 'Procedimento atualizado com sucesso.'})
+        updated_procedure = form.save()
+        
+        email_try = False
+        email_sent = True
+        email_error = None
+
+        # Check if the email has changed
+        if updated_procedure.email_paciente and updated_procedure.email_paciente != old_email:
+            email_try = True
+            try:
+                survey_url = request.build_absolute_uri(reverse('survey', args=[updated_procedure.nps_token]))
+                subject = 'Pesquisa de Satisfação com Atendimento Anestésico em procedimento cirúrgico'
+                message = f"""Prezado(a) {updated_procedure.nome_paciente},
+
+Estamos entrando em contato para solicitar sua colaboração em um processo importante de melhoria contínua do nosso atendimento.
+Você foi submetido(a) recentemente a um procedimento cirúrgico, ou está prestes a passar por um, e gostaríamos de conhecer sua opinião sobre o atendimento anestésico que recebeu ou receberá. 
+
+Sua experiência é fundamental para nós, e seu feedback nos ajudará a aprimorar nossos serviços.
+
+Pedimos, gentilmente, que responda a um breve questionário de avaliação de satisfação após a realização do procedimento anestésico. 
+
+{survey_url}
+
+Suas respostas serão tratadas com total confidencialidade e utilizadas exclusivamente para fins de melhoria do atendimento.
+
+Agradecemos antecipadamente por sua disponibilidade e colaboração. 
+
+Sua opinião é extremamente valiosa para nós."""
+                from_email = settings.DEFAULT_FROM_EMAIL
+                recipient_list = [updated_procedure.email_paciente]
+                send_mail(subject, message, from_email, recipient_list)
+            except Exception as e:
+                email_sent = False
+                email_error = str(e)
+                print(f"Error sending email to patient {updated_procedure.email_paciente}: ", e)
+
+        return JsonResponse({
+            'success': True, 
+            'message': 'Procedimento atualizado com sucesso.',
+            'email_sent': email_sent,
+            'email_error': email_error,
+            'email_try': email_try
+        })
     return JsonResponse({
         'success': False,
         'errors': ErrorDict(form.errors).as_json(),
-        'message': 'Erro ao atualizar procedimento.'
+        'message': 'Erro ao atualizar procedimento.',
     })
 
 @require_http_methods(["POST"])

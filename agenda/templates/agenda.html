@@ -571,9 +571,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                let message = data.message;
-                if (!data.email_sent) {
-                    message += ` Porém, não foi possível enviar o link de pesquisa para o email do usuário devido a: ${data.email_error}`;
+                let message = procedureId ? 'Procedimento editado com sucesso.' : 'Procedimento criado com sucesso.'
+                if (data.email_sent === false && data.email_try === true) {
+                    message += ` Porém, não foi possível enviar o link de pesquisa para o email do paciente devido a: ${data.email_error}`;
+                } else if (data.email_sent === true) {
+                    message += ' O link de pesquisa foi enviado para o email do paciente.';
                 }
                 showCustomAlert(message, 'success');
                 setTimeout(() => {
