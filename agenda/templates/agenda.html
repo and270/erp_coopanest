@@ -220,7 +220,7 @@
 <div id="procedimento-form-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2>Novo Agendamento</h2>
+        <h2>Agendamento</h2>
         <span class="required-field-text"><span class="required-asterisk">*</span>Campo de preenchimento obrigatório</span><br><br>
         <form method="POST" enctype="multipart/form-data" id="procedimento-form">
             {% csrf_token %}
@@ -465,6 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Show the form modal
         formModal.style.display = 'block';
+        hideAgendarButton();
     }
 
     function formatDate(dateString) {
@@ -511,6 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }); 
     document.querySelector('.close').addEventListener('click', function() {
         document.getElementById('procedimento-form-modal').style.display = 'none';
+        showAgendarButton();
     });
 </script>
 <script>
@@ -537,6 +539,17 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleConditionalFields(); // Initial call to set the correct state on page load
     });
 
+</script>
+
+<script>
+    // This script is used to hide the "Agendar" button when the form modal is open
+    function hideAgendarButton() {
+        document.getElementById('agendar-btn').style.display = 'none';
+    }
+
+    function showAgendarButton() {
+        document.getElementById('agendar-btn').style.display = '';
+    }
 </script>
 
 <script>
@@ -578,6 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     message += ' O link de pesquisa foi enviado para o email do paciente.';
                 }
                 showCustomAlert(message, 'success');
+                showAgendarButton(); 
                 setTimeout(() => {
                     location.reload();
                 }, 2000);
@@ -674,7 +688,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
                 
                 procedureFormModal.style.display = 'block';
-                formSubmitBtn.textContent = 'Editar Agendamento';
+                formSubmitBtn.textContent = 'Salvar Alterações';
+                hideAgendarButton();
             });
     }
     
@@ -733,6 +748,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('procedure_id').value = '';
         formSubmitBtn.textContent = 'Criar Agendamento';
         procedureFormModal.style.display = 'block';
+        hideAgendarButton();
     });
 });
 </script>
@@ -814,6 +830,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Show the form modal
         formModal.style.display = 'block';
+        hideAgendarButton();
     }
 
     // Add event listeners to month view cells
