@@ -237,6 +237,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.11/interact.min.js"></script>
 
 <script>
+    function hideNovaEscalaButton() {
+        document.getElementById('criar-escala-btn').style.display = 'none';
+    }
+
+    function showNovaEscalaButton() {
+        document.getElementById('criar-escala-btn').style.display = '';
+    }
+</script>
+
+<script>
 $(document).ready(function(){
     // Apply masks
     $("#id_data_inicio, #id_data_fim").inputmask("99/99/9999");  // dd/mm/yyyy
@@ -297,15 +307,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     criarEscalaBtn.addEventListener('click', function() {
         escalaFormModal.style.display = 'block';
+        hideNovaEscalaButton();
     });
 
     closeBtn.addEventListener('click', function() {
         escalaFormModal.style.display = 'none';
+        showNovaEscalaButton(); 
     });
 
     window.addEventListener('click', function(event) {
         if (event.target == escalaFormModal) {
             escalaFormModal.style.display = 'none';
+            showNovaEscalaButton(); 
         }
     });
 
@@ -375,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadEscalaDataIntoForm(escalaId);
         escalaDetailsModal.style.display = 'none';
         editEscalaModal.style.display = 'block';
+        hideNovaEscalaButton();
     }
 
     function loadEscalaDataIntoForm(escalaId) {
@@ -443,6 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.close').forEach(closeBtn => {
         closeBtn.addEventListener('click', function() {
             this.closest('.modal').style.display = 'none';
+            showNovaEscalaButton();
         });
     });
 
