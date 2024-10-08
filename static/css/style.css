@@ -797,11 +797,27 @@ select {
         top: 100px;
         left: 0;
         width: 100%;
-        background-color: #232376;
+        background-color: #01124A;
+        z-index: 1001;
     }
 
     .nav-links.active {
-        display: flex; /* Show the menu when active */
+        display: flex;
+    }
+
+    .nav-links li {
+        margin: 0;
+        width: 100%;
+    }
+
+    .nav-links li a {
+        display: block;
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-links li:last-child a {
+        border-bottom: none;
     }
 
     .menu-toggle {
