@@ -903,17 +903,23 @@ select {
 
     /* Stack sub-controls vertically */
     .sub-controls {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-wrap: wrap;
+        justify-content: space-between;
     }
 
     .view-switcher, .view-type-switcher {
-        width: 100%;
+        flex: 0 0 auto;
+        width: auto;
         margin-bottom: 10px;
     }
 
     .view-switcher {
-        justify-content: space-between;
+        flex-grow: 1;
+        margin-right: 10px;
+    }
+
+    .view-type-switcher {
+        flex-shrink: 0;
     }
 
     /* Adjust the search bar */
