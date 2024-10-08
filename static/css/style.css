@@ -938,6 +938,43 @@ select {
     .left-controls {
         font-size: 24px;
     }
+
+    /* Set fixed widths for escala grid columns */
+    .escala-grid {
+        grid-template-columns: auto repeat(7, 120px); /* Adjust the width as needed */
+        overflow-x: auto; /* Enable horizontal scrolling */
+    }
+
+    /* Adjust the escala days header to align with columns */
+    .escala-days {
+        grid-template-columns: repeat(7, 120px); /* Match the column widths */
+    }
+
+    .escala-days span {
+        width: 120px; /* Match the column width */
+        flex-shrink: 0;
+    }
+
+    /* Ensure escala week dates column is fixed */
+    .escala-week-dates {
+        width: 120px; /* Match the width of other columns */
+        flex-shrink: 0; /* Prevent shrinking */
+        text-align: center;
+    }
+
+    /* Adjust escala day cells */
+    .escala-day-cell {
+        min-width: 120px; /* Ensure cells don't shrink too much */
+        overflow: hidden; /* Hide overflow content */
+    }
+
+    /* Adjust escala items inside cells */
+    .escala-item {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }
 
 /* For screens larger than 768px, show the nav-links */
