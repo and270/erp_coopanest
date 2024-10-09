@@ -5,6 +5,9 @@ from .models import Anesthesiologist, Surgeon, HospitalClinic
 from django.contrib.auth import authenticate, login
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from django.http import HttpResponseForbidden
+from django.http import FileResponse
+from django.conf import settings
+import os
 
 def home_view(request):
     context = {
@@ -225,3 +228,11 @@ def delete_view(request, model_name, object_id):
         return redirect('members')
 
     return render(request, 'confirm_delete.html', {'instance': instance})
+
+def terms_of_service(request):
+    file_path = os.path.join(settings.BASE_DIR, 'registration/terms_and_privacy/terms_of_service.pdf')
+    return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+
+def privacy_policy(request):
+    file_path = os.path.join(settings.BASE_DIR, 'registration/terms_and_privacy/privacy_policy.pdf')
+    return FileResponse(open(file_path, 'rb'), content_type='application/pdf')

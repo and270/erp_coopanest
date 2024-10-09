@@ -67,9 +67,11 @@
                     </div>
                 {% endif %}
             </div>
-            <div class="form-group" id="create-new-group-option">
-                <label for="register-create-new-group"><span>&#x1F6A7;</span> Criar novo grupo</label>
+            <div class="form-group-checkbox" id="create-new-group-option">
                 {{ register_form.create_new_group }}
+                <label for="{{ register_form.create_new_group.id_for_label }}">
+                    <span>&#x1F6A7;</span> Criar novo grupo
+                </label>
             </div>
             <div class="form-group" id="group-selection">
                 <label for="register-group"><span>&#x1F3E2;</span> Grupo</label>
@@ -87,6 +89,15 @@
                 {% if register_form.new_group.errors %}
                     <div class="error-message">
                         {{ register_form.new_group.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group" id="new-group-email">
+                <label for="register-new-group-email"><span>&#x2709;</span> E-mail do Novo Grupo</label>
+                {{ register_form.new_group_email }}
+                {% if register_form.new_group_email.errors %}
+                    <div class="error-message">
+                        {{ register_form.new_group_email.errors.0 }}
                     </div>
                 {% endif %}
             </div>
@@ -108,6 +119,19 @@
                     </div>
                 {% endif %}
             </div>
+            <div class="form-group-checkbox">
+                <input type="checkbox" id="agree-terms" name="agree_terms" required>
+                <label for="agree-terms">
+                    Concordo com os <a href="{% url 'terms_of_service' %}" target="_blank">Termos de Serviço</a>
+                </label>
+            </div>
+            <div class="form-group-checkbox">
+                <input type="checkbox" id="agree-privacy" name="agree_privacy" required>
+                <label for="agree-privacy">
+                    Concordo com a <a href="{% url 'privacy_policy' %}" target="_blank">Política de Privacidade</a>
+                </label>
+            </div>
+            
             <button type="submit" name="register" class="auth-button">Criar conta</button>
         </form>
     </div>
@@ -119,6 +143,7 @@
         const createNewGroupField = document.querySelector('#id_create_new_group');
         const groupSelection = document.querySelector('#group-selection');
         const newGroup = document.querySelector('#new-group');
+        const newGroupEmail = document.querySelector('#new-group-email');
         const createNewGroupOption = document.querySelector('#create-new-group-option');
         
         function toggleFields() {
@@ -130,14 +155,17 @@
                 if (createNewGroupChecked) {
                     groupSelection.style.display = 'none';
                     newGroup.style.display = 'block';
+                    newGroupEmail.style.display = 'block';
                 } else {
                     groupSelection.style.display = 'block';
                     newGroup.style.display = 'none';
+                    newGroupEmail.style.display = 'none';
                 }
             } else {
                 createNewGroupOption.style.display = 'none';
                 groupSelection.style.display = 'block';
                 newGroup.style.display = 'none';
+                newGroupEmail.style.display = 'none';
             }
         }
     

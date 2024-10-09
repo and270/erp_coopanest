@@ -7,6 +7,7 @@
     <title>{% block title %}CoopaHub{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400&display=swap" rel="stylesheet">
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const menuToggle = document.querySelector('.menu-toggle');
@@ -33,23 +34,24 @@
             <ul class="nav-links">
                 {% if user.is_authenticated %}
                     {% if user.user_type == SECRETARIA_USER or user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
-                        <li><a href="{% url 'members' %}">MEMBROS</a></li>
-                        <li><a href="{% url 'cadastro' %}">CADASTRO</a></li>
+                        <li><a href="{% url 'members' %}" {% if request.resolver_match.url_name == 'members' %}class="active"{% endif %}>Membros</a></li>
+                        <li><a href="{% url 'cadastro' %}" {% if request.resolver_match.url_name == 'cadastro' %}class="active"{% endif %}>Cadastro</a></li>
                     {% elif user.user_type == ANESTESISTA_USER %}
-                        <li><a href="{% url 'members' %}">MEU CADASTRO</a></li>
+                        <li><a href="{% url 'members' %}" {% if request.resolver_match.url_name == 'members' %}class="active"{% endif %}>Meu cadastro</a></li>
                     {% endif %}
                 {% else %}
-                    <li><a href="{% url 'cadastro' %}">CADASTRO</a></li>
+                    <li><a href="{% url 'cadastro' %}" {% if request.resolver_match.url_name == 'cadastro' %}class="active"{% endif %}>Cadastro</a></li>
                 {% endif %}
-                <li><a href="#">AGENDA</a></li>
-                <li><a href="#">FINANÇAS</a></li>
-                <li><a href="#">QUALIDADE</a></li>
-                <li><a href="#">DASHBOARD</a></li>
+                <li><a href="{% url 'agenda' %}" {% if request.resolver_match.url_name == 'agenda' %}class="active"{% endif %}>Agenda</a></li>
+                <li><a href="#" {% if request.resolver_match.url_name == 'financas' %}class="active"{% endif %}>Finanças</a></li>
+                <li><a href="#" {% if request.resolver_match.url_name == 'qualidade' %}class="active"{% endif %}>Qualidade</a></li>
+                <li><a href="#" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
                 {% if user.is_authenticated %}
-                    <li><a href="{% url 'profile' %}">MINHA CONTA</a></li>
+                    <li><a href="{% url 'profile' %}" class="user-account-icon" aria-label="Minha conta"></a></li>
                 {% else %}
-                    <li><a href="{% url 'login_register' %}">LOGIN</a></li>
+                    <li><a href="{% url 'login_register' %}" {% if request.resolver_match.url_name == 'login_register' %}class="active"{% endif %}>Login</a></li>
                 {% endif %}
+            </ul>
             <!-- Por enquanto não temos função de busca
             <div class="search-and-notification">
                 <input type="text" placeholder="O que você procura">

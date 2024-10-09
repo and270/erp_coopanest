@@ -1,0 +1,24 @@
+<form method="POST" id="procedimento-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Salvar</button>
+</form>
+
+<script>
+    document.getElementById('procedimento-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var formData = new FormData(this);
+
+        // Send AJAX request to submit form data
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', this.action, true);
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                // Hide modal and refresh the agenda page
+                document.getElementById('procedimento-form-modal').style.display = 'none';
+                location.reload();
+            }
+        };
+        xhr.send(formData);
+    });
+</script>

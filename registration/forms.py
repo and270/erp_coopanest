@@ -10,11 +10,18 @@ from django.utils.translation import gettext_lazy as _
 class CustomUserCreationForm(UserCreationForm):
     group = forms.ModelChoiceField(queryset=Groups.objects.all(), required=False, label='Selecione seu Grupo')
     new_group = forms.CharField(required=False, label='Registre o nome do seu Grupo')
-    create_new_group = forms.BooleanField(required=False, label='Criar novo grupo')
+    new_group_email = forms.EmailField(required=False, label='E-mail do Grupo')
+    create_new_group = forms.BooleanField(
+        required=False, 
+        label='Criar novo grupo',
+        widget=forms.CheckboxInput(attrs={'id': 'id_create_new_group'})
+    )
+    agree_terms = forms.BooleanField(required=True, label='Concordo com os Termos de Serviço')
+    agree_privacy = forms.BooleanField(required=True, label='Concordo com a Política de Privacidade')
 
     class Meta:
         model = CustomUser
-        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'password1', 'password2')
+        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'new_group_email', 'password1', 'password2', 'agree_terms', 'agree_privacy')
         labels = {
             'email': 'E-mail',
             'user_type': 'Tipo de usuário',
@@ -22,26 +29,19 @@ class CustomUserCreationForm(UserCreationForm):
             'password2': 'Confirme a senha',
         }
 
-    def __init__(self, *args, **kwargs):
-        super(CustomUserCreationForm, self).__init__(*args, **kwargs)
-
-        user_type_choices = [
-            (SECRETARIA_USER, 'Secretária'),
-            (GESTOR_USER, 'Gestor'),
-            (ANESTESISTA_USER, 'Anestesista')
-        ]
-        self.fields['user_type'].choices = user_type_choices
-
     def clean(self):
         cleaned_data = super().clean()
         user_type = cleaned_data.get("user_type")
         create_new_group = cleaned_data.get("create_new_group")
         group = cleaned_data.get("group")
         new_group = cleaned_data.get("new_group")
+        new_group_email = cleaned_data.get("new_group_email")
 
         if user_type == GESTOR_USER:
             if create_new_group and not new_group:
                 raise forms.ValidationError("Por favor, insira o nome do novo grupo.")
+            elif create_new_group and not new_group_email:
+                raise forms.ValidationError("Por favor, insira o e-mail do novo grupo.")
             elif not create_new_group and not group:
                 raise forms.ValidationError("Por favor, selecione um grupo.")
 
@@ -56,10 +56,14 @@ class CustomUserCreationForm(UserCreationForm):
         create_new_group = self.cleaned_data.get("create_new_group")
         group = self.cleaned_data.get("group")
         new_group = self.cleaned_data.get("new_group")
+        new_group_email = self.cleaned_data.get("new_group_email")
 
         if user_type == GESTOR_USER:
             if create_new_group:
-                group, created = Groups.objects.get_or_create(name=new_group)
+                group, created = Groups.objects.get_or_create(
+                    name=new_group,
+                    defaults={'email': new_group_email}
+                )
                 user.group = group
             else:
                 user.group = group

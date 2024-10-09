@@ -1,0 +1,618 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Escala{% endblock %}
+
+{% block content %}
+<div class="agenda-container escala-view">
+    <div class="agenda-header">
+        <div class="left-controls">
+            Escala
+        </div>
+
+        <div class="center-controls">
+
+        </div>
+
+        <div class="right-controls">
+            <div class="agenda-scale">
+                <input type="radio" id="scale-view" name="view-toggle" checked>
+                <label for="scale-view"><b>Escala</b></label>
+                <input type="radio" id="agenda-view" name="view-toggle">
+                <label for="agenda-view"><b>Agenda</b></label>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div class="calendar-sidebar">
+            <div class="event-types-container">
+                <div class="event-types-legend">Legenda</div>
+                <ul class="event-types">
+                    <li><button class="btn-plantonista">Plantonista</button></li>
+                    <li><button class="btn-substituto">Substituto</button></li>
+                    <li><button class="btn-ferias">Férias/Licença</button></li>
+                </ul>
+            </div>
+        </div>
+        <div class="calendar-main">
+            <div class="sub-controls">
+                <div class="view-switcher">
+                    <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
+                    <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
+                    <h3 id="current-date-range" class="escala-date-range">{{ start_date|date:"d/m" }} até {{ end_date|date:"d/m" }}</h3>
+                </div>
+            </div>
+            <div class="escala-grid">
+                <div class="escala-days">
+                    <span>DOM</span>
+                    <span>SEG</span>
+                    <span>TER</span>
+                    <span>QUA</span>
+                    <span>QUI</span>
+                    <span>SEX</span>
+                    <span>SÁB</span>
+                </div>
+                {% for week in weeks %}
+                    <div class="escala-week-row">
+                        <div class="escala-week-dates">{{ week.start_date|date:"d/m" }} - {{ week.end_date|date:"d/m" }}</div>
+                        {% for day in week.days %}
+                            <div class="escala-day-cell" data-date="{{ day|date:'Y-m-d' }}">
+                                {% for escala in escalas %}
+                                    {% if escala.data == day %}
+                                        <div class="escala-item {{ escala.escala_type }}" data-id="{{ escala.id }}" data-original-date="{{ escala.data|date:'Y-m-d' }}">
+                                            <p><b>{{ escala.anestesiologista.name }}</b></p>
+                                            <p>{{ escala.hora_inicio|time:"H:i" }} - {{ escala.hora_fim|time:"H:i" }}</p>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>    
+</div>
+
+<!-- Escala Details Modal -->
+<div id="escala-details-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <span id="modal-escala-type"></span>
+        <span id="modal-anestesiologista"></span>
+        <p><span id="modal-data"></span></p>
+        <p>De <span id="modal-hora-inicio"></span> até <span id="modal-hora-fim"></span></p>
+        <p><strong>Observações:</strong> <span id="modal-observacoes"></span></p>
+        <div class="modal-actions">
+            <button class="btn btn-primary edit-escala">Editar</button>
+            <button class="btn btn-danger delete-escala">Excluir</button>
+        </div>
+    </div>
+</div>
+
+<div id="edit-escala-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Editar Escala</h2>
+        <br>
+        <form id="edit-escala-form">
+            {% csrf_token %}
+            <input type="hidden" id="edit_escala_id" name="escala_id">
+            <div class="form-group">
+                <label for="edit_escala_type">Tipo de Escala:</label>
+                <select id="edit_escala_type" name="escala_type" class="form-control" required>
+                    <option value="{{ PLANTONISTA_ESCALA }}">Plantonista</option>
+                    <option value="{{ SUBSTITUTO_ESCALA }}">Substituto</option>
+                    <option value="{{ FERIAS_ESCALA }}">Férias/Licença</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="edit_anestesiologista">Anestesiologista:</label>
+                <select id="edit_anestesiologista" name="anestesiologista" class="form-control" required>
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="edit_data">Data:</label>
+                <input type="date" id="edit_data" name="data" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_hora_inicio">Hora Início:</label>
+                <input type="time" id="edit_hora_inicio" name="hora_inicio" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_hora_fim">Hora Fim:</label>
+                <input type="time" id="edit_hora_fim" name="hora_fim" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_observacoes">Observações:</label>
+                <textarea id="edit_observacoes" name="observacoes" class="form-control"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+<button class="btn btn-primary" id="criar-escala-btn">Nova Escala</button>
+<div id="escala-form-modal" class="modal" style="display: {% if form_errors %}block{% else %}none{% endif %};">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Nova Escala</h2>
+                    <br>
+                    <form method="POST" enctype="multipart/form-data" id="escala-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="escala_id" id="escala_id">
+                        <div class="form-group">
+                            <label for="{{ form.escala_type.id_for_label }}">{{ form.escala_type.label }}</label>
+                            {{ form.escala_type }}
+                            {% if form.escala_type.errors %}
+                                <div class="error-message">
+                                    {{ form.escala_type.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.anestesiologista.id_for_label }}">{{ form.anestesiologista.label }}</label>
+                            {{ form.anestesiologista }}
+                            {% if form.anestesiologista.errors %}
+                                <div class="error-message">
+                                    {{ form.anestesiologista.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half-width">
+                                {{ form.data_inicio.label_tag }} {{ form.data_inicio }}
+                                {% if form.data_inicio.errors %}
+                                    <div class="error-message">
+                                        {{ form.data_inicio.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="form-group half-width">
+                                {{ form.data_fim.label_tag }} {{ form.data_fim }}
+                                {% if form.data_fim.errors %}
+                                    <div class="error-message">
+                                        {{ form.data_fim.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            {{ form.dias_da_semana.label_tag }}
+                            <div id="dias-da-semana-container">
+                                {% for value, label in form.dias_da_semana.field.choices %}
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="{{ form.dias_da_semana.name }}" value="{{ value }}"
+                                                   {% if value in form.dias_da_semana.value %}checked{% endif %}
+                                                   {% if value == 'todos' %}id="todos-os-dias"{% endif %}>
+                                            {{ label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.dias_da_semana.errors %}
+                                <div class="error-message">
+                                    {{ form.dias_da_semana.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.hora_inicio.label_tag }} {{ form.hora_inicio }}
+                            {% if form.hora_inicio.errors %}
+                                <div class="error-message">
+                                    {{ form.hora_inicio.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.hora_fim.label_tag }} {{ form.hora_fim }}
+                            {% if form.hora_fim.errors %}
+                                <div class="error-message">
+                                    {{ form.hora_fim.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.observacoes.label_tag }} {{ form.observacoes }}
+                            {% if form.observacoes.errors %}
+                                <div class="error-message">
+                                    {{ form.observacoes.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Escala</button>
+                    </form>
+                </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.11/interact.min.js"></script>
+
+<script>
+    function hideNovaEscalaButton() {
+        document.getElementById('criar-escala-btn').style.display = 'none';
+    }
+
+    function showNovaEscalaButton() {
+        document.getElementById('criar-escala-btn').style.display = '';
+    }
+</script>
+
+<script>
+$(document).ready(function(){
+    // Apply masks
+    $("#id_data_inicio, #id_data_fim").inputmask("99/99/9999");  // dd/mm/yyyy
+    $("#id_hora_inicio, #id_hora_fim").inputmask("99:99");  // hh:mm
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Calendar navigation
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentDateRange = document.getElementById('current-date-range');
+    
+    // Parse the start date string into year, month, and day components
+    const [year, month, day] = '{{ first_of_month|date:"Y-m-d" }}'.split('-').map(Number);
+    let currentStartDate = new Date(Date.UTC(year, month - 1, day));
+
+    function updateDateRange() {
+        currentDateRange.textContent = formatMonthYear(currentStartDate);
+    }
+
+    function formatMonthYear(date) {
+        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    function formatDate(date) {
+        return `${date.getUTCDate().toString().padStart(2, '0')}/${(date.getUTCMonth() + 1).toString().padStart(2, '0')}`;
+    }
+
+    updateDateRange();
+
+    prevBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        currentStartDate.setUTCMonth(currentStartDate.getUTCMonth() - 1);
+        currentStartDate.setUTCDate(1);
+        updateDateRange();
+        loadEscalas(currentStartDate);
+    });
+
+    nextBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        currentStartDate.setUTCMonth(currentStartDate.getUTCMonth() + 1);
+        currentStartDate.setUTCDate(1);
+        updateDateRange();
+        loadEscalas(currentStartDate);
+    });
+
+
+    function loadEscalas(startDate) {
+        window.location.href = `/escala/?start_date=${startDate.toISOString().split('T')[0]}`;
+    }
+
+    // Escala form handling
+    const criarEscalaBtn = document.getElementById('criar-escala-btn');
+    const escalaFormModal = document.getElementById('escala-form-modal');
+    const escalaForm = document.getElementById('escala-form');
+    const formSubmitBtn = document.getElementById('form-submit-btn');
+    const closeBtn = escalaFormModal.querySelector('.close');
+
+    criarEscalaBtn.addEventListener('click', function() {
+        escalaFormModal.style.display = 'block';
+        hideNovaEscalaButton();
+    });
+
+    closeBtn.addEventListener('click', function() {
+        escalaFormModal.style.display = 'none';
+        showNovaEscalaButton(); 
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target == escalaFormModal) {
+            escalaFormModal.style.display = 'none';
+            showNovaEscalaButton(); 
+        }
+    });
+
+    // Escala item handling
+    const escalaItems = document.querySelectorAll('.escala-item');
+    const escalaDetailsModal = document.getElementById('escala-details-modal');
+    const closeDetailsBtn = escalaDetailsModal.querySelector('.close');
+
+    escalaItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const escalaId = this.getAttribute('data-id');
+            fetchEscalaDetails(escalaId);
+        });
+    });
+
+    closeDetailsBtn.addEventListener('click', function() {
+        escalaDetailsModal.style.display = 'none';
+    });
+
+    function fetchEscalaDetails(escalaId) {
+        fetch(`/get-escala/${escalaId}/`)
+            .then(response => response.json())
+            .then(data => {
+                populateEscalaModal(data);
+                escalaDetailsModal.style.display = 'block';
+            });
+    }
+
+    function populateEscalaModal(data) {
+        const escalaTypeSpan = document.getElementById('modal-escala-type');
+        escalaTypeSpan.textContent = data.escala_type;
+        escalaTypeSpan.className = data.escala_type.toLowerCase(); // This sets the correct class for styling
+        document.getElementById('modal-anestesiologista').textContent = data.anestesiologista_name;
+        document.getElementById('modal-escala-type').textContent = data.escala_type;
+        document.getElementById('modal-data').textContent = formatDateFull(data.data);
+        document.getElementById('modal-hora-inicio').textContent = data.hora_inicio;
+        document.getElementById('modal-hora-fim').textContent = data.hora_fim;
+        document.getElementById('modal-observacoes').textContent = data.observacoes || 'Nenhuma observação';
+
+        escalaDetailsModal.setAttribute('data-escala-id', data.id);
+
+        // Add event listener for the edit button
+        const editButton = escalaDetailsModal.querySelector('.edit-escala');
+        editButton.onclick = function() {
+            openEditForm(data.id);
+        };
+
+        // Add event listener for the delete button
+        const deleteButton = escalaDetailsModal.querySelector('.delete-escala');
+        deleteButton.onclick = function() {
+            if (confirm('Tem certeza que deseja excluir esta escala?')) {
+                deleteEscala(data.id);
+            }
+        };
+    }
+
+    function formatDateFull(dateString) {
+        const date = new Date(dateString + 'T00:00:00Z');  // Append time and 'Z' for UTC
+        return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+    }
+
+    // Edit and delete handlers
+    const editEscalaModal = document.getElementById('edit-escala-modal');
+    const editEscalaForm = document.getElementById('edit-escala-form');
+
+    function openEditForm(escalaId) {
+        loadEscalaDataIntoForm(escalaId);
+        escalaDetailsModal.style.display = 'none';
+        editEscalaModal.style.display = 'block';
+        hideNovaEscalaButton();
+    }
+
+    function loadEscalaDataIntoForm(escalaId) {
+        fetch(`/get-escala/${escalaId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('edit_escala_id').value = data.id;
+                document.getElementById('edit_escala_type').value = data.escala_type;
+                document.getElementById('edit_data').value = data.data;
+                document.getElementById('edit_hora_inicio').value = data.hora_inicio;
+                document.getElementById('edit_hora_fim').value = data.hora_fim;
+                document.getElementById('edit_observacoes').value = data.observacoes;
+
+                // Populate anesthesiologist options
+                const anestesiologistaSelect = document.getElementById('edit_anestesiologista');
+                anestesiologistaSelect.innerHTML = ''; // Clear existing options
+                data.anesthesiologists.forEach(anesthesiologist => {
+                    const option = document.createElement('option');
+                    option.value = anesthesiologist.id;
+                    option.textContent = anesthesiologist.name;
+                    anestesiologistaSelect.appendChild(option);
+                });
+                anestesiologistaSelect.value = data.anestesiologista;
+
+                // Open the edit modal
+                document.getElementById('edit-escala-modal').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error loading escala data:', error);
+            });
+    }
+
+    editEscalaForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const escalaId = document.getElementById('edit_escala_id').value;
+        
+        fetch(`/edit-single-day-escala/${escalaId}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                console.error('Form errors:', data.errors);
+                let errorMessage = 'Erro ao salvar a escala. Por favor, verifique os seguintes campos:\n';
+                const errors = JSON.parse(data.errors);
+                for (const [field, fieldErrors] of Object.entries(errors)) {
+                    errorMessage += `${field}: ${fieldErrors.join(', ')}\n`;
+                }
+                alert(errorMessage);
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting form:', error);
+            alert('Erro ao enviar o formulário. Por favor, tente novamente.');
+        });
+    });
+
+    // Close modals
+    document.querySelectorAll('.close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            this.closest('.modal').style.display = 'none';
+            showNovaEscalaButton();
+        });
+    });
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Drag and drop functionality
+    interact('.escala-item').draggable({
+        inertia: true,
+        modifiers: [
+            interact.modifiers.restrictRect({
+                restriction: '.escala-grid',
+                endOnly: true
+            })
+        ],
+        autoScroll: true,
+        listeners: {
+            move: dragMoveListener,
+            end: dragEndListener
+        }
+    });
+
+    interact('.escala-day-cell').dropzone({
+        accept: '.escala-item',
+        overlap: 0.75,
+        ondropactivate: function (event) {
+            event.target.classList.add('drop-active');
+        },
+        ondropdeactivate: function (event) {
+            event.target.classList.remove('drop-active');
+        },
+        ondrop: function (event) {
+            const escalaItem = event.relatedTarget;
+            const newCell = event.target;
+            const escalaId = escalaItem.getAttribute('data-id');
+            const newDate = newCell.getAttribute('data-date');
+
+            newCell.appendChild(escalaItem);
+            escalaItem.style.transform = 'translate(0px, 0px)';
+            updateEscalaDate(escalaId, newDate);
+        }
+    });
+
+    function dragMoveListener(event) {
+        var target = event.target;
+        var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+        var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+        target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+    }
+
+    function dragEndListener(event) {
+        var target = event.target;
+        target.setAttribute('data-x', 0);
+        target.setAttribute('data-y', 0);
+    }
+
+    function updateEscalaDate(escalaId, newDate) {
+        fetch(`/update-escala-date/${escalaId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `new_date=${newDate}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Escala updated successfully');
+                location.reload();
+            } else {
+                console.error('Failed to update escala:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating escala:', error);
+        });
+    }
+
+    function deleteEscala(escalaId) {
+        fetch(`/delete-escala/${escalaId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                escalaDetailsModal.style.display = 'none';
+                location.reload();
+            } else {
+                alert('Erro ao excluir a escala. Por favor, tente novamente.');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting escala:', error);
+            alert('Erro ao excluir a escala. Por favor, tente novamente.');
+        });
+    }
+
+    // Handle "Todos os Dias" checkbox
+    const todosOsDiasCheckbox = document.getElementById('todos-os-dias');
+    const diasDaSemanaContainer = document.getElementById('dias-da-semana-container');
+
+    if (todosOsDiasCheckbox) {
+        todosOsDiasCheckbox.addEventListener('change', function() {
+            const checkboxes = diasDaSemanaContainer.querySelectorAll('input[type="checkbox"]:not(#todos-os-dias)');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+                checkbox.disabled = this.checked;
+            });
+        });
+
+        // Uncheck "Todos os Dias" if any other day is unchecked
+        diasDaSemanaContainer.addEventListener('change', function(event) {
+            if (event.target !== todosOsDiasCheckbox && !event.target.checked) {
+                todosOsDiasCheckbox.checked = false;
+            }
+        });
+    }
+});
+
+// View switcher
+document.addEventListener('DOMContentLoaded', function() {
+    const agendaRadio = document.getElementById('agenda-view');
+    const escalaRadio = document.getElementById('scale-view');
+    
+    escalaRadio.addEventListener('change', function() {
+        if (escalaRadio.checked) {
+            window.location.href = "{% url 'escala' %}";
+        }
+    });
+
+    agendaRadio.addEventListener('change', function() {
+        if (agendaRadio.checked) {
+            window.location.href = "{% url 'agenda' %}";
+        }
+    });
+});
+</script>
+{% endblock %}
