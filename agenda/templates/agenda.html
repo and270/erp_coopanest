@@ -328,6 +328,32 @@
     });
 </script>
 <script>
+    function openFormModal(date, time) {
+    const formModal = document.getElementById('procedimento-form-modal');
+    const dateField = document.getElementById('id_data');
+    const timeField = document.getElementById('id_time');
+    const formSubmitBtn = document.getElementById('form-submit-btn');  // Define formSubmitBtn here
+
+    // Reset the form and clear procedure_id
+    document.querySelector('#procedimento-form-modal form').reset();
+    document.getElementById('procedure_id').value = '';
+    formSubmitBtn.textContent = 'Criar Agendamento'; // Reset button text to default
+
+    // Pre-fill the date and time fields
+    $(dateField).inputmask("setvalue", date);
+    if (time) {
+        $(timeField).inputmask("setvalue", time);
+    } else {
+        $(timeField).inputmask("setvalue", "");
+    }
+
+    // Show the form modal
+    formModal.style.display = 'block';
+    hideAgendarButton();
+}
+
+</script>
+<script>
     function showCustomAlert(message, type) {
         const alertElement = document.getElementById('customAlert');
         alertElement.textContent = message;
@@ -458,26 +484,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDateRange();
         loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
     });
-
-
-    // Function to open the form modal with pre-filled data
-    function openFormModal(date, time) {
-        const formModal = document.getElementById('procedimento-form-modal');
-        const dateField = document.getElementById('id_data');
-        const timeField = document.getElementById('id_time');
-        
-        // Pre-fill the date and time fields
-        $(dateField).inputmask("setvalue", date);
-        if (time) {
-            $(timeField).inputmask("setvalue", time);
-        } else {
-            $(timeField).inputmask("setvalue", "");
-        }
-
-        // Show the form modal
-        formModal.style.display = 'block';
-        hideAgendarButton();
-    }
 
     function formatDate(dateString) {
         const date = new Date(dateString);
@@ -825,25 +831,6 @@ document.addEventListener('DOMContentLoaded', function() {
         4: 'Maio', 5: 'Junho', 6: 'Julho', 7: 'Agosto',
         8: 'Setembro', 9: 'Outubro', 10: 'Novembro', 11: 'Dezembro'
     };
-
-    // Function to open the form modal with pre-filled data
-    function openFormModal(date, time) {
-        const formModal = document.getElementById('procedimento-form-modal');
-        const dateField = document.getElementById('id_data');
-        const timeField = document.getElementById('id_time');
-        
-        // Pre-fill the date and time fields
-        $(dateField).inputmask("setvalue", date);
-        if (time) {
-            $(timeField).inputmask("setvalue", time);
-        } else {
-            $(timeField).inputmask("setvalue", "");
-        }
-
-        // Show the form modal
-        formModal.style.display = 'block';
-        hideAgendarButton();
-    }
 
     // Add event listeners to month view cells
     const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
