@@ -47,7 +47,12 @@
                 <li><a href="#" {% if request.resolver_match.url_name == 'qualidade' %}class="active"{% endif %}>Qualidade</a></li>
                 <li><a href="#" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
                 {% if user.is_authenticated %}
-                    <li><a href="{% url 'profile' %}" class="user-account-icon" aria-label="Minha conta"></a></li>
+                    <li>
+                        <a href="{% url 'profile' %}" class="user-account-link">
+                            <span class="user-account-icon" aria-label="Minha conta"></span>
+                            <span class="user-account-text">Minha Conta</span>
+                        </a>
+                    </li>
                 {% else %}
                     <li><a href="{% url 'login_register' %}" {% if request.resolver_match.url_name == 'login_register' %}class="active"{% endif %}>Login</a></li>
                 {% endif %}
