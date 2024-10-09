@@ -49,7 +49,9 @@
                 {% if user.is_authenticated %}
                     <li>
                         <a href="{% url 'profile' %}" class="user-account-link">
-                            <span class="user-account-icon" aria-label="Minha conta"></span>
+                            <span class="user-account-icon" aria-label="Minha conta">
+                                {{ user.email|first|upper }}
+                            </span>
                             <span class="user-account-text">Minha Conta</span>
                         </a>
                     </li>
