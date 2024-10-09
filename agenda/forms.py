@@ -23,6 +23,11 @@ class ProcedimentoForm(forms.ModelForm):
         label="Previsão de Término"
     )
 
+    cpf_paciente = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'}),
+        label="CPF do Paciente"
+    )
+
     class Meta:
         model = Procedimento
         exclude = ['group', 'data_horario', 'data_horario_fim', 'nps_token', 'csat_score', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca', 'comentario_adicional']
@@ -52,6 +57,7 @@ class ProcedimentoForm(forms.ModelForm):
             'data_visita_pre_anestesica': self.fields['data_visita_pre_anestesica'],
             'foto_anexo': self.fields['foto_anexo'],
             'nome_responsavel_visita': self.fields['nome_responsavel_visita'],
+            'cpf_paciente': self.fields['cpf_paciente'],
         }
 
         if user:

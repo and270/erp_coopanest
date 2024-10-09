@@ -174,6 +174,7 @@ def get_procedure(request, procedure_id):
         'end_time': end_time.strftime('%H:%M'),
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
+        'cpf_paciente': procedure.cpf_paciente,
         'procedimento': procedure.procedimento,
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
