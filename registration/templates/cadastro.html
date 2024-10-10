@@ -6,9 +6,9 @@
 {% block content %}
 <div class="cadastro-container">
     <div class="tab-container">
-        <button class="tab-button active" data-tab="medicos-anestesiologistas">médicos anestesiologistas</button>
-        <button class="tab-button" data-tab="medicos-cirurgioes">médicos cirurgiões</button>
-        <button class="tab-button" data-tab="hospitais-clinicas">hospitais e clínicas</button>
+        <button class="tab-button active" data-tab="medicos-anestesiologistas">Médicos anestesiologistas</button>
+        <button class="tab-button" data-tab="medicos-cirurgioes">Médicos cirurgiões</button>
+        <button class="tab-button" data-tab="hospitais-clinicas">Hospitais e clínicas</button>
     </div>
 
     {% if error_message %}
@@ -21,7 +21,12 @@
         <form method="post">
             {% csrf_token %}
             <div class="form-group">
-                {{ anesthesiologist_form.as_p }}
+                {% for field in anesthesiologist_form %}
+                    <div class="form-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endfor %}
             </div>
             <button type="submit" name="form_type" value="anesthesiologist" class="cadastrar-btn">Cadastrar</button>
         </form>
@@ -31,7 +36,12 @@
         <form method="post">
             {% csrf_token %}
             <div class="form-group">
-                {{ surgeon_form.as_p }}
+                {% for field in surgeon_form %}
+                    <div class="form-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endfor %}
             </div>
             <button type="submit" name="form_type" value="surgeon" class="cadastrar-btn">Cadastrar</button>
         </form>
@@ -41,7 +51,12 @@
         <form method="post">
             {% csrf_token %}
             <div class="form-group">
-                {{ hospital_clinic_form.as_p }}
+                {% for field in hospital_clinic_form %}
+                    <div class="form-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endfor %}
             </div>
             <button type="submit" name="form_type" value="hospital_clinic" class="cadastrar-btn">Cadastrar</button>
         </form>
