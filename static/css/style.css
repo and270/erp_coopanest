@@ -1,10 +1,10 @@
 html, body {
     margin: 0;
     padding: 0;
-    min-height: 100vh; /* Changed from 100% to 100vh */
+    min-height: 100vh;
     font-family: 'Inter', sans-serif;
-    background-color: #101820;
-    color: #ffffff;
+    background-color: #ffffff;
+    color: #000000;
     display: flex;
     flex-direction: column;
 }
@@ -104,6 +104,9 @@ main {
 .home-container {
     text-align: center;
     padding: 20px;
+    background-color: #1c2630;
+    height: 100vh;
+    width: 100%;
 }
 
 .main-title {
@@ -541,31 +544,52 @@ hr {
 /* Add this to your existing style.css file */
 
 .cadastro-container {
-    max-width: 800px;
+    max-width: 90%;
     margin: 0 auto;
     padding: 20px;
+    background-color: #ffffff; /* Changed from #101820 to #ffffff */
+    color: #000000;
 }
 
 .tab-container {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 600px;
+    height: 36px;
+    background-color: #ECEFF5;
+    border-radius: 5px;
+    overflow: hidden;
+    padding: 2px;
     margin-bottom: 20px;
 }
 
 .tab-button {
-    background-color: #232376;
-    color: #ffffff;
-    border: none;
-    padding: 10px 20px;
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    transition: background-color 0.3s;
-    flex-grow: 1;
-    text-align: center;
+    font-weight: bold;
+    color: #505050;
+    transition: background-color 0.3s, color 0.3s;
+    border-radius: 3px;
+    border: none;
+    background-color: transparent;
+    font-size: 12px;
+    padding: 0;
 }
 
 .tab-button:hover,
 .tab-button.active {
-    background-color: #418FDE;
+    background-color: #FFFFFF;
+    color: #1A73E8;
+    box-shadow: 0 0 0 2px #ECEFF5;
+}
+
+.tab-button:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 .tab-content {
