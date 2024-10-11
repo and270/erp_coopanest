@@ -228,18 +228,25 @@ main {
 }
 
 .auth-box {
-    background-color: #222;
-    padding: 20px;
+    background-color: #ffffff;
+    padding: 15px;
     border-radius: 10px;
     width: 350px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
     margin-bottom: 30px;
+    color: #3D3D3D;
 }
 
+.auth-box .form-group {
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+
 .auth-box h2 {
-    color: #ffffff;
+    color: #3D3D3D;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .form-group {
@@ -265,7 +272,7 @@ main {
     display: flex;
     align-items: center;
     margin-bottom: 15px;
-    color: #ffffff;
+    color: #3D3D3D;
 }
 
 .form-group-checkbox input[type="checkbox"] {
