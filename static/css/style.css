@@ -923,7 +923,23 @@ select {
     }
 
     .tab-button {
+        flex: none;
+        width: 100%;
+        height: 36px;
         margin-bottom: 10px;
+        border-radius: 5px;
+        background-color: #ECEFF5;
+    }
+
+    .tab-button:last-child {
+        margin-bottom: 0;
+    }
+
+    .tab-button:hover,
+    .tab-button.active {
+        background-color: #FFFFFF;
+        color: #1A73E8;
+        box-shadow: 0 0 0 2px #ECEFF5;
     }
 
     .member-list li {
