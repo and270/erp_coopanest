@@ -24,7 +24,7 @@ class ProcedimentoForm(forms.ModelForm):
     )
 
     cpf_paciente = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'}),
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
         label="CPF do Paciente"
     )
 

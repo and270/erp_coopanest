@@ -104,7 +104,7 @@ class AnesthesiologistForm(forms.ModelForm):
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'class': 'date-input'}),
             'admission_date': forms.DateInput(attrs={'class': 'date-input'}),
-            'cpf': forms.TextInput(attrs={'placeholder': '000.000.000-00'}),
+            'phone': forms.TextInput(attrs={'class': 'phone-mask'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -145,6 +145,9 @@ class SurgeonForm(forms.ModelForm):
             'phone': 'Telefone',
             'notes': 'Sugestões de anestesia',
         }
+        widgets = {
+            'phone': forms.TextInput(attrs={'class': 'phone-mask'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -168,6 +171,10 @@ class HospitalClinicForm(forms.ModelForm):
             'address': 'Endereço',
             'surgery_center_phone': 'Telefone do Centro Cirúrgico',
             'hospital_phone': 'Telefone do Hospital',
+        }
+        widgets = {
+            'surgery_center_phone': forms.TextInput(attrs={'class': 'phone-mask'}),
+            'hospital_phone': forms.TextInput(attrs={'class': 'phone-mask'}),
         }
 
     def __init__(self, *args, **kwargs):
