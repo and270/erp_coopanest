@@ -8,23 +8,22 @@
     <h1 class="main-title">Editar Anestesiologista</h1>
     <form method="post">
         {% csrf_token %}
-        {% for field in form %}
-            <div class="form-group">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                    <div class="error-message">
-                        {% for error in field.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-        {% endfor %}
-        <div class="button-group">
-            <button type="submit" class="cadastrar-btn save-btn">Salvar Alterações</button>
-            <a href="{% url 'members' %}" class="cadastrar-btn cancel-btn">Cancelar</a>
+        <div class="form-group">
+            {% for field in form %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="error-message">
+                            {% for error in field.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
         </div>
+        <button type="submit" class="cadastrar-btn">Salvar Alterações</button>
     </form>
 </div>
 {% endblock %}
