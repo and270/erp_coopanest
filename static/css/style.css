@@ -646,7 +646,6 @@ hr {
     background-color: transparent;
 }
 
-
 .member-table th {
     padding: 20px 15px;
     text-align: left;
@@ -679,7 +678,7 @@ hr {
     padding: 15px;
     text-align: left;
     vertical-align: middle;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: none;
 }
 
 /* Remove bottom border from the last tbody row's cells */
