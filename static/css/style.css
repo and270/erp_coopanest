@@ -899,6 +899,26 @@ select {
     .card:last-child {
         margin-right: 20px; /* This creates some space after the last card */
     }
+
+    .form-group {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .form-field {
+        flex: 0 0 100%;
+        max-width: 100%;
+        min-width: 100%;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
     .form-row {
         flex-direction: column;
     }
