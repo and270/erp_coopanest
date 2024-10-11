@@ -640,6 +640,12 @@ hr {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
     padding-bottom: 80px;
+    font-size: 14px;
+}
+
+.member-table .header-row {
+    background-color: #ECEFF5;
+    height: 40px; /* Adjust this value to control the height of the header background */
 }
 
 .member-table thead {
@@ -647,11 +653,11 @@ hr {
 }
 
 .member-table th {
-    padding: 20px 15px;
+    padding: 10px 15px;
     text-align: left;
-    font-weight: bold;
     color: #3D3D3D;
     position: relative;
+    background-color: transparent;
 }
 
 .member-table th::before {
@@ -664,6 +670,15 @@ hr {
     background-color: #ECEFF5;
     z-index: -1;
 }
+
+.member-table th:first-child {
+    border-top-left-radius: 12.96px;
+}
+
+.member-table th:last-child {
+    border-top-right-radius: 12.96px;
+}
+
 .member-table th:first-child::before {
     border-top-left-radius: 12.96px;
     border-bottom-left-radius: 12.96px;
