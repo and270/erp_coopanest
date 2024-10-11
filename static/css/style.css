@@ -297,7 +297,6 @@ main {
     margin-bottom: 5px;
     color: #3D3D3D;
     font-size: 14px;
-    font-weight: bold !important;
 }
 
 .form-group label::after {

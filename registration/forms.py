@@ -113,11 +113,12 @@ class AnesthesiologistForm(forms.ModelForm):
 
         if user:
             self.fields['user'].queryset = CustomUser.objects.filter(user_type=ANESTESISTA_USER, group=user.group)
+        
+        # Add this line to change the empty label
+        self.fields['user'].empty_label = "Selecione se for um Anestesista cadastrado"
 
         for field in self.fields:
             self.fields[field].initial = None
-            if isinstance(self.fields[field], forms.CharField):
-                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
     def clean_user(self):
         user = self.cleaned_data.get('user')
