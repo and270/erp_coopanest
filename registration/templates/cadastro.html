@@ -6,9 +6,9 @@
 {% block content %}
 <div class="cadastro-container">
     <div class="tab-container">
-        <button class="tab-button active" data-tab="medicos-anestesiologistas">Médicos anestesiologistas</button>
-        <button class="tab-button" data-tab="medicos-cirurgioes">Médicos cirurgiões</button>
-        <button class="tab-button" data-tab="hospitais-clinicas">Hospitais e clínicas</button>
+        <button class="tab-button {% if active_tab == 'anesthesiologists' %}active{% endif %}" data-tab="medicos-anestesiologistas">Médicos anestesiologistas</button>
+        <button class="tab-button {% if active_tab == 'surgeons' %}active{% endif %}" data-tab="medicos-cirurgioes">Médicos cirurgiões</button>
+        <button class="tab-button {% if active_tab == 'hospitals' %}active{% endif %}" data-tab="hospitais-clinicas">Hospitais e clínicas</button>
     </div>
 
     {% if error_message %}
@@ -72,17 +72,31 @@
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
 
+        function activateTab(tabName) {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            const activeButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+            activeButton.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const tabName = button.getAttribute('data-tab');
-                
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-
-                button.classList.add('active');
-                document.getElementById(tabName).classList.add('active');
+                activateTab(tabName);
             });
         });
+
+        // Activate the initial tab based on the active_tab variable
+        const initialTab = '{{ active_tab }}';
+        if (initialTab === 'anesthesiologists') {
+            activateTab('medicos-anestesiologistas');
+        } else if (initialTab === 'surgeons') {
+            activateTab('medicos-cirurgioes');
+        } else if (initialTab === 'hospitals') {
+            activateTab('hospitais-clinicas');
+        }
     });
 </script>
 <script>

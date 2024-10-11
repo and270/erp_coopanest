@@ -121,7 +121,7 @@
             {% endif %}
         </div>
     {% endif %}
-    <button class="new-registration-button">Novo Cadastro</button>
+    <button class="new-registration-button" data-tab="anesthesiologists">Novo Cadastro</button>
 </div>
 {% endblock %}
 
@@ -130,6 +130,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
+        const newRegistrationButton = document.querySelector('.new-registration-button');
 
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -140,7 +141,16 @@
 
                 button.classList.add('active');
                 document.getElementById(tabName).classList.add('active');
+
+                // Update the new registration button's data-tab attribute
+                newRegistrationButton.setAttribute('data-tab', tabName);
             });
+        });
+
+        // Add click event listener for the new registration button
+        newRegistrationButton.addEventListener('click', function() {
+            const currentTab = this.getAttribute('data-tab');
+            window.location.href = "{% url 'cadastro_redirect' 'placeholder' %}".replace('placeholder', currentTab);
         });
     });
 </script>
