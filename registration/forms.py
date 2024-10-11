@@ -150,8 +150,6 @@ class SurgeonForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].initial = None
-            if isinstance(self.fields[field], forms.CharField):
-                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
     def save(self, commit=True, user=None):
         instance = super().save(commit=False)
@@ -176,8 +174,6 @@ class HospitalClinicForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].initial = None
-            if isinstance(self.fields[field], forms.CharField):
-                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
     def save(self, commit=True, user=None):
         instance = super().save(commit=False)
