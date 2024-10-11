@@ -104,7 +104,7 @@ class AnesthesiologistForm(forms.ModelForm):
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'class': 'date-input'}),
             'admission_date': forms.DateInput(attrs={'class': 'date-input'}),
-            'cpf': forms.TextInput(attrs={'placeholder': '000.000.000-00'}),
+            'phone': forms.TextInput(attrs={'class': 'phone-mask'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -113,11 +113,12 @@ class AnesthesiologistForm(forms.ModelForm):
 
         if user:
             self.fields['user'].queryset = CustomUser.objects.filter(user_type=ANESTESISTA_USER, group=user.group)
+        
+        # Add this line to change the empty label
+        self.fields['user'].empty_label = "Selecione se for um Anestesista cadastrado"
 
         for field in self.fields:
             self.fields[field].initial = None
-            if isinstance(self.fields[field], forms.CharField):
-                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
     def clean_user(self):
         user = self.cleaned_data.get('user')
@@ -144,13 +145,14 @@ class SurgeonForm(forms.ModelForm):
             'phone': 'Telefone',
             'notes': 'Sugestões de anestesia',
         }
+        widgets = {
+            'phone': forms.TextInput(attrs={'class': 'phone-mask'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].initial = None
-            if isinstance(self.fields[field], forms.CharField):
-                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
     def save(self, commit=True, user=None):
         instance = super().save(commit=False)
@@ -170,13 +172,15 @@ class HospitalClinicForm(forms.ModelForm):
             'surgery_center_phone': 'Telefone do Centro Cirúrgico',
             'hospital_phone': 'Telefone do Hospital',
         }
+        widgets = {
+            'surgery_center_phone': forms.TextInput(attrs={'class': 'phone-mask'}),
+            'hospital_phone': forms.TextInput(attrs={'class': 'phone-mask'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].initial = None
-            if isinstance(self.fields[field], forms.CharField):
-                self.fields[field].widget.attrs['placeholder'] = self.fields[field].label
 
     def save(self, commit=True, user=None):
         instance = super().save(commit=False)

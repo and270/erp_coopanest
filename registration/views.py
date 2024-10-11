@@ -236,3 +236,26 @@ def terms_of_service(request):
 def privacy_policy(request):
     file_path = os.path.join(settings.BASE_DIR, 'registration/terms_and_privacy/privacy_policy.pdf')
     return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+
+@login_required
+def cadastro_redirect(request, tab):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
+    if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+        return render(request, 'usuario_fora_funcao.html')
+    
+    anesthesiologist_form = AnesthesiologistForm(user=request.user)
+    surgeon_form = SurgeonForm()
+    hospital_clinic_form = HospitalClinicForm()
+    
+    return render(request, 'cadastro.html', {
+        'anesthesiologist_form': anesthesiologist_form,
+        'surgeon_form': surgeon_form,
+        'hospital_clinic_form': hospital_clinic_form,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+        'active_tab': tab,
+    })

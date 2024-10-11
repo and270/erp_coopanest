@@ -14,4 +14,5 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
     path('termos-de-servico/', views.terms_of_service, name='terms_of_service'),
     path('politica-de-privacidade/', views.privacy_policy, name='privacy_policy'),
+    path('cadastro/<str:tab>/', views.cadastro_redirect, name='cadastro_redirect'),
 ]
