@@ -41,10 +41,10 @@ def update_procedure(request, procedure_id):
         updated_procedure = form.save()
         
         email_try = False
-        email_sent = True
+        email_sent = False
         email_error = None
 
-        # Check if the email has changed
+        # Check if the email has changed and is not empty
         if updated_procedure.email_paciente and updated_procedure.email_paciente != old_email:
             email_try = True
             try:
@@ -69,11 +69,11 @@ Sua opinião é extremamente valiosa para nós."""
                 from_email = settings.DEFAULT_FROM_EMAIL
                 recipient_list = [updated_procedure.email_paciente]
                 send_mail(subject, message, from_email, recipient_list)
+                email_sent = True
             except Exception as e:
-                email_sent = False
                 email_error = str(e)
                 print(f"Error sending email to patient {updated_procedure.email_paciente}: ", e)
-
+               
         return JsonResponse({
             'success': True, 
             'message': 'Procedimento atualizado com sucesso.',
@@ -90,7 +90,7 @@ Sua opinião é extremamente valiosa para nós."""
 @require_http_methods(["POST"])
 def create_procedure(request):
     if not request.user.validado:
-        return HttpResponseForbidden("You don't have permission to update this procedure.")
+        return HttpResponseForbidden("You don't have permission to create this procedure.")
     
     form = ProcedimentoForm(request.POST, request.FILES, user=request.user)
 
@@ -99,7 +99,7 @@ def create_procedure(request):
         procedure.group = request.user.group
         procedure.save()
 
-        email_sent = True
+        email_sent = False
         email_error = None
 
         if procedure.email_paciente:
@@ -125,10 +125,10 @@ Sua opinião é extremamente valiosa para nós."""
                 from_email = settings.DEFAULT_FROM_EMAIL
                 recipient_list = [procedure.email_paciente]
                 send_mail(subject, message, from_email, recipient_list)
+                email_sent = True
             except Exception as e:
-                email_sent = False
                 email_error = str(e)
-                print(f"xxxxxx Error sending email to patient {procedure.email_paciente}: ", e)
+                print(f"Error sending email to patient {procedure.email_paciente}: ", e)
 
         return JsonResponse({
             'success': True,
@@ -141,7 +141,7 @@ Sua opinião é extremamente valiosa para nós."""
         return JsonResponse({
             'success': False,
             'errors': ErrorDict(form.errors).as_json(),
-            'message': 'Erro ao criar procedimento.'
+            'message': 'Erro ao criar procedimento.',
         })
 
 @require_http_methods(["POST"])
