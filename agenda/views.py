@@ -178,6 +178,7 @@ def get_procedure(request, procedure_id):
         'end_time': end_time.strftime('%H:%M'),
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
+        'convenio': procedure.convenio,
         'cpf_paciente': procedure.cpf_paciente,
         'procedimento': procedure.procedimento,
         'hospital': procedure.hospital.id if procedure.hospital else '',
@@ -323,7 +324,8 @@ def get_procedimento_details(request, procedimento_id):
     
     data = {
         'nome_paciente': procedimento.nome_paciente,
-        'contato_paciente': procedimento.contato_pacinete,
+        'email_paciente': procedimento.email_paciente,
+        'convenio': procedimento.convenio,
         'procedimento': procedimento.procedimento,
         'hospital': procedimento.hospital.name if procedimento.hospital else procedimento.outro_local,
         'data_horario': procedimento.data_horario.strftime('%d/%m/%Y %H:%M'),

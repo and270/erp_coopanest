@@ -123,10 +123,11 @@
                                         <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                         <br>
                                         <p>Procedimento: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
-                                        <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente }}</strong></span></p>
-                                        <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></strong></p>
-                                        <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></strong></p>
-                                        <p>Anestesista: <strong><span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></strong></p>
+                                        <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
+                                        <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
+                                        <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
+                                        <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
+                                        <p>Anestesista: <strong><span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name|default:"Não informado" }}</span></strong></p>
                                         <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                         <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                         <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -185,10 +186,11 @@
                                                 <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                                 <br>
                                                 <p>Procedimento: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
-                                                <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente }}</strong></span></p>
-                                                <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local }}</span></strong></p>
-                                                <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name }}</span></strong></p>
-                                                <p>Anestesista: <strong><span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span></strong></p>
+                                                <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
+                                                <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
+                                                <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
+                                                <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
+                                                <p>Anestesista: <strong><span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name|default:"Não informado" }}</span></strong></p>
                                                 <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                                 <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                                 <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -255,14 +257,20 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.email_paciente.id_for_label }}">{{ form.email_paciente.label }}<span class="required-asterisk">*</span></label>
+                <label for="{{ form.email_paciente.id_for_label }}">{{ form.email_paciente.label }}</label>
                 {{ form.email_paciente }}
             </div>
 
             <div class="form-group">
+                <label for="{{ form.convenio.id_for_label }}">{{ form.convenio.label }}</label>
+                {{ form.convenio }}
+            </div>
+            
+            <div class="form-group">
                 <label for="{{ form.cpf_paciente.id_for_label }}">{{ form.cpf_paciente.label }}</label>
                 {{ form.cpf_paciente }}
             </div>
+            
             
             <div class="form-group">
                 <label for="{{ form.procedimento.id_for_label }}">{{ form.procedimento.label }}<span class="required-asterisk">*</span></label>
@@ -695,6 +703,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
                 document.getElementById('id_email_paciente').value = data.email_paciente;
+                document.getElementById('id_convenio').value = data.convenio;
                 document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
                 document.getElementById('id_procedimento').value = data.procedimento;
                 document.getElementById('id_hospital').value = data.hospital;
