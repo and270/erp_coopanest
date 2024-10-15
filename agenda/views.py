@@ -102,6 +102,8 @@ def create_procedure(request):
         email_sent = False
         email_error = None
 
+        success_message = 'Procedimento criado com sucesso.'
+
         if procedure.email_paciente:
             try:
                 survey_url = request.build_absolute_uri(reverse('survey', args=[procedure.nps_token]))
@@ -129,11 +131,13 @@ Sua opinião é extremamente valiosa para nós."""
             except Exception as e:
                 email_error = str(e)
                 print(f"Error sending email to patient {procedure.email_paciente}: ", e)
+        else:
+            success_message = 'Procedimento criado com sucesso. Email do paciente não fornecido. Você pode adicioná-lo depois'
 
         return JsonResponse({
             'success': True,
             'id': procedure.id,
-            'message': 'Procedimento criado com sucesso.',
+            'message': success_message,
             'email_sent': email_sent,
             'email_error': email_error
         })
