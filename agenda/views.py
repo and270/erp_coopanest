@@ -41,10 +41,10 @@ def update_procedure(request, procedure_id):
         updated_procedure = form.save()
         
         email_try = False
-        email_sent = True
+        email_sent = False
         email_error = None
 
-        # Check if the email has changed
+        # Check if the email has changed and is not empty
         if updated_procedure.email_paciente and updated_procedure.email_paciente != old_email:
             email_try = True
             try:
@@ -69,11 +69,11 @@ Sua opinião é extremamente valiosa para nós."""
                 from_email = settings.DEFAULT_FROM_EMAIL
                 recipient_list = [updated_procedure.email_paciente]
                 send_mail(subject, message, from_email, recipient_list)
+                email_sent = True
             except Exception as e:
-                email_sent = False
                 email_error = str(e)
                 print(f"Error sending email to patient {updated_procedure.email_paciente}: ", e)
-
+               
         return JsonResponse({
             'success': True, 
             'message': 'Procedimento atualizado com sucesso.',
@@ -90,7 +90,7 @@ Sua opinião é extremamente valiosa para nós."""
 @require_http_methods(["POST"])
 def create_procedure(request):
     if not request.user.validado:
-        return HttpResponseForbidden("You don't have permission to update this procedure.")
+        return HttpResponseForbidden("You don't have permission to create this procedure.")
     
     form = ProcedimentoForm(request.POST, request.FILES, user=request.user)
 
@@ -99,8 +99,10 @@ def create_procedure(request):
         procedure.group = request.user.group
         procedure.save()
 
-        email_sent = True
+        email_sent = False
         email_error = None
+
+        success_message = 'Procedimento criado com sucesso.'
 
         if procedure.email_paciente:
             try:
@@ -125,15 +127,17 @@ Sua opinião é extremamente valiosa para nós."""
                 from_email = settings.DEFAULT_FROM_EMAIL
                 recipient_list = [procedure.email_paciente]
                 send_mail(subject, message, from_email, recipient_list)
+                email_sent = True
             except Exception as e:
-                email_sent = False
                 email_error = str(e)
-                print(f"xxxxxx Error sending email to patient {procedure.email_paciente}: ", e)
+                print(f"Error sending email to patient {procedure.email_paciente}: ", e)
+        else:
+            success_message = 'Procedimento criado com sucesso. Email do paciente não fornecido. Você pode adicioná-lo depois'
 
         return JsonResponse({
             'success': True,
             'id': procedure.id,
-            'message': 'Procedimento criado com sucesso.',
+            'message': success_message,
             'email_sent': email_sent,
             'email_error': email_error
         })
@@ -141,7 +145,7 @@ Sua opinião é extremamente valiosa para nós."""
         return JsonResponse({
             'success': False,
             'errors': ErrorDict(form.errors).as_json(),
-            'message': 'Erro ao criar procedimento.'
+            'message': 'Erro ao criar procedimento.',
         })
 
 @require_http_methods(["POST"])
@@ -174,6 +178,7 @@ def get_procedure(request, procedure_id):
         'end_time': end_time.strftime('%H:%M'),
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
+        'convenio': procedure.convenio,
         'cpf_paciente': procedure.cpf_paciente,
         'procedimento': procedure.procedimento,
         'hospital': procedure.hospital.id if procedure.hospital else '',
@@ -319,7 +324,8 @@ def get_procedimento_details(request, procedimento_id):
     
     data = {
         'nome_paciente': procedimento.nome_paciente,
-        'contato_paciente': procedimento.contato_pacinete,
+        'email_paciente': procedimento.email_paciente,
+        'convenio': procedimento.convenio,
         'procedimento': procedimento.procedimento,
         'hospital': procedimento.hospital.name if procedimento.hospital else procedimento.outro_local,
         'data_horario': procedimento.data_horario.strftime('%d/%m/%Y %H:%M'),
