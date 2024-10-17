@@ -410,6 +410,70 @@ main {
     color: #ffffff;
 }
 
+/* Remove dropdown arrow for anesthesiologist select across all browsers */
+#id_anestesistas_responsaveis {
+    /* Remove default arrow */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    /* Remove background image (if any) */
+    background-image: none !important;
+    
+    /* Adjust padding and add a custom background color */
+    padding-right: 10px;
+    background-color: #ffffff;
+    
+    /* Other styles */
+    color: #000000;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+/* Hide arrow in IE10 and IE11 */
+#id_anestesistas_responsaveis::-ms-expand {
+    display: none;
+}
+
+/* Hide arrow in Firefox */
+#id_anestesistas_responsaveis {
+    text-indent: 0.01px;
+    text-overflow: '';
+}
+
+/* Hide arrow in Chrome and Safari */
+#id_anestesistas_responsaveis::-webkit-select-placeholder {
+    color: transparent;
+}
+
+/* Ensure no dropdown arrow for anesthesiologist select */
+#id_anestesistas_responsaveis {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none;
+    padding-right: 10px; /* Adjust padding as needed */
+}
+
+/* Style for dropdown options */
+#id_anestesistas_responsaveis option {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+#id_anestesistas_responsaveis option:checked {
+    background-color: #418FDE;
+    color: #ffffff;
+}
+
+#id_anestesistas_responsaveis option:hover {
+    background-color: #f0f0f0;
+}
+
 #add-anesthesiologist {
     background-color: #1A73E8;
     color: #ffffff;
