@@ -27,6 +27,12 @@
     <p>{{ hours|join:", " }}</p>
 </div>
 -->
+<p>Anestesistas:</p>
+<ul>
+  {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+    <li>{{ anestesista.name }}</li>
+  {% endfor %}
+</ul>
 <div class="agenda-container">
     <div class="agenda-header">
         <div class="left-controls">
@@ -127,7 +133,13 @@
                                         <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                         <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
                                         <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
-                                        <p>Anestesista: <strong><span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name|default:"Não informado" }}</span></strong></p>
+                                        <p>Anestesistas: <strong>
+                                            <span class="modal-anesthesiologists">
+                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </span>
+                                        </strong></p>
                                         <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                         <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                         <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -190,7 +202,13 @@
                                                 <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                                 <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
                                                 <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
-                                                <p>Anestesista: <strong><span class="modal-anesthesiologist">{{ procedimento.anestesista_responsavel.name|default:"Não informado" }}</span></strong></p>
+                                                <p>Anestesistas: <strong>
+                                                    <span class="modal-anesthesiologists">
+                                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                                        {% endfor %}
+                                                    </span>
+                                                </strong></p>
                                                 <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                                 <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                                 <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -293,8 +311,9 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.anestesista_responsavel.id_for_label }}">{{ form.anestesista_responsavel.label }}</label>
-                {{ form.anestesista_responsavel }}
+                <label for="{{ form.anestesistas_responsaveis.id_for_label }}">{{ form.anestesistas_responsaveis.label }}</label>
+                {{ form.anestesistas_responsaveis }}
+                <button type="button" id="add-anesthesiologist" class="btn btn-secondary btn-sm mt-2">+ Adicionar Anestesista</button>
             </div>
             
             <div class="form-group-inline">
@@ -583,6 +602,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const procedureFormModal = document.getElementById('procedimento-form-modal');
     const formSubmitBtn = document.getElementById('form-submit-btn');
     const procedimentoForm = document.getElementById('procedimento-form');
+    const addAnesthesiologistBtn = document.getElementById('add-anesthesiologist');
+    const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
+
+    addAnesthesiologistBtn.addEventListener('click', function() {
+        const selectedOptions = Array.from(anesthesiologistSelect.selectedOptions);
+        
+        if (selectedOptions.length > 0) {
+            selectedOptions.forEach(option => {
+                const newDiv = document.createElement('div');
+                newDiv.className = 'selected-anesthesiologist';
+                newDiv.innerHTML = `
+                    ${option.text}
+                    <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
+                `;
+                anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
+                option.selected = false;
+            });
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('remove-anesthesiologist')) {
+            e.target.parentElement.remove();
+        }
+    });
     
     procedimentoForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -592,8 +636,23 @@ document.addEventListener('DOMContentLoaded', function() {
         formSubmitBtn.innerHTML = '<span class="spinner"></span> Processando...';
         formSubmitBtn.disabled = true;
 
+        // Mark all selected anesthesiologists as selected in the form's select field
+        const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
+        const selectedAnesthesiologists = document.querySelectorAll('.selected-anesthesiologist');
+        selectedAnesthesiologists.forEach(div => {
+            const anesthesiologistName = div.textContent.trim().replace('Remover', '').trim();
+            const option = Array.from(anesthesiologistSelect.options).find(opt => opt.text === anesthesiologistName);
+            if (option) {
+                option.selected = true;
+            }
+        });
+
         const formData = new FormData(this);
         const procedureId = document.getElementById('procedure_id').value;
+
+        for (const pair of formData.entries()) {
+            console.log(pair[0]+ ', ' + pair[1]); 
+        }
         
         // Reset previous error messages
         document.querySelectorAll('.error-message').forEach(el => el.remove());
@@ -709,11 +768,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
                 document.getElementById('id_cirurgiao').value = data.cirurgiao;
-                document.getElementById('id_anestesista_responsavel').value = data.anestesista_responsavel;
                 document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
                 
+                document.querySelectorAll('.selected-anesthesiologist').forEach(el => el.remove());
+                
+                data.anestesistas_responsaveis.forEach(anestesista => {
+                    const option = Array.from(anesthesiologistSelect.options).find(opt => opt.value == anestesista.id);
+                    if (option) {
+                        const newDiv = document.createElement('div');
+                        newDiv.className = 'selected-anesthesiologist';
+                        newDiv.innerHTML = `
+                            ${anestesista.name}
+                            <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
+                        `;
+                        anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
+                    }
+                });
+
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Salvar Alterações';
                 hideAgendarButton();
@@ -1073,6 +1146,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
 </script>
 {% endblock %}

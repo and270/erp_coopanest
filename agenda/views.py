@@ -39,6 +39,10 @@ def update_procedure(request, procedure_id):
     form = ProcedimentoForm(request.POST, request.FILES, instance=procedure, user=request.user)
     if form.is_valid():
         updated_procedure = form.save()
+        if 'anestesistas_responsaveis' in form.cleaned_data:
+            updated_procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
+        
+        updated_procedure.save()
         
         email_try = False
         email_sent = False
@@ -97,7 +101,10 @@ def create_procedure(request):
     if form.is_valid():
         procedure = form.save(commit=False)
         procedure.group = request.user.group
-        procedure.save()
+        procedure.save() 
+
+        procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
+        procedure.save() 
 
         email_sent = False
         email_error = None
@@ -184,7 +191,10 @@ def get_procedure(request, procedure_id):
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
         'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
-        'anestesista_responsavel': procedure.anestesista_responsavel.id if procedure.anestesista_responsavel else '',
+        'anestesistas_responsaveis': [
+            {'id': anestesista.id, 'name': anestesista.name}
+            for anestesista in procedure.anestesistas_responsaveis.all()
+        ],
         'visita_pre_anestesica': procedure.visita_pre_anestesica,
         'data_visita_pre_anestesica': procedure.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedure.data_visita_pre_anestesica else '',
         'nome_responsavel_visita': procedure.nome_responsavel_visita,
@@ -438,7 +448,8 @@ def agenda_view(request):
         calendar_dates = get_calendar_dates(year, month)
         week_dates = []
 
-    procedimentos = Procedimento.objects.filter(group=user.group)
+    procedimentos = Procedimento.objects.filter(group=request.user.group).prefetch_related('anestesistas_responsaveis')
+    
 
     for procedimento in procedimentos:
         if procedimento.data_horario_fim:
