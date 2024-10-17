@@ -114,6 +114,7 @@ class SurveyForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field_name in ['satisfacao_geral', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca']:
             self.fields[field_name].empty_label = None
+            self.fields[field_name].required = True
 
     def save(self, commit=True):
         instance = super().save(commit=False)
