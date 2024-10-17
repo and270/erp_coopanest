@@ -27,12 +27,6 @@
     <p>{{ hours|join:", " }}</p>
 </div>
 -->
-<p>Anestesistas:</p>
-<ul>
-  {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-    <li>{{ anestesista.name }}</li>
-  {% endfor %}
-</ul>
 <div class="agenda-container">
     <div class="agenda-header">
         <div class="left-controls">
@@ -119,7 +113,11 @@
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento }}</span>
-                                    <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span>
+                                    <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
+                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </span>
                                 </div>
                                 <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                     <div class="procedure-modal-content">
@@ -188,7 +186,11 @@
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             </div>
                                             <span class="procedure-name">{{ procedimento.procedimento }}</span>
-                                            <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}</span>
+                                            <span class="procedure-anesthesiologist">
+                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </span>
                                         </div>
                                         <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                             <div class="procedure-modal-content">
@@ -285,7 +287,7 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.cpf_paciente.id_for_label }}">{{ form.cpf_paciente.label }}</label>
+                <label for="{{ form.cpf_paciente.id_for_label }}">{{ form.cpf_paciente.label }}<span class="required-asterisk">*</span></label>
                 {{ form.cpf_paciente }}
             </div>
             
