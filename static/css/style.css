@@ -401,8 +401,55 @@ main {
 }
 
 .form-group select option {
-    background-color: #333;
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.form-group select option:checked {
+    background-color: #1A73E8;
     color: #ffffff;
+}
+
+#add-anesthesiologist {
+    background-color: #1A73E8;
+    color: #ffffff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    align-self: flex-start;
+    width: auto;
+}
+
+#add-anesthesiologist:hover {
+    background-color: #2c659e;
+}
+
+/* Style for the selected anesthesiologist container */
+.selected-anesthesiologist {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 12px; /* Smaller font size for the name */
+}
+
+/* Style for the remove button */
+.remove-anesthesiologist {
+    background-color: #dc3545;
+    color: #ffffff;
+    border: none;
+    padding: 2px 3px;
+    border-radius: 3px;
+    font-size: 10px; /* Smaller font size for the button */
+    cursor: pointer;
+    margin-left: 5px;
+    transition: background-color 0.3s;
+}
+
+.remove-anesthesiologist:hover {
+    background-color: #c82333;
 }
 
 .auth-box a {
