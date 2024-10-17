@@ -6,6 +6,7 @@ urlpatterns = [
     path('', views.home_view, name='home'),
     path('login/', views.login_register_view, name='login_register'),
     path('cadastro/', views.cadastro_view, name='cadastro'),
+    path('cadastro/<str:tab>/', views.cadastro_redirect, name='cadastro_redirect'),
     path('members/', views.members_view, name='members'),
     path('delete/<str:model_name>/<int:object_id>/', views.delete_view, name='delete'),
     path('profile/', views.profile_view, name='profile'),
@@ -14,5 +15,4 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
     path('termos-de-servico/', views.terms_of_service, name='terms_of_service'),
     path('politica-de-privacidade/', views.privacy_policy, name='privacy_policy'),
-    path('cadastro/<str:tab>/', views.cadastro_redirect, name='cadastro_redirect'),
 ]
