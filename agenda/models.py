@@ -23,7 +23,7 @@ class Procedimento(models.Model):
     nome_paciente = models.CharField(max_length=255, verbose_name='Nome do Paciente', default='')
     #telefone_paciente = models.CharField(max_length=20, verbose_name='Telefone do Paciente', blank=True, null=True)
     email_paciente = models.EmailField(verbose_name='Email do Paciente', blank=True, null=True)
-    cpf_paciente = models.CharField(max_length=15, default='000.000.000-00', verbose_name='CPF do Paciente')
+    cpf_paciente = models.CharField(max_length=15, blank=True, null=True, default='000.000.000-00', verbose_name='CPF do Paciente')
     convenio = models.CharField(max_length=255, blank=True, null=True, verbose_name='Convênio')
     procedimento = models.CharField(max_length=255, verbose_name='Procedimento', default='')
     data_horario = models.DateTimeField(verbose_name='Data e Horário Marcados', default=timezone.now)
@@ -31,7 +31,12 @@ class Procedimento(models.Model):
     hospital = models.ForeignKey(HospitalClinic, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hospital/Clínica')
     outro_local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Outro Local')
     cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião')
-    anestesista_responsavel = models.ForeignKey(Anesthesiologist, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Anestesista Responsável')
+    anestesistas_responsaveis = models.ManyToManyField(
+        Anesthesiologist,
+        related_name='procedimentos',
+        blank=True,
+        verbose_name='Anestesistas Responsáveis'
+    )
     nps_token = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True, null=True, blank=True)
     visita_pre_anestesica = models.BooleanField(default=False, verbose_name='Visita Pré-Anestésica Realizada')
     data_visita_pre_anestesica = models.DateField(blank=True, null=True, verbose_name='Data da Visita Pré-Anestésica')

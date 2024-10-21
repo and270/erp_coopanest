@@ -28,6 +28,13 @@ class ProcedimentoForm(forms.ModelForm):
         label="CPF do Paciente"
     )
 
+    anestesistas_responsaveis = forms.ModelMultipleChoiceField(
+        queryset=Anesthesiologist.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
+        required=False,
+        label="Anestesistas Responsáveis"
+    )
+
     class Meta:
         model = Procedimento
         exclude = ['group', 'data_horario', 'data_horario_fim', 'nps_token', 'csat_score', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca', 'comentario_adicional']
@@ -53,7 +60,7 @@ class ProcedimentoForm(forms.ModelForm):
             'hospital': self.fields['hospital'],
             'outro_local': self.fields['outro_local'],
             'cirurgiao': self.fields['cirurgiao'],
-            'anestesista_responsavel': self.fields['anestesista_responsavel'],
+            'anestesistas_responsaveis': self.fields['anestesistas_responsaveis'],
             'visita_pre_anestesica': self.fields['visita_pre_anestesica'],
             'data_visita_pre_anestesica': self.fields['data_visita_pre_anestesica'],
             'foto_anexo': self.fields['foto_anexo'],
@@ -63,9 +70,9 @@ class ProcedimentoForm(forms.ModelForm):
 
         if user:
             # Filter the ForeignKey fields by the user's group
-            self.fields['anestesista_responsavel'].queryset = Anesthesiologist.objects.filter(group=user.group)
             self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group)
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group)
+            self.fields['anestesistas_responsaveis'].queryset = Anesthesiologist.objects.filter(group=user.group)
 
         # Add CSS classes to the conditional fields
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
@@ -83,6 +90,7 @@ class ProcedimentoForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+    
 class SurveyForm(forms.ModelForm):
     class Meta:
         model = Procedimento
@@ -106,6 +114,7 @@ class SurveyForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field_name in ['satisfacao_geral', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca']:
             self.fields[field_name].empty_label = None
+            self.fields[field_name].required = True
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -218,4 +227,3 @@ class SingleDayEscalaForm(forms.ModelForm):
         
         if user:
             self.fields['anestesiologista'].queryset = Anesthesiologist.objects.filter(group=user.group)
-
