@@ -4,9 +4,8 @@
 {% block title %}Avaliação RPA{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Avaliação RPA</h2>
-    <h3>Procedimento: {{ procedimento.procedimento }} - {{ procedimento.nome_paciente }}</h3>
+<div class="container-form">
+    <h1>Avaliação RPA</h1>
     <form method="post" id="avaliacaoRPAForm">
         {% csrf_token %}
         <div class="form-group">
@@ -15,29 +14,29 @@
         </div>
         <div class="form-group">
             <label>{{ form.dor_pos_operatoria.label }}</label>
-            <div>
+            <div class="radio-inline">
                 {% for radio in form.dor_pos_operatoria %}
-                    <div class="form-check form-check-inline">
+                    <label>
                         {{ radio.tag }}
-                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                    </div>
+                        {{ radio.choice_label }}
+                    </label>
                 {% endfor %}
             </div>
         </div>
         <div class="form-group">
             <label>{{ form.escala.label }}</label>
-            <div>
+            <div class="escala-options">
                 {% for radio in form.escala %}
-                    <div class="form-check">
+                    <label>
                         {{ radio.tag }}
-                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                    </div>
+                        {{ radio.choice_label }}
+                    </label>
                 {% endfor %}
             </div>
         </div>
 
         <!-- EVA specific fields -->
-        <div id="eva-fields" style="display: none;">
+        <div id="eva-fields" class="eva-fields">
             <div class="form-group">
                 <label for="{{ form.eva_score.id_for_label }}">{{ form.eva_score.label }}</label>
                 {{ form.eva_score }}
@@ -45,7 +44,7 @@
         </div>
 
         <!-- FLACC specific fields -->
-        <div id="flacc-fields" style="display: none;">
+        <div id="flacc-fields" class="flacc-fields">
             {% for field in form %}
                 {% if field.name in 'face,pernas,atividade,choro,consolabilidade' %}
                     <div class="form-group">
@@ -57,7 +56,7 @@
         </div>
 
         <!-- BPS specific fields -->
-        <div id="bps-fields" style="display: none;">
+        <div id="bps-fields" class="bps-fields">
             {% for field in form %}
                 {% if field.name in 'expressao_facial,movimentos_membros_superiores,adaptacao_ventilador' %}
                     <div class="form-group">
@@ -69,7 +68,7 @@
         </div>
 
         <!-- PAINAD-B specific fields -->
-        <div id="painad-b-fields" style="display: none;">
+        <div id="painad-b-fields" class="painad-b-fields">
             {% for field in form %}
                 {% if field.name in 'respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad' %}
                     <div class="form-group">
@@ -83,12 +82,12 @@
         <!-- Common fields -->
         <div class="form-group">
             <label>{{ form.evento_adverso.label }}</label>
-            <div>
+            <div class="radio-inline">
                 {% for radio in form.evento_adverso %}
-                    <div class="form-check form-check-inline">
+                    <label>
                         {{ radio.tag }}
-                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                    </div>
+                        {{ radio.choice_label }}
+                    </label>
                 {% endfor %}
             </div>
         </div>
@@ -98,12 +97,12 @@
         </div>
         <div class="form-group">
             <label>{{ form.ponv.label }}</label>
-            <div>
+            <div class="radio-inline">
                 {% for radio in form.ponv %}
-                    <div class="form-check form-check-inline">
+                    <label>
                         {{ radio.tag }}
-                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                    </div>
+                        {{ radio.choice_label }}
+                    </label>
                 {% endfor %}
             </div>
         </div>

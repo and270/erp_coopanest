@@ -1,3 +1,4 @@
 from django.contrib import admin
+from qualidade.models import AvaliacaoRPA
 
-# Register your models here.
+admin.site.register(AvaliacaoRPA)
