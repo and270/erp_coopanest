@@ -1,0 +1,662 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Qualidade{% endblock %}
+
+{% block content %}
+<!--
+<div>
+    <h3>Detailed Debug Info:</h3>
+    <p>Number of procedimentos: {{ procedimentos|length }}</p>
+    {% for proc in procedimentos %}
+        <p>Procedimento: {{ proc.nome_paciente }} - {{ proc.data_horario|date:"Y-m-d H:i" }}</p>
+        {% for date in week_dates %}
+            <p>Comparing with: {{ date.full_date|date:"Y-m-d" }} - Date Match: {% if proc.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" %}Yes{% else %}No{% endif %}</p>
+            {% if proc.data_horario|date:"Y-m-d" == date.full_date|date:"Y-m-d" %}
+                {% for hour in hours %}
+                    <p>Hour comparison: Procedure hour: {{ proc.data_horario|date:"H" }}, Comparing with: {{ hour }} - Hour Match: {% if proc.data_horario|date:"H" == hour %}Yes{% else %}No{% endif %}</p>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+    <p>Current week dates:</p>
+    {% for date in week_dates %}
+        <p>{{ date.full_date|date:"Y-m-d" }} ({{ date.day_name }})</p>
+    {% endfor %}
+    <p>Hours being checked:</p>
+    <p>{{ hours|join:", " }}</p>
+</div>
+-->
+<div class="agenda-container">
+    <div class="calendar-container">
+        <div class="calendar-sidebar">
+            <div class="mini-calendar">
+                <div class="mini-calendar-header">
+                    <span id="mini-current-month"></span>
+                    <button id="mini-prev-btn" class="btn-link">&lt;</button>
+                    <button id="mini-next-btn" class="btn-link">&gt;</button>
+                </div>
+                <div class="mini-calendar-weekdays">
+                    <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                </div>
+                <div class="mini-calendar-dates" id="mini-calendar-dates">
+                    <!-- Dates will be populated here by JavaScript -->
+                </div>
+            </div>
+            <div class="event-types-container">
+                <div class="event-types-legend">Legenda</div>
+                <ul class="event-types">
+                    <li><button class="btn-cirurgias">Cirurgia</button></li>
+                    <li><button class="btn-procedimentos">Procedimento fora do centro cirúrgico</button></li>
+                    <li><button class="btn-exames">Exame</button></li>
+                </ul>
+            </div>
+        </div>
+        <div class="calendar-main">
+            <div class="sub-controls">
+                <div class="view-switcher">
+                    <a href="#" id="prev-btn" class="btn btn-link">&lt;</a>
+                    <a href="#" id="next-btn" class="btn btn-link">&gt;</a>
+                    <h2 id="current-date-range"></h2>
+                </div>
+                <div class="view-type-switcher">
+                    <select id="view-select" class="btn">
+                        <option value="mes" {% if view_type == 'month' %}selected{% endif %}>Mês</option>
+                        <option value="semana" {% if view_type == 'week' %}selected{% endif %}>Semana</option>
+                    </select>
+                </div>
+                <div class="search-bar">
+                    <div class="input-group">
+                        <input type="text" id="search-patient-input" placeholder="Paciente">
+                        <button id="search-patient-btn"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="search-date-input" placeholder="Data">
+                        <button id="search-date-btn"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="calendar-grid month-view">
+                <div class="calendar-days">
+                    <span>DOM</span>
+                    <span>SEG</span>
+                    <span>TER</span>
+                    <span>QUA</span>
+                    <span>QUI</span>
+                    <span>SEX</span>
+                    <span>SÁB</span>
+                </div>
+                {% for date in calendar_dates %}
+                    <div class="day {% if not date.is_current_month %}other-month{% endif %}" data-date="{{ date.day|date:'Y-m-d' }}">
+                        <span>{{ date.day.day }}</span>
+                        {% for procedimento in procedimentos %}
+                            {% if procedimento.data_horario.date == date.day.date %}
+                                <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                    <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
+                                    <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                    <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
+                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                </div>
+                                <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
+                                    <div class="procedure-modal-content">
+                                        <span class="close-modal">&times;</span>
+                                        <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                        <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
+                                        <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
+                                        <br>
+                                        <p>Procedimento: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                        <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
+                                        <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
+                                        <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
+                                        <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
+                                        <p>Anestesistas: <strong>
+                                            <span class="modal-anesthesiologists">
+                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </span>
+                                        </strong></p>
+                                        <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
+                                        <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
+                                        <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
+                                        <p>Anexo Visita Pré-Anestésica:
+                                            {% if procedimento.foto_anexo %}
+                                                <a href="{% url 'protected_file' procedimento.foto_anexo.name %}" target="_blank" class="modal-attachment">Ver anexo</a>
+                                            {% else %}
+                                                <span class="modal-attachment">Nenhum anexo disponível</span>
+                                            {% endif %}
+                                        </p>
+                                        <div class="modal-actions">
+                                            <!--TODO Trocar para "Finalizar Procedimento, que deixa o staus do procedimnto como "Finalizado" e "Avaliação RPA", que faz o redirect para a página de formulário-->
+                                            <button class="btn btn-primary edit-procedure">Editar</button>
+                                            <button class="btn btn-danger delete-procedure">Excluir</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="calendar-grid week-view">
+                <div class="calendar-days">
+                    <span class="time-column"></span>
+                    {% for date in week_dates %}
+                        <span class="day-column" data-date="{{ date.full_date|date:'Y-m-d' }}">
+                            {{ date.day_name }}<br>
+                            ({{ date.date }})
+                        </span>
+                    {% endfor %}
+                </div>
+                <div class="time-slots">
+                    {% for hour in hours %}
+                        <div class="time-slot">{{ hour }}:00</div>
+                    {% endfor %}
+                </div>
+                {% for date in week_dates %}
+                    <div class="day-column" data-date="{{ date.full_date|date:'Y-m-d' }}">
+                        {% for hour in hours %}
+                            <div class="hour-slot" data-hour="{{ hour }}">
+                                {% for procedimento in procedimentos %}
+                                    {% if procedimento.data_horario|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
+                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                            <div class="procedure-first-row">
+                                                <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                                <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
+                                            </div>
+                                            <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                            <span class="procedure-anesthesiologist">
+                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </span>
+                                        </div>
+                                        <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
+                                            <div class="procedure-modal-content">
+                                                <span class="close-modal">&times;</span>
+                                                <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                                <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
+                                                <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
+                                                <br>
+                                                <p>Procedimento: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                                <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
+                                                <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
+                                                <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
+                                                <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
+                                                <p>Anestesistas: <strong>
+                                                    <span class="modal-anesthesiologists">
+                                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
+                                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                                        {% endfor %}
+                                                    </span>
+                                                </strong></p>
+                                                <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
+                                                <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
+                                                <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
+                                                <p>Anexo Visita Pré-Anestésica:
+                                                    {% if procedimento.foto_anexo %}
+                                                        <a href="{% url 'protected_file' procedimento.foto_anexo.name %}" target="_blank" class="modal-attachment">Ver anexo</a>
+                                                    {% else %}
+                                                        <span class="modal-attachment">Nenhum anexo disponível</span>
+                                                    {% endif %}
+                                                </p>
+                                                <div class="modal-actions">
+                                                    <button class="btn btn-primary edit-procedure">Editar</button>
+                                                    <button class="btn btn-danger delete-procedure">Excluir</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="customAlert" class="custom-alert"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#{{ form.cpf_paciente.id_for_label }}').mask('000.000.000-00', {reverse: true});
+    });
+</script>
+
+<script>
+    function showCustomAlert(message, type) {
+        const alertElement = document.getElementById('customAlert');
+        alertElement.textContent = message;
+        alertElement.className = `custom-alert ${type}`;
+        alertElement.style.display = 'block';
+        
+        setTimeout(() => {
+            alertElement.style.display = 'none';
+        }, 3500);  // Hide after 5 seconds
+    }
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const semanaBtn = document.getElementById('semana-view');
+    const mesBtn = document.getElementById('mes-view');
+    const monthView = document.querySelector('.month-view');
+    const weekView = document.querySelector('.week-view');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentDateRange = document.getElementById('current-date-range');
+
+    let currentView = '{{ view_type }}';
+    let currentYear = {{ current_year }};
+    let currentMonth = {{ current_month }};
+    let currentWeekStart = new Date('{{ current_week_start|date:"Y-m-d" }}T00:00:00');
+
+    const MONTH_NAMES_PT = {
+        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+    };
+
+    function updateDateRange() {
+        if (currentView === 'month') {
+            currentDateRange.textContent = `${MONTH_NAMES_PT[currentMonth]} de ${currentYear}`;
+        } else {
+            const weekStartCopy = new Date(currentWeekStart.getTime());
+            const weekEnd = new Date(currentWeekStart.getTime());
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            const startDateFormatted = weekStartCopy.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' });
+            const endDateFormatted = weekEnd.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' });
+
+            currentDateRange.textContent = `${startDateFormatted} a ${endDateFormatted}`;
+        }
+    }
+
+    function loadView(year, month, weekStart) {
+        const base_url = '{% url 'qualidade' %}';
+        const url = new URL(window.location.origin + base_url);
+        url.searchParams.set('year', year);
+        url.searchParams.set('month', month);
+        if (weekStart) {
+            url.searchParams.set('week_start', weekStart.toISOString().split('T')[0]);
+        } else {
+            url.searchParams.delete('week_start');
+        }
+        window.location.href = url.toString();
+    }
+
+    function updateViewDisplay() {
+        if (currentView === 'week') {
+            monthView.style.display = 'none';
+            weekView.style.display = 'grid';
+        } else {
+            monthView.style.display = 'grid';
+            weekView.style.display = 'none';
+        }
+    }
+
+    updateViewDisplay();
+    updateDateRange();
+
+    function getFirstDayOfWeek(date) {
+        const dateCopy = new Date(date.getTime());
+        const day = dateCopy.getDay(); // 0 for Sunday
+        const diff = dateCopy.getDate() - day;
+        dateCopy.setDate(diff);
+        return dateCopy;
+    }
+
+    const viewSelect = document.getElementById('view-select');
+    // Event listener for the dropdown
+    viewSelect.addEventListener('change', function() {
+        const selectedView = this.value;
+        if (selectedView === 'semana') {
+            currentView = 'week';
+            currentWeekStart = getFirstDayOfWeek(new Date());
+            currentYear = currentWeekStart.getFullYear();
+            currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
+        } else if (selectedView === 'mes') {
+            currentView = 'month';
+        }
+        updateViewDisplay();
+        updateDateRange();
+        loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
+    });
+
+    prevBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentView === 'month') {
+            currentMonth--;
+            if (currentMonth < 1) {
+                currentMonth = 12;
+                currentYear--;
+            }
+        } else {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            currentYear = currentWeekStart.getFullYear();
+            currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
+        }
+        updateDateRange();
+        loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
+    });
+
+    nextBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentView === 'month') {
+            currentMonth++;
+            if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+            }
+        } else {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            currentYear = currentWeekStart.getFullYear();
+            currentMonth = currentWeekStart.getMonth() + 1; // months are zero-based
+        }
+        updateDateRange();
+        loadView(currentYear, currentMonth, currentView === 'week' ? currentWeekStart : null);
+    });
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        // Adjust for local time zone
+        date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }    
+});
+
+</script>
+
+<script>
+    document.getElementById('agendar-btn').addEventListener('click', function() {
+        document.getElementById('procedimento-form-modal').style.display = 'block';
+    }); 
+    document.querySelector('.close').addEventListener('click', function() {
+        document.getElementById('procedimento-form-modal').style.display = 'none';
+        showAgendarButton();
+    });
+</script>
+<script>
+    $(document).ready(function(){
+        // Apply masks
+        $("input[name='data']").inputmask("99/99/9999");  // dd/mm/yyyy
+        $("input[name='time'], input[name='end_time']").inputmask("99:99");  // hh:mm
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const visitaPreAnestesicaCheckbox = document.getElementById('id_visita_pre_anestesica');
+        const conditionalContainer = document.querySelector('.conditional-container'); // Change this line
+
+        function toggleConditionalFields() {
+            if (visitaPreAnestesicaCheckbox.checked) {
+                conditionalContainer.style.display = 'block';  // Show the container when checked
+            } else {
+                conditionalContainer.style.display = 'none';  // Hide the container when unchecked
+            }
+        }
+
+        visitaPreAnestesicaCheckbox.addEventListener('change', toggleConditionalFields);
+        toggleConditionalFields(); // Initial call to set the correct state on page load
+    });
+
+</script>
+
+<script>
+    // This script is used to hide the "Agendar" button when the form modal is open
+    function hideAgendarButton() {
+        document.getElementById('agendar-btn').style.display = 'none';
+    }
+
+    function showAgendarButton() {
+        document.getElementById('agendar-btn').style.display = '';
+    }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
+
+    procedureCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const procedureId = this.getAttribute('data-id');
+            const modal = document.getElementById(`procedure-details-modal-${procedureId}`);
+
+            if (modal) {
+                modal.style.display = 'block'; // Show the modal
+            }
+        });
+    });
+});
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const procedureModals = document.querySelectorAll('.procedure-modal');
+        const procedureFormModal = document.getElementById('procedimento-form-modal');
+        
+        // Close modal when clicking the "X"
+        procedureModals.forEach(modal => {
+            modal.querySelector('.close-modal').addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent further event propagation
+                modal.style.display = 'none';
+            });
+        });
+
+        // Close modal when clicking outside of it
+        window.addEventListener('click', function(e) {
+            procedureModals.forEach(modal => {
+                if (e.target == modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+
+<script>
+    // Mini calendar: Implements functionality for the small calendar in the sidebar
+    document.addEventListener('DOMContentLoaded', function() {
+        const miniPrevBtn = document.getElementById('mini-prev-btn');
+        const miniNextBtn = document.getElementById('mini-next-btn');
+        const miniCurrentMonth = document.getElementById('mini-current-month');
+        const miniCalendarDates = document.getElementById('mini-calendar-dates');
+    
+        let miniCurrentYear = new Date().getFullYear();
+        let miniCurrentMonthIndex = new Date().getMonth();
+    
+        const MONTH_NAMES_PT = {
+            0: 'Janeiro', 1: 'Fevereiro', 2: 'Março', 3: 'Abril',
+            4: 'Maio', 5: 'Junho', 6: 'Julho', 7: 'Agosto',
+            8: 'Setembro', 9: 'Outubro', 10: 'Novembro', 11: 'Dezembro'
+        };
+    
+        function updateMiniCalendar() {
+            const monthName = MONTH_NAMES_PT[miniCurrentMonthIndex];
+            miniCurrentMonth.textContent = `${monthName} ${miniCurrentYear}`;
+    
+            const firstDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex, 1);
+            const lastDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex + 1, 0);
+            const firstDayWeekday = firstDayOfMonth.getDay();
+            const lastDate = lastDayOfMonth.getDate();
+    
+            miniCalendarDates.innerHTML = '';
+    
+            // Fill in the days from the previous month
+            for (let i = 0; i < firstDayWeekday; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.classList.add('mini-calendar-date', 'empty');
+                miniCalendarDates.appendChild(emptyCell);
+            }
+    
+            // Fill in the days of the current month
+            for (let date = 1; date <= lastDate; date++) {
+                const dateCell = document.createElement('div');
+                dateCell.classList.add('mini-calendar-date');
+                dateCell.textContent = date;
+                miniCalendarDates.appendChild(dateCell);
+            }
+        }
+    
+        miniPrevBtn.addEventListener('click', function() {
+            miniCurrentMonthIndex--;
+            if (miniCurrentMonthIndex < 0) {
+                miniCurrentMonthIndex = 11;
+                miniCurrentYear--;
+            }
+            updateMiniCalendar();
+        });
+    
+        miniNextBtn.addEventListener('click', function() {
+            miniCurrentMonthIndex++;
+            if (miniCurrentMonthIndex > 11) {
+                miniCurrentMonthIndex = 0;
+                miniCurrentYear++;
+            }
+            updateMiniCalendar();
+        });
+    
+        // Initial call to set up the mini calendar
+        updateMiniCalendar();
+    });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchDateBtn = document.getElementById('search-date-btn');
+    const searchPatientBtn = document.getElementById('search-patient-btn');
+    const searchDateInput = document.getElementById('search-date-input');
+    const searchPatientInput = document.getElementById('search-patient-input');
+
+    function performDateSearch() {
+        const query = searchDateInput.value.trim();
+        if (!query) return;
+
+        const dateParts = query.split('/');
+        if (dateParts.length === 3) {
+            const day = dateParts[0].padStart(2, '0');
+            const month = dateParts[1].padStart(2, '0');
+            const year = dateParts[2];
+            const formattedDate = `${year}-${month}-${day}`;
+            window.location.href = `/agenda/search?date=${formattedDate}`;
+        } else {
+            showCustomAlert('Formato de data inválido. Use DD/MM/YYYY.', 'error');
+        }
+    }
+
+    function performPatientSearch() {
+        const query = searchPatientInput.value.trim();
+        if (!query) return;
+
+        window.location.href = `/agenda/search?paciente=${encodeURIComponent(query)}`;
+    }
+
+    searchDateBtn.addEventListener('click', performDateSearch);
+    searchPatientBtn.addEventListener('click', performPatientSearch);
+
+    searchDateInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performDateSearch();
+        }
+    });
+
+    searchPatientInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performPatientSearch();
+        }
+    });
+});
+</script>
+
+<script>
+// Date highlighting: Highlights the searched date in the calendar view
+    const highlightDate = '{{ highlight_date|date:"Y-m-d" }}';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        if (highlightDate) {
+            // Highlight the day columns
+            const dayElements = document.querySelectorAll(`.day[data-date="${highlightDate}"], .day-column[data-date="${highlightDate}"]`);
+            dayElements.forEach(el => {
+                el.classList.add('highlight');
+            });
+    
+            // Highlight the procedure cards
+            const procedureCards = document.querySelectorAll(`.procedure-card[data-date="${highlightDate}"]`);
+            procedureCards.forEach(card => {
+                card.classList.add('highlight');
+            });
+        }
+    });
+</script>
+
+<script>
+// Autocomplete: Implements autocomplete for patient search
+document.addEventListener('DOMContentLoaded', function() {
+    const searchPatientInput = document.getElementById('search-patient-input');
+
+    let timeoutId;
+
+    searchPatientInput.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            const query = this.value.trim();
+            if (query.length >= 2) {
+                fetch(`/search-pacientes/?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const existingResults = document.getElementById('autocomplete-results');
+                        if (existingResults) {
+                            existingResults.remove();
+                        }
+
+                        const resultsDiv = document.createElement('div');
+                        resultsDiv.id = 'autocomplete-results';
+                        resultsDiv.style.position = 'absolute';
+                        resultsDiv.style.zIndex = '1000';
+                        resultsDiv.style.backgroundColor = 'white';
+                        resultsDiv.style.border = '1px solid #ddd';
+                        resultsDiv.style.maxHeight = '200px';
+                        resultsDiv.style.overflowY = 'auto';
+
+                        data.forEach(paciente => {
+                            const item = document.createElement('div');
+                            item.textContent = paciente;
+                            item.style.padding = '5px';
+                            item.style.cursor = 'pointer';
+                            item.addEventListener('click', function() {
+                                searchPatientInput.value = this.textContent;
+                                resultsDiv.remove();
+                            });
+                            resultsDiv.appendChild(item);
+                        });
+
+                        searchPatientInput.parentNode.appendChild(resultsDiv);
+                    });
+            }
+        }, 300);  // Debounce for 300ms
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target !== searchPatientInput) {
+            const results = document.getElementById('autocomplete-results');
+            if (results) {
+                results.remove();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

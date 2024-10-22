@@ -8,4 +8,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('registration.urls')),
     path('', include('agenda.urls')),
+    path('', include('qualidade.urls')),
 ]
