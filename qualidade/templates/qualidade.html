@@ -131,8 +131,8 @@
                                         </p>
                                         <div class="modal-actions">
                                             <!--TODO Trocar para "Finalizar Procedimento, que deixa o staus do procedimnto como "Finalizado" e "Avaliação RPA", que faz o redirect para a página de formulário-->
-                                            <button class="btn btn-primary edit-procedure">Editar</button>
-                                            <button class="btn btn-danger delete-procedure">Excluir</button>
+                                            <button class="btn btn-primary edit-procedure">Finalizar Procedimento</button>
+                                            <button class="btn btn-danger delete-procedure">Avaliar RPA</button>
                                         </div>
                                     </div>
                                 </div>
@@ -435,6 +435,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (modal) {
                 modal.style.display = 'block'; // Show the modal
+                const avaliarRPABtn = modal.querySelector('.delete-procedure');
+                avaliarRPABtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.location.href = `/qualidade/avaliacao-rpa/${procedureId}/`;
+                });
             }
         });
     });
@@ -660,3 +665,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+

@@ -1,6 +1,6 @@
 from django.utils import timezone
 from django.db import models
-from constants import CIRURGIA_PROCEDIMENTO, EXAME_PROCEDIMENTO, FORA_CENTRO_PROCEDIMENTO, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
+from constants import CIRURGIA_PROCEDIMENTO, EXAME_PROCEDIMENTO, FORA_CENTRO_PROCEDIMENTO, PLANTONISTA_ESCALA, STATUS_FINISHED, STATUS_PENDING, SUBSTITUTO_ESCALA, FERIAS_ESCALA
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
 from django.contrib.postgres.fields import ArrayField
 import uuid
@@ -77,6 +77,12 @@ class Procedimento(models.Model):
     )
     comentario_adicional = models.TextField(blank=True, null=True, verbose_name='Comentário adicional')
     csat_score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='CSAT Score')
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, 'Pendente'),
+        (STATUS_FINISHED, 'Finalizado'),
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Status')
 
     class Meta:
         verbose_name = "Procedimento"

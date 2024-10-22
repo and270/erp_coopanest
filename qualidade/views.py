@@ -13,8 +13,10 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
 import os
+from .forms import AvaliacaoRPAForm
+from .models import AvaliacaoRPA
 
-#TODO view que muda o status do procedimento para "Finalizado" e redireciona para a página de avaliação RPA
+#TODO view que muda o status do procedimento para "Finalizado" e redireciona para a página de avaliaço RPA
 
 @login_required
 def search_qualidade(request):
@@ -254,3 +256,31 @@ def serve_protected_file(request, file_path):
             response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
             return response
     raise Http404
+
+@login_required
+def avaliacao_rpa(request, procedimento_id):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
+    procedimento = get_object_or_404(Procedimento, id=procedimento_id, group=request.user.group)
+    
+    try:
+        avaliacao_rpa = AvaliacaoRPA.objects.get(procedimento=procedimento)
+    except AvaliacaoRPA.DoesNotExist:
+        avaliacao_rpa = None
+
+    if request.method == 'POST':
+        form = AvaliacaoRPAForm(request.POST, instance=avaliacao_rpa)
+        if form.is_valid():
+            avaliacao = form.save(commit=False)
+            avaliacao.procedimento = procedimento
+            avaliacao.save()
+            return redirect('qualidade')  # Redirect to the qualidade page after saving
+    else:
+        form = AvaliacaoRPAForm(instance=avaliacao_rpa)
+
+    context = {
+        'form': form,
+        'procedimento': procedimento,
+    }
+    return render(request, 'avaliacao_rpa.html', context)

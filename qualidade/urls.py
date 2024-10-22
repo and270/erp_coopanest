@@ -7,4 +7,5 @@ urlpatterns = [
     path('get-procedure/<int:procedure_id>/', views.get_procedure, name='get_procedure'),
     re_path(r'^protected-media/(?P<file_path>.*)$', views.serve_protected_file, name='protected_file'),
     path('search-pacientes/', views.search_pacientes, name='search_pacientes'),
+    path('qualidade/avaliacao-rpa/<int:procedimento_id>/', views.avaliacao_rpa, name='avaliacao_rpa'),
 ]

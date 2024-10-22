@@ -1,0 +1,141 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Avaliação RPA{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Avaliação RPA</h2>
+    <h3>Procedimento: {{ procedimento.procedimento }} - {{ procedimento.nome_paciente }}</h3>
+    <form method="post" id="avaliacaoRPAForm">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="{{ form.tempo_alta_rpa.id_for_label }}">{{ form.tempo_alta_rpa.label }}</label>
+            {{ form.tempo_alta_rpa }}
+        </div>
+        <div class="form-group">
+            <label>{{ form.dor_pos_operatoria.label }}</label>
+            <div>
+                {% for radio in form.dor_pos_operatoria %}
+                    <div class="form-check form-check-inline">
+                        {{ radio.tag }}
+                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ form.escala.label }}</label>
+            <div>
+                {% for radio in form.escala %}
+                    <div class="form-check">
+                        {{ radio.tag }}
+                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- EVA specific fields -->
+        <div id="eva-fields" style="display: none;">
+            <div class="form-group">
+                <label for="{{ form.eva_score.id_for_label }}">{{ form.eva_score.label }}</label>
+                {{ form.eva_score }}
+            </div>
+        </div>
+
+        <!-- FLACC specific fields -->
+        <div id="flacc-fields" style="display: none;">
+            {% for field in form %}
+                {% if field.name in 'face,pernas,atividade,choro,consolabilidade' %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- BPS specific fields -->
+        <div id="bps-fields" style="display: none;">
+            {% for field in form %}
+                {% if field.name in 'expressao_facial,movimentos_membros_superiores,adaptacao_ventilador' %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- PAINAD-B specific fields -->
+        <div id="painad-b-fields" style="display: none;">
+            {% for field in form %}
+                {% if field.name in 'respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad' %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Common fields -->
+        <div class="form-group">
+            <label>{{ form.evento_adverso.label }}</label>
+            <div>
+                {% for radio in form.evento_adverso %}
+                    <div class="form-check form-check-inline">
+                        {{ radio.tag }}
+                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="{{ form.evento_adverso_qual.id_for_label }}">{{ form.evento_adverso_qual.label }}</label>
+            {{ form.evento_adverso_qual }}
+        </div>
+        <div class="form-group">
+            <label>{{ form.ponv.label }}</label>
+            <div>
+                {% for radio in form.ponv %}
+                    <div class="form-check form-check-inline">
+                        {{ radio.tag }}
+                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('avaliacaoRPAForm');
+        const escalaInputs = form.querySelectorAll('input[name="escala"]');
+        const evaFields = document.getElementById('eva-fields');
+        const flaccFields = document.getElementById('flacc-fields');
+        const bpsFields = document.getElementById('bps-fields');
+        const painadBFields = document.getElementById('painad-b-fields');
+
+        function showRelevantFields() {
+            const selectedScale = form.querySelector('input[name="escala"]:checked').value;
+            evaFields.style.display = selectedScale === 'EVA' ? 'block' : 'none';
+            flaccFields.style.display = selectedScale === 'FLACC' ? 'block' : 'none';
+            bpsFields.style.display = selectedScale === 'BPS' ? 'block' : 'none';
+            painadBFields.style.display = selectedScale === 'PAINAD-B' ? 'block' : 'none';
+        }
+
+        escalaInputs.forEach(input => {
+            input.addEventListener('change', showRelevantFields);
+        });
+
+        // Show relevant fields on page load if a scale is already selected
+        showRelevantFields();
+    });
+</script>
+{% endblock %}
