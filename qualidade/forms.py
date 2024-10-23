@@ -43,6 +43,12 @@ class AvaliacaoRPAForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        evento_adverso = cleaned_data.get('evento_adverso')
+        evento_adverso_qual = cleaned_data.get('evento_adverso_qual')
+
+        if evento_adverso and not evento_adverso_qual:
+            self.add_error('evento_adverso_qual', 'Este campo é obrigatório quando há evento adverso.')
+
         escala = cleaned_data.get('escala')
 
         if escala == 'EVA':

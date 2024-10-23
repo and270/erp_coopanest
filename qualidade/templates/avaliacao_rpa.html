@@ -248,7 +248,7 @@
                     </div>
                 {% endfor %}
         </div>
-        <div class="radio-group">
+        <div class="radio-group" id="evento_adverso_qual_group" style="display: none;">
             <label for="{{ form.evento_adverso_qual.id_for_label }}">{{ form.evento_adverso_qual.label }}</label>
             {{ form.evento_adverso_qual }}
         </div>
@@ -302,6 +302,22 @@
 
         // Show relevant fields on page load
         showRelevantFields();
+
+        // Add evento_adverso handling
+        const eventoAdversoInputs = form.querySelectorAll('input[name="evento_adverso"]');
+        const eventoAdversoQualGroup = document.getElementById('evento_adverso_qual_group');
+
+        function toggleEventoAdversoQual() {
+            const selectedEvento = form.querySelector('input[name="evento_adverso"]:checked');
+            eventoAdversoQualGroup.style.display = selectedEvento && selectedEvento.value === 'True' ? 'block' : 'none';
+        }
+
+        eventoAdversoInputs.forEach(input => {
+            input.addEventListener('change', toggleEventoAdversoQual);
+        });
+
+        // Show/hide on page load
+        toggleEventoAdversoQual();
     });
 </script>
 {% endblock %}
