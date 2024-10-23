@@ -76,6 +76,55 @@ class AvaliacaoRPA(models.Model):
         }
     }
 
+    BPS_DESCRIPTIONS = {
+        'expressao_facial': {
+            'low': 'Relaxada',
+            'mid': 'Parcialmente tensa',
+            'high': 'Totalmente tensa',
+            'extreme': 'Fazendo careta'
+        },
+        'movimentos_membros_superiores': {
+            'low': 'Sem movimentos',
+            'mid': 'Parcialmente fletidos',
+            'high': 'Totalmente fletidos',
+            'extreme': 'Permanentemente retraídos'
+        },
+        'adaptacao_ventilador': {
+            'low': 'Tolerando movimentos',
+            'mid': 'Tossindo, mas tolerando',
+            'high': 'Lutando contra o ventilador',
+            'extreme': 'Impossibilidade de controle'
+        }
+    }
+
+    PAINAD_B_DESCRIPTIONS = {
+        'respiracao': {
+            'low': 'Normal',
+            'mid': 'Dificuldade ocasional na respiração. Curto período de hiperventilação',
+            'high': 'Respiração ruidosa e com dificuldade. Longo período de hiperventilação. Respiração Cheyne-Stokes'
+        },
+        'vocalizacao_negativa': {
+            'low': 'Nenhuma',
+            'mid': 'Resmungos ou gemidos ocasionais. Fala baixa com qualidade negativa ou desaprovadora',
+            'high': 'Chamados perturbadores repetitivos. Resmungos ou gemidos altos. Choro'
+        },
+        'expressao_facial_painad': {
+            'low': 'Sorridente ou inexpressiva',
+            'mid': 'Triste, Amedrontada, Franzida',
+            'high': 'Careta'
+        },
+        'linguagem_corporal': {
+            'low': 'Relaxada',
+            'mid': 'Tensa, Andar angustiado de um lado para outro, Inquietação',
+            'high': 'Rígida, Punhos cerrados, Joelhos encolhidos, Puxar ou empurrar, Agitação'
+        },
+        'consolabilidade_painad': {
+            'low': 'Sem necessidade de consolar',
+            'mid': 'Distraído ou tranquilizado por voz ou toque',
+            'high': 'Impossível consolar, distrair ou tranquilizar'
+        }
+    }
+
     def __str__(self):
         return f"Avaliação RPA para {self.procedimento}"
 

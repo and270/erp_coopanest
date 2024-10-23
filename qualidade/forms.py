@@ -6,6 +6,8 @@ class AvaliacaoRPAForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.EVA_DESCRIPTIONS = AvaliacaoRPA.EVA_DESCRIPTIONS
         self.FLACC_DESCRIPTIONS = AvaliacaoRPA.FLACC_DESCRIPTIONS
+        self.BPS_DESCRIPTIONS = AvaliacaoRPA.BPS_DESCRIPTIONS
+        self.PAINAD_B_DESCRIPTIONS = AvaliacaoRPA.PAINAD_B_DESCRIPTIONS
 
     class Meta:
         model = AvaliacaoRPA

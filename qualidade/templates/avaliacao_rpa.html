@@ -322,6 +322,12 @@
                 {% if field.name in 'expressao_facial,movimentos_membros_superiores,adaptacao_ventilador' %}
                     <div class="scale-container">
                         <label>{{ field.label }}</label>
+                        <div class="scale-descriptions">
+                            <span class="scale-description left">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'low' }}</span>
+                            <span class="scale-description">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'mid' }}</span>
+                            <span class="scale-description">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'high' }}</span>
+                            <span class="scale-description right">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'extreme' }}</span>
+                        </div>
                         <div class="rainbow-scale"></div>
                         <div class="horizontal-radio-group">
                             {% for radio in field %}
@@ -343,6 +349,11 @@
                     {% if field.name in painad_fields %}
                         <div class="scale-container">
                             <label>{{ field.label }}</label>
+                            <div class="scale-descriptions">
+                                <span class="scale-description left">{{ form.PAINAD_B_DESCRIPTIONS|get_item:field.name|get_item:'low' }}</span>
+                                <span class="scale-description">{{ form.PAINAD_B_DESCRIPTIONS|get_item:field.name|get_item:'mid' }}</span>
+                                <span class="scale-description right">{{ form.PAINAD_B_DESCRIPTIONS|get_item:field.name|get_item:'high' }}</span>
+                            </div>
                             <div class="rainbow-scale"></div>
                             <div class="horizontal-radio-group">
                                 {% for radio in field %}
