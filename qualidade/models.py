@@ -11,9 +11,9 @@ class AvaliacaoRPA(models.Model):
     ]
 
     procedimento = models.OneToOneField(Procedimento, on_delete=models.CASCADE, related_name='avaliacao_rpa')
-    tempo_alta_rpa = models.TimeField(verbose_name="Tempo até atingir alta RPA*")
-    dor_pos_operatoria = models.BooleanField(verbose_name="Dor pós operatória imediata*")
-    escala = models.CharField(max_length=10, choices=ESCALA_CHOICES, verbose_name="Qual escala?*")
+    tempo_alta_rpa = models.TimeField(verbose_name="Tempo até atingir alta RPA")
+    dor_pos_operatoria = models.BooleanField(verbose_name="Dor pós operatória imediata")
+    escala = models.CharField(max_length=10, choices=ESCALA_CHOICES, verbose_name="Qual escala?")
     
     # EVA specific fields
     eva_score = models.IntegerField(verbose_name="Quanto?", null=True, blank=True)
@@ -38,9 +38,9 @@ class AvaliacaoRPA(models.Model):
     consolabilidade_painad = models.IntegerField(verbose_name="Consolabilidade", null=True, blank=True)
 
     # Common fields
-    evento_adverso = models.BooleanField(verbose_name="Evento adverso evitável na RPA*", null=True, blank=True)
+    evento_adverso = models.BooleanField(verbose_name="Evento adverso evitável na RPA", null=True, blank=True)
     evento_adverso_qual = models.TextField(verbose_name="Qual?", null=True, blank=True)
-    ponv = models.BooleanField(verbose_name="PONV na RPA*", null=True, blank=True)
+    ponv = models.BooleanField(verbose_name="PONV na RPA", null=True, blank=True)
 
     def __str__(self):
         return f"Avaliação RPA para {self.procedimento}"

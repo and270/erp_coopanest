@@ -4,39 +4,149 @@
 {% block title %}Avaliação RPA{% endblock %}
 
 {% block content %}
+<style>
+    .container-form {
+        flex: 1;
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    h1 {
+        color: #1A73E8;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 19.36px;
+        text-align: left;
+        margin-bottom: 10px;
+    }
+    p {
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 14.52px;
+        text-align: left;
+        margin-bottom: 20px;
+    }
+    form {
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100vh - 40px); /* Subtract padding */
+        background-color: #ffffff;
+        padding: 20px;
+    }
+    label {
+        display: block;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 14.52px;
+        text-align: left;
+        margin-bottom: 10px;
+    }
+    .radio-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+    }
+    .radio-option {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    input[type="radio"] {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 20px;
+        height: 20px;
+        border: 1px solid #E6E6E6;
+        border-radius: 50%;
+        outline: none;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+    input[type="radio"]:checked {
+        border: 5px solid #1A73E8;
+    }
+    .radio-option label {
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 14.52px;
+        margin-bottom: 0;
+    }
+    textarea {
+        width: calc(100% - 20px); /* Subtract 20px to account for padding */
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #E6E6E6;
+        border-radius: 5px;
+        resize: vertical;
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        box-sizing: border-box; /* Include padding in the width calculation */
+    }
+    button[type="submit"] {
+        background-color: #1A73E8;
+        color: #ffffff;
+        border: none;
+        padding: 15px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        width: 100%;
+        font-family: 'Inter', sans-serif;
+        font-size: 16px;
+    }
+    button[type="submit"]:hover {
+        background-color: #1557b0;
+    }
+
+    @media (max-width: 480px) {
+        .button-container {
+            position: sticky;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    .button-container {
+        padding-top: 20px;
+        background-color: #ffffff;
+    }
+</style>
 <div class="container-form">
-    <h1>Avaliação RPA</h1>
     <form method="post" id="avaliacaoRPAForm">
+        <h1>Avaliação RPA</h1>
         {% csrf_token %}
-        <div class="form-group">
+        <div class="radio-group">
             <label for="{{ form.tempo_alta_rpa.id_for_label }}">{{ form.tempo_alta_rpa.label }}</label>
             {{ form.tempo_alta_rpa }}
         </div>
-        <div class="form-group">
+        <div class="radio-group">
             <label>{{ form.dor_pos_operatoria.label }}</label>
-            <div class="radio-inline">
                 {% for radio in form.dor_pos_operatoria %}
-                    <label>
-                        {{ radio.tag }}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
                         {{ radio.choice_label }}
-                    </label>
+                    </div>
                 {% endfor %}
-            </div>
         </div>
-        <div class="form-group">
+        <div class="radio-group">
             <label>{{ form.escala.label }}</label>
-            <div class="escala-options">
-                {% for radio in form.escala %}
-                    <label>
-                        {{ radio.tag }}
+            {% for radio in form.escala %}
+                {% if radio.choice_label != '---------' %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
                         {{ radio.choice_label }}
-                    </label>
-                {% endfor %}
-            </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
         </div>
 
         <!-- EVA specific fields -->
-        <div id="eva-fields" class="eva-fields">
+        <div id="eva-fields" class="radio-group">
             <div class="form-group">
                 <label for="{{ form.eva_score.id_for_label }}">{{ form.eva_score.label }}</label>
                 {{ form.eva_score }}
@@ -44,10 +154,10 @@
         </div>
 
         <!-- FLACC specific fields -->
-        <div id="flacc-fields" class="flacc-fields">
+        <div id="flacc-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'face,pernas,atividade,choro,consolabilidade' %}
-                    <div class="form-group">
+                    <div class="radio-option">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                     </div>
@@ -56,10 +166,10 @@
         </div>
 
         <!-- BPS specific fields -->
-        <div id="bps-fields" class="bps-fields">
+        <div id="bps-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'expressao_facial,movimentos_membros_superiores,adaptacao_ventilador' %}
-                    <div class="form-group">
+                    <div class="radio-option">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                     </div>
@@ -68,7 +178,7 @@
         </div>
 
         <!-- PAINAD-B specific fields -->
-        <div id="painad-b-fields" class="painad-b-fields">
+        <div id="painad-b-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad' %}
                     <div class="form-group">
@@ -80,31 +190,27 @@
         </div>
 
         <!-- Common fields -->
-        <div class="form-group">
+        <div class="radio-group">
             <label>{{ form.evento_adverso.label }}</label>
-            <div class="radio-inline">
                 {% for radio in form.evento_adverso %}
-                    <label>
-                        {{ radio.tag }}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
                         {{ radio.choice_label }}
-                    </label>
+                    </div>
                 {% endfor %}
-            </div>
         </div>
-        <div class="form-group">
+        <div class="radio-group">
             <label for="{{ form.evento_adverso_qual.id_for_label }}">{{ form.evento_adverso_qual.label }}</label>
             {{ form.evento_adverso_qual }}
         </div>
-        <div class="form-group">
+        <div class="radio-group">
             <label>{{ form.ponv.label }}</label>
-            <div class="radio-inline">
                 {% for radio in form.ponv %}
-                    <label>
-                        {{ radio.tag }}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
                         {{ radio.choice_label }}
-                    </label>
+                    </div>
                 {% endfor %}
-            </div>
         </div>
         <button type="submit" class="btn btn-primary">Salvar</button>
     </form>
@@ -122,18 +228,28 @@
         const painadBFields = document.getElementById('painad-b-fields');
 
         function showRelevantFields() {
-            const selectedScale = form.querySelector('input[name="escala"]:checked').value;
-            evaFields.style.display = selectedScale === 'EVA' ? 'block' : 'none';
-            flaccFields.style.display = selectedScale === 'FLACC' ? 'block' : 'none';
-            bpsFields.style.display = selectedScale === 'BPS' ? 'block' : 'none';
-            painadBFields.style.display = selectedScale === 'PAINAD-B' ? 'block' : 'none';
+            const selectedScale = form.querySelector('input[name="escala"]:checked');
+            const selectedValue = selectedScale ? selectedScale.value : null;
+
+            evaFields.style.display = selectedValue === 'EVA' ? 'block' : 'none';
+            flaccFields.style.display = selectedValue === 'FLACC' ? 'block' : 'none';
+            bpsFields.style.display = selectedValue === 'BPS' ? 'block' : 'none';
+            painadBFields.style.display = selectedValue === 'PAINAD-B' ? 'block' : 'none';
+
+            // If no scale is selected, hide all specific fields
+            if (!selectedValue) {
+                evaFields.style.display = 'none';
+                flaccFields.style.display = 'none';
+                bpsFields.style.display = 'none';
+                painadBFields.style.display = 'none';
+            }
         }
 
         escalaInputs.forEach(input => {
             input.addEventListener('change', showRelevantFields);
         });
 
-        // Show relevant fields on page load if a scale is already selected
+        // Show relevant fields on page load
         showRelevantFields();
     });
 </script>
