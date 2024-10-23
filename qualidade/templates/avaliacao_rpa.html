@@ -211,26 +211,17 @@
         align-items: flex-end;
     }
 
-    /* Ajuste para telas pequenas */
-    @media (max-width: 480px) {
-        .horizontal-radio-group {
-            flex-direction: row;
-        }
-        .rainbow-scale {
-            width: 100%;
-        }
-    }
-
     .scale-descriptions {
         display: flex;
         justify-content: space-between;
         margin-bottom: 5px;
         font-size: 10px;
         color: #666;
+        align-items: flex-end;
     }
 
     .scale-description {
-        max-width: 15%;
+        max-width: 20%;
         text-align: center;
     }
 
@@ -240,6 +231,16 @@
 
     .scale-description.right {
         text-align: right;
+    }
+
+    /* Ajuste para telas pequenas */
+    @media (max-width: 480px) {
+        .horizontal-radio-group {
+            flex-direction: row;
+        }
+        .rainbow-scale {
+            width: 100%;
+        }
     }
 </style>
 <div class="container-form">
