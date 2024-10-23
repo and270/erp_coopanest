@@ -13,30 +13,33 @@ class AvaliacaoRPAForm(forms.ModelForm):
             'linguagem_corporal', 'consolabilidade_painad'
         ]
         widgets = {
-            'tempo_alta_rpa': forms.TimeInput(attrs={'type': 'time'}),
-            'dor_pos_operatoria': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')]),
-            'escala': forms.RadioSelect(),
-            'eva_score': forms.NumberInput(attrs={'min': 1, 'max': 10}),
-            'evento_adverso': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')]),
-            'ponv': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')]),
-            'face': forms.NumberInput(attrs={'min': 1, 'max': 3}),
-            'pernas': forms.NumberInput(attrs={'min': 1, 'max': 3}),
-            'atividade': forms.NumberInput(attrs={'min': 1, 'max': 3}),
-            'choro': forms.NumberInput(attrs={'min': 1, 'max': 3}),
-            'consolabilidade': forms.NumberInput(attrs={'min': 1, 'max': 3}),
-            'expressao_facial': forms.NumberInput(attrs={'min': 1, 'max': 4}),
-            'movimentos_membros_superiores': forms.NumberInput(attrs={'min': 1, 'max': 4}),
-            'adaptacao_ventilador': forms.NumberInput(attrs={'min': 1, 'max': 4}),
-            'respiracao': forms.NumberInput(attrs={'min': 0, 'max': 2}),
-            'vocalizacao_negativa': forms.NumberInput(attrs={'min': 0, 'max': 2}),
-            'expressao_facial_painad': forms.NumberInput(attrs={'min': 0, 'max': 2}),
-            'linguagem_corporal': forms.NumberInput(attrs={'min': 0, 'max': 2}),
-            'consolabilidade_painad': forms.NumberInput(attrs={'min': 0, 'max': 2}),
+            'tempo_alta_rpa': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control fomr-options-text'}),
+            'dor_pos_operatoria': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'fomr-options-text'}),
+            'escala': forms.RadioSelect(attrs={'class': 'fomr-options-text'}),
+            'eva_score': forms.NumberInput(attrs={'min': 1, 'max': 10, 'class': 'form-control fomr-options-text'}),
+            'evento_adverso': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'fomr-options-text'}),
+            'ponv': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'fomr-options-text'}),
+            'face': forms.NumberInput(attrs={'min': 1, 'max': 3, 'class': 'form-control fomr-options-text'}),
+            'pernas': forms.NumberInput(attrs={'min': 1, 'max': 3, 'class': 'form-control fomr-options-text'}),
+            'atividade': forms.NumberInput(attrs={'min': 1, 'max': 3, 'class': 'form-control fomr-options-text'}),
+            'choro': forms.NumberInput(attrs={'min': 1, 'max': 3, 'class': 'form-control fomr-options-text'}),
+            'consolabilidade': forms.NumberInput(attrs={'min': 1, 'max': 3, 'class': 'form-control fomr-options-text'}),
+            'expressao_facial': forms.NumberInput(attrs={'min': 1, 'max': 4, 'class': 'form-control fomr-options-text'}),
+            'movimentos_membros_superiores': forms.NumberInput(attrs={'min': 1, 'max': 4, 'class': 'form-control fomr-options-text'}),
+            'adaptacao_ventilador': forms.NumberInput(attrs={'min': 1, 'max': 4, 'class': 'form-control fomr-options-text'}),
+            'respiracao': forms.NumberInput(attrs={'min': 0, 'max': 2, 'class': 'form-control fomr-options-text'}),
+            'vocalizacao_negativa': forms.NumberInput(attrs={'min': 0, 'max': 2, 'class': 'form-control fomr-options-text'}),
+            'expressao_facial_painad': forms.NumberInput(attrs={'min': 0, 'max': 2, 'class': 'form-control fomr-options-text'}),
+            'linguagem_corporal': forms.NumberInput(attrs={'min': 0, 'max': 2, 'class': 'form-control fomr-options-text'}),
+            'consolabilidade_painad': forms.NumberInput(attrs={'min': 0, 'max': 2, 'class': 'form-control fomr-options-text'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['evento_adverso_qual'].widget.attrs['rows'] = 3
+        self.fields['evento_adverso_qual'].widget.attrs.update({
+            'rows': 3,
+            'class': 'form-control fomr-options-text'
+        })
 
     def clean(self):
         cleaned_data = super().clean()

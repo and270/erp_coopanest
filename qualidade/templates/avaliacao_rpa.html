@@ -29,14 +29,14 @@
     form {
         display: flex;
         flex-direction: column;
-        min-height: calc(100vh - 40px); /* Subtract padding */
+        min-height: calc(100vh - 40px);
         background-color: #ffffff;
         padding: 20px;
     }
     label {
         display: block;
-        font-size: 15px;
-        font-weight: 500;
+        font-size: 13px;
+        font-weight: bold;
         line-height: 14.52px;
         text-align: left;
         margin-bottom: 10px;
@@ -70,7 +70,7 @@
         max-width: 580px;
     }
     .radio-option label {
-        font-size: 10px;
+        font-size: 8px;
         font-weight: 500;
         line-height: 12.1px;
         margin-bottom: 0;
@@ -114,6 +114,44 @@
         background-color: #ffffff;
     }
 
+    input, select, textarea {
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+    }
+
+    input[type="time"] {
+        font-family: 'Inter', sans-serif;
+    }
+
+    select, 
+    select option,
+    input[type="text"],
+    input[type="time"],
+    textarea {
+        font-size: 8px;
+        line-height: 14.52px;
+    }
+
+    .fomr-options-text,
+    .fomr-options-text option,
+    input.fomr-options-text,
+    select.fomr-options-text,
+    textarea.fomr-options-text {
+        font-size: 8px;
+        line-height: 1.2;
+    }
+
+    .radio-option label,
+    .radio-group label {
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .radio-option {
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
     @media (max-width: 480px) {
         .button-container {
             position: sticky;
@@ -126,16 +164,6 @@
         }
     }
 
-    /* Add these new styles */
-    input, select, textarea {
-        font-family: 'Inter', sans-serif;
-        font-size: 12px;
-    }
-
-    /* Add this to ensure the time input uses the correct font */
-    input[type="time"] {
-        font-family: 'Inter', sans-serif;
-    }
 </style>
 <div class="container-form">
     <form method="post" id="avaliacaoRPAForm">
