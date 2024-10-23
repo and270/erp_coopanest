@@ -339,20 +339,22 @@
         <!-- PAINAD-B specific fields -->
         <div id="painad-b-fields" class="radio-group">
             {% for field in form %}
-                {% if field.name in 'respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad' %}
-                    <div class="scale-container">
-                        <label>{{ field.label }}</label>
-                        <div class="rainbow-scale"></div>
-                        <div class="horizontal-radio-group">
-                            {% for radio in field %}
-                                <div class="radio-option">
-                                    <label>{{ radio.tag }}</label>
-                                    {{ radio.choice_label }}
-                                </div>
-                            {% endfor %}
+                {% with painad_fields='respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad'|split:',' %}
+                    {% if field.name in painad_fields %}
+                        <div class="scale-container">
+                            <label>{{ field.label }}</label>
+                            <div class="rainbow-scale"></div>
+                            <div class="horizontal-radio-group">
+                                {% for radio in field %}
+                                    <div class="radio-option">
+                                        <label>{{ radio.tag }}</label>
+                                        {{ radio.choice_label }}
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
-                    </div>
-                {% endif %}
+                    {% endif %}
+                {% endwith %}
             {% endfor %}
         </div>
 
