@@ -164,6 +164,61 @@
         }
     }
 
+    /* Novo estilo para os campos específicos */
+    .scale-container {
+        margin-bottom: 20px;
+    }
+
+    .horizontal-radio-group {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        position: relative;
+        width: 100%;
+        /* Remove o gap e padding */
+    }
+
+    .rainbow-scale {
+        height: 8px;
+        width: 100%;
+        margin-bottom: 10px;
+        background: linear-gradient(to right, 
+            #00B4D8, /* azul claro */
+            #90E0EF, /* azul mais claro */
+            #CAF0F8, /* azul bem claro */
+            #FFEE93, /* amarelo claro */
+            #FFB347, /* laranja */
+            #FF6B6B  /* vermelho */
+        );
+        border-radius: 4px;
+    }
+
+    .horizontal-radio-group .radio-option {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        /* Remove flex: 1 e define uma largura específica */
+        width: 30px; /* ou o valor que melhor se adequar ao seu layout */
+    }
+
+    .horizontal-radio-group .radio-option:first-child {
+        align-items: flex-start;
+    }
+
+    .horizontal-radio-group .radio-option:last-child {
+        align-items: flex-end;
+    }
+
+    /* Ajuste para telas pequenas */
+    @media (max-width: 480px) {
+        .horizontal-radio-group {
+            flex-direction: column;
+        }
+        .rainbow-scale {
+            width: 100%;
+        }
+    }
 </style>
 <div class="container-form">
     <form method="post" id="avaliacaoRPAForm">
@@ -195,27 +250,35 @@
         </div>
 
         <!-- EVA specific fields -->
-        <div id="eva-fields" class="radio-group">
+        <div id="eva-fields" class="radio-group scale-container">
             <label>{{ form.eva_score.label }}</label>
-            {% for radio in form.eva_score %}
-                <div class="radio-option">
-                    <label>{{ radio.tag }}</label>
-                    {{ radio.choice_label }}
-                </div>
-            {% endfor %}
+            <div class="rainbow-scale"></div>
+            <div class="horizontal-radio-group">
+                {% for radio in form.eva_score %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
+                        {{ radio.choice_label }}
+                    </div>
+                {% endfor %}
+            </div>
         </div>
 
         <!-- FLACC specific fields -->
         <div id="flacc-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'face,pernas,atividade,choro,consolabilidade' %}
-                    <label>{{ field.label }}</label>
-                    {% for radio in field %}
-                        <div class="radio-option">
-                            <label>{{ radio.tag }}</label>
-                            {{ radio.choice_label }}
+                    <div class="scale-container">
+                        <label>{{ field.label }}</label>
+                        <div class="rainbow-scale"></div>
+                        <div class="horizontal-radio-group">
+                            {% for radio in field %}
+                                <div class="radio-option">
+                                    <label>{{ radio.tag }}</label>
+                                    {{ radio.choice_label }}
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    </div>
                 {% endif %}
             {% endfor %}
         </div>
@@ -224,13 +287,18 @@
         <div id="bps-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'expressao_facial,movimentos_membros_superiores,adaptacao_ventilador' %}
-                    <label>{{ field.label }}</label>
-                    {% for radio in field %}
-                        <div class="radio-option">
-                            <label>{{ radio.tag }}</label>
-                            {{ radio.choice_label }}
+                    <div class="scale-container">
+                        <label>{{ field.label }}</label>
+                        <div class="rainbow-scale"></div>
+                        <div class="horizontal-radio-group">
+                            {% for radio in field %}
+                                <div class="radio-option">
+                                    <label>{{ radio.tag }}</label>
+                                    {{ radio.choice_label }}
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    </div>
                 {% endif %}
             {% endfor %}
         </div>
@@ -239,13 +307,18 @@
         <div id="painad-b-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad' %}
-                    <label>{{ field.label }}</label>
-                    {% for radio in field %}
-                        <div class="radio-option">
-                            <label>{{ radio.tag }}</label>
-                            {{ radio.choice_label }}
+                    <div class="scale-container">
+                        <label>{{ field.label }}</label>
+                        <div class="rainbow-scale"></div>
+                        <div class="horizontal-radio-group">
+                            {% for radio in field %}
+                                <div class="radio-option">
+                                    <label>{{ radio.tag }}</label>
+                                    {{ radio.choice_label }}
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    </div>
                 {% endif %}
             {% endfor %}
         </div>
@@ -333,4 +406,3 @@
     });
 </script>
 {% endblock %}
-
