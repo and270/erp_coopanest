@@ -2,6 +2,11 @@ from django import forms
 from .models import AvaliacaoRPA
 
 class AvaliacaoRPAForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.EVA_DESCRIPTIONS = AvaliacaoRPA.EVA_DESCRIPTIONS
+        self.FLACC_DESCRIPTIONS = AvaliacaoRPA.FLACC_DESCRIPTIONS
+
     class Meta:
         model = AvaliacaoRPA
         fields = [
@@ -33,13 +38,6 @@ class AvaliacaoRPAForm(forms.ModelForm):
             'linguagem_corporal': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'form-options-text'}),
             'consolabilidade_painad': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'form-options-text'}),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['evento_adverso_qual'].widget.attrs.update({
-            'rows': 3,
-            'class': 'form-control form-options-text'
-        })
 
     def clean(self):
         cleaned_data = super().clean()

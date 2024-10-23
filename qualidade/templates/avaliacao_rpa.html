@@ -1,5 +1,6 @@
 {% extends 'layout.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Avaliação RPA{% endblock %}
 
@@ -219,6 +220,27 @@
             width: 100%;
         }
     }
+
+    .scale-descriptions {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 10px;
+        color: #666;
+    }
+
+    .scale-description {
+        max-width: 30%;
+        text-align: center;
+    }
+
+    .scale-description.left {
+        text-align: left;
+    }
+
+    .scale-description.right {
+        text-align: right;
+    }
 </style>
 <div class="container-form">
     <form method="post" id="avaliacaoRPAForm">
@@ -252,6 +274,11 @@
         <!-- EVA specific fields -->
         <div id="eva-fields" class="radio-group scale-container">
             <label>{{ form.eva_score.label }}</label>
+            <div class="scale-descriptions">
+                <span class="scale-description left">Dor leve</span>
+                <span class="scale-description">Dor moderada</span>
+                <span class="scale-description right">Dor intensa</span>
+            </div>
             <div class="rainbow-scale"></div>
             <div class="horizontal-radio-group">
                 {% for radio in form.eva_score %}
@@ -269,6 +296,11 @@
                 {% if field.name in 'face,pernas,atividade,choro,consolabilidade' %}
                     <div class="scale-container">
                         <label>{{ field.label }}</label>
+                        <div class="scale-descriptions">
+                            <span class="scale-description left">{{ form.FLACC_DESCRIPTIONS|get_item:field.name|get_item:'low' }}</span>
+                            <span class="scale-description">{{ form.FLACC_DESCRIPTIONS|get_item:field.name|get_item:'mid' }}</span>
+                            <span class="scale-description right">{{ form.FLACC_DESCRIPTIONS|get_item:field.name|get_item:'high' }}</span>
+                        </div>
                         <div class="rainbow-scale"></div>
                         <div class="horizontal-radio-group">
                             {% for radio in field %}
@@ -406,3 +438,4 @@
     });
 </script>
 {% endblock %}
+

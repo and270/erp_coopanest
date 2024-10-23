@@ -42,6 +42,40 @@ class AvaliacaoRPA(models.Model):
     evento_adverso_qual = models.TextField(verbose_name="Qual?", null=True, blank=True)
     ponv = models.BooleanField(verbose_name="PONV na RPA", null=True, blank=True)
 
+    EVA_DESCRIPTIONS = {
+        'low': 'Dor leve',
+        'mid': 'Dor moderada',
+        'high': 'Dor intensa'
+    }
+
+    FLACC_DESCRIPTIONS = {
+        'face': {
+            'low': 'Nenhuma expressão particular ou sorriso',
+            'mid': 'Caretas ou sobrancelhas franzidas de vez em quando, introversão, desinteresse',
+            'high': 'Tremor frequente do queixo, mandíbulas cerradas'
+        },
+        'pernas': {
+            'low': 'Posição normal ou relaxadas',
+            'mid': 'Inquietas, agitadas, tensas',
+            'high': 'Chutando ou esticadas'
+        },
+        'atividade': {
+            'low': 'Quieto, posição normal, movendo-se facilmente',
+            'mid': 'Contorcendo-se, movendo-se para frente e para trás, tenso',
+            'high': 'Curvado, rígido ou com movimentos bruscos'
+        },
+        'choro': {
+            'low': 'Sem choro (acordado ou dormindo)',
+            'mid': 'Gemidos ou choramingos; queixa ocasional',
+            'high': 'Choro continuado, grito ou soluço; queixa com frequência'
+        },
+        'consolabilidade': {
+            'low': 'Satisfeito, relaxado',
+            'mid': 'Tranquilizado por toques, abraços ou conversas ocasionais; pode ser distraído',
+            'high': 'Difícil de consolar ou confortar'
+        }
+    }
+
     def __str__(self):
         return f"Avaliação RPA para {self.procedimento}"
 
