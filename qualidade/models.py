@@ -1,13 +1,14 @@
 from django.db import models
 from agenda.models import Procedimento
+from django.utils.safestring import mark_safe
 
 
 class AvaliacaoRPA(models.Model):
     ESCALA_CHOICES = [
-        ('EVA', 'EVA - Adultos e crianças maiores que 7 anos.'),
-        ('FLACC', 'FLACC - Crianças menores que 7 anos ou pacientes não verbais.'),
-        ('BPS', 'BPS - Pacientes intubados e sedados.'),
-        ('PAINAD-B', 'PAINAD-B - Pacientes com demência avançada.')
+        ('EVA', mark_safe('<span class="scale-name">EVA</span> &nbsp; &nbsp; &nbsp;Adultos e crianças maiores que 7 anos.')),
+        ('FLACC', mark_safe('<span class="scale-name">FLACC</span> &nbsp; &nbsp; &nbsp;Crianças menores que 7 anos ou pacientes não verbais.')),
+        ('BPS', mark_safe('<span class="scale-name">BPS</span> &nbsp; &nbsp; &nbsp;Pacientes intubados e sedados.')),
+        ('PAINAD-B', mark_safe('<span class="scale-name">PAINAD-B</span> &nbsp; &nbsp; &nbsp;Pacientes com demência avançada.'))
     ]
 
     procedimento = models.OneToOneField(Procedimento, on_delete=models.CASCADE, related_name='avaliacao_rpa')
