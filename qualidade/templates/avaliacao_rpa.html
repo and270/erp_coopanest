@@ -196,20 +196,26 @@
 
         <!-- EVA specific fields -->
         <div id="eva-fields" class="radio-group">
-            <div class="form-group">
-                <label for="{{ form.eva_score.id_for_label }}">{{ form.eva_score.label }}</label>
-                {{ form.eva_score }}
-            </div>
+            <label>{{ form.eva_score.label }}</label>
+            {% for radio in form.eva_score %}
+                <div class="radio-option">
+                    <label>{{ radio.tag }}</label>
+                    {{ radio.choice_label }}
+                </div>
+            {% endfor %}
         </div>
 
         <!-- FLACC specific fields -->
         <div id="flacc-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'face,pernas,atividade,choro,consolabilidade' %}
-                    <div class="radio-option">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                    </div>
+                    <label>{{ field.label }}</label>
+                    {% for radio in field %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
                 {% endif %}
             {% endfor %}
         </div>
@@ -218,10 +224,13 @@
         <div id="bps-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'expressao_facial,movimentos_membros_superiores,adaptacao_ventilador' %}
-                    <div class="radio-option">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                    </div>
+                    <label>{{ field.label }}</label>
+                    {% for radio in field %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
                 {% endif %}
             {% endfor %}
         </div>
@@ -230,10 +239,13 @@
         <div id="painad-b-fields" class="radio-group">
             {% for field in form %}
                 {% if field.name in 'respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad' %}
-                    <div class="form-group">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                    </div>
+                    <label>{{ field.label }}</label>
+                    {% for radio in field %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
                 {% endif %}
             {% endfor %}
         </div>
@@ -321,3 +333,4 @@
     });
 </script>
 {% endblock %}
+
