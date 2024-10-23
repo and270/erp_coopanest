@@ -13,32 +13,32 @@ class AvaliacaoRPAForm(forms.ModelForm):
             'linguagem_corporal', 'consolabilidade_painad'
         ]
         widgets = {
-            'tempo_alta_rpa': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control fomr-options-text'}),
-            'dor_pos_operatoria': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'fomr-options-text'}),
-            'escala': forms.RadioSelect(attrs={'class': 'fomr-options-text'}),
-            'eva_score': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 11)], attrs={'class': 'fomr-options-text'}),
-            'evento_adverso': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'fomr-options-text'}),
-            'ponv': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'fomr-options-text'}),
-            'face': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'fomr-options-text'}),
-            'pernas': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'fomr-options-text'}),
-            'atividade': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'fomr-options-text'}),
-            'choro': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'fomr-options-text'}),
-            'consolabilidade': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'fomr-options-text'}),
-            'expressao_facial': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 5)], attrs={'class': 'fomr-options-text'}),
-            'movimentos_membros_superiores': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 5)], attrs={'class': 'fomr-options-text'}),
-            'adaptacao_ventilador': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 5)], attrs={'class': 'fomr-options-text'}),
-            'respiracao': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'fomr-options-text'}),
-            'vocalizacao_negativa': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'fomr-options-text'}),
-            'expressao_facial_painad': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'fomr-options-text'}),
-            'linguagem_corporal': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'fomr-options-text'}),
-            'consolabilidade_painad': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'fomr-options-text'}),
+            'tempo_alta_rpa': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control form-options-text'}),
+            'dor_pos_operatoria': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'form-options-text'}),
+            'escala': forms.RadioSelect(attrs={'class': 'form-options-text'}),
+            'eva_score': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 11)], attrs={'class': 'form-options-text'}),
+            'evento_adverso': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'form-options-text'}),
+            'ponv': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'form-options-text'}),
+            'face': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'form-options-text'}),
+            'pernas': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'form-options-text'}),
+            'atividade': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'form-options-text'}),
+            'choro': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'form-options-text'}),
+            'consolabilidade': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 4)], attrs={'class': 'form-options-text'}),
+            'expressao_facial': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 5)], attrs={'class': 'form-options-text'}),
+            'movimentos_membros_superiores': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 5)], attrs={'class': 'form-options-text'}),
+            'adaptacao_ventilador': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 5)], attrs={'class': 'form-options-text'}),
+            'respiracao': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'form-options-text'}),
+            'vocalizacao_negativa': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'form-options-text'}),
+            'expressao_facial_painad': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'form-options-text'}),
+            'linguagem_corporal': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'form-options-text'}),
+            'consolabilidade_painad': forms.RadioSelect(choices=[(i, str(i)) for i in range(3)], attrs={'class': 'form-options-text'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['evento_adverso_qual'].widget.attrs.update({
             'rows': 3,
-            'class': 'form-control fomr-options-text'
+            'class': 'form-control form-options-text'
         })
 
     def clean(self):
