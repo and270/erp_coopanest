@@ -363,17 +363,13 @@
 
         <div class="info-section">
             <div class="info-item">
-                <div class="info-label">Status</div>
+                <div class="info-label">Visita Pré-Anestésica</div>
                 <div class="info-value">{% if procedimento.visita_pre_anestesica %}Realizada{% else %}Não informada{% endif %}</div>
             </div>
             {% if procedimento.visita_pre_anestesica %}
-                <div class="info-item">
-                    <div class="info-label">Data</div>
-                    <div class="info-value">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y" }}</div>
-                </div>
                 {% if procedimento.foto_anexo %}
                     <div class="info-item">
-                        <div class="info-label">Anexo</div>
+                        <div class="info-label">Anexo Visita Pré-Anestésica:</div>
                         <div class="info-value">
                             <a href="{% url 'serve_protected_file' procedimento.foto_anexo %}" target="_blank">Ver anexo</a>
                         </div>
