@@ -191,6 +191,13 @@
             </div>
 
             <!-- Common fields -->
+
+            <div class="total-container">
+                <span class="total-label">Total:</span>
+                <span class="total-value" id="total-score">0</span>
+                <span class="pain-classification" id="pain-classification"></span>
+            </div>
+            
             <div class="radio-group">
                 <label>{{ form.evento_adverso.label }}</label>
                     {% for radio in form.evento_adverso %}
@@ -271,6 +278,77 @@
 
         // Show/hide on page load
         toggleEventoAdversoQual();
+
+        function getPainClassification(scale, total) {
+            if (scale === 'BPS') {
+                if (total === 3) return "Sem dor";
+                if (total >= 4 && total <= 5) return "Dor Leve";
+                if (total >= 6 && total <= 8) return "Dor moderada";
+                if (total >= 9 && total <= 12) return "Dor forte";
+            }
+            else if (scale === 'PAINAD-B') {
+                if (total === 0) return "Sem dor";
+                if (total >= 1 && total <= 3) return "Dor Leve";
+                if (total >= 4 && total <= 7) return "Dor moderada";
+                if (total >= 8 && total <= 10) return "Dor forte";
+            }
+            return ""; // Retorna vazio para outras escalas
+        }
+
+        function calculateTotal() {
+            const selectedScale = form.querySelector('input[name="escala"]:checked');
+            if (!selectedScale) return;
+
+            let total = 0;
+            
+            switch(selectedScale.value) {
+                case 'EVA':
+                    const evaScore = form.querySelector('input[name="eva_score"]:checked');
+                    total = evaScore ? parseInt(evaScore.value) : 0;
+                    break;
+                    
+                case 'FLACC':
+                    const flaccFields = ['face', 'pernas', 'atividade', 'choro', 'consolabilidade'];
+                    flaccFields.forEach(field => {
+                        const checked = form.querySelector(`input[name="${field}"]:checked`);
+                        total += checked ? parseInt(checked.value) : 0;
+                    });
+                    break;
+                    
+                case 'BPS':
+                    const bpsFields = ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador'];
+                    bpsFields.forEach(field => {
+                        const checked = form.querySelector(`input[name="${field}"]:checked`);
+                        total += checked ? parseInt(checked.value) : 0;
+                    });
+                    break;
+                    
+                case 'PAINAD-B':
+                    const painadFields = ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 
+                                       'linguagem_corporal', 'consolabilidade_painad'];
+                    painadFields.forEach(field => {
+                        const checked = form.querySelector(`input[name="${field}"]:checked`);
+                        total += checked ? parseInt(checked.value) : 0;
+                    });
+                    break;
+            }
+            
+            document.getElementById('total-score').textContent = total;
+            
+            // Atualiza a classificação da dor
+            const classification = getPainClassification(selectedScale.value, total);
+            const classificationElement = document.getElementById('pain-classification');
+            classificationElement.textContent = classification ? `- ${classification}` : '';
+        }
+
+        // Adicionar event listeners para todos os campos que afetam o total
+        const allScaleInputs = form.querySelectorAll('input[type="radio"]');
+        allScaleInputs.forEach(input => {
+            input.addEventListener('change', calculateTotal);
+        });
+
+        // Calcular total inicial
+        calculateTotal();
     });
 </script>
 {% endblock %}
