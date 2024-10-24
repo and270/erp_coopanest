@@ -14,8 +14,8 @@
     }
 
     .container-info {
-        width: 320px; /* Largura fixa */
-        min-width: 320px; /* Garante que não encolha */
+        width: 320px;
+        min-width: 320px;
         background-color: #ffffff;
         padding: 20px;
         order: 2;
@@ -23,7 +23,7 @@
     }
 
     .container-form {
-        width: calc(100% - 320px); /* Subtrai a largura do container-info */
+        width: calc(100% - 320px);
         background-color: #ffffff;
         padding: 20px;
         order: 1;
@@ -235,12 +235,12 @@
         width: 100%;
         margin-bottom: 10px;
         background: linear-gradient(to right, 
-            #00B4D8, /* azul claro */
-            #90E0EF, /* azul mais claro */
-            #CAF0F8, /* azul bem claro */
-            #FFEE93, /* amarelo claro */
-            #FFB347, /* laranja */
-            #FF6B6B  /* vermelho */
+            #00B4D8,
+            #90E0EF,
+            #CAF0F8,
+            #FFEE93,
+            #FFB347,
+            #FF6B6B
         );
         border-radius: 4px;
     }
@@ -283,6 +283,27 @@
         text-align: right;
     }
 
+    .type-indicator {
+        display: inline-block;
+        width: 11.45px;
+        height: 11.45px;
+        border-radius: 50%;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+    
+    .type-indicator.cirurgia {
+        background-color: #33B679;
+    }
+    
+    .type-indicator.fora-centro {
+        background-color: #F4511E;
+    }
+    
+    .type-indicator.exame {
+        background-color: #F6BF26;
+    }
+
     @media (max-width: 768px) {
         .horizontal-radio-group {
             flex-direction: row;
@@ -290,7 +311,6 @@
         .rainbow-scale {
             width: 100%;
         }
-        /* Add these new rules */
         .container-info {
             display: none;
         }
@@ -305,12 +325,15 @@
 </style>
 
 <div class="page-container">
-    <!-- New info container -->
+
     <div class="container-info">
         <div class="info-section">
             <h2>Resumo do procedimento</h2>
             <div class="info-item">
-                <div class="procedure-type">{{ procedimento.get_procedimento_type_display }}</div>
+                <div class="procedure-type">
+                    <span class="type-indicator {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% else %}exame{% endif %}"></span>
+                    {{ procedimento.get_procedimento_type_display }}
+                </div>
                 <div class="procedure-name">{{ procedimento.procedimento }}</div>
                 <div class="info-value">{{ procedimento.data_horario|date:"d/m/Y" }} - {{ procedimento.data_horario|time:"H:i" }} às {{ procedimento.data_horario_fim|time:"H:i" }}</div>
             </div>
@@ -359,7 +382,6 @@
         </div>
     </div>
 
-    <!-- Your existing form container -->
     <div class="container-form">
         <form method="post" id="avaliacaoRPAForm">
             <h1>Avaliação RPA</h1>
