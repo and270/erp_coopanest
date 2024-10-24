@@ -283,21 +283,23 @@
         text-align: right;
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 768px) {
         .horizontal-radio-group {
             flex-direction: row;
         }
         .rainbow-scale {
             width: 100%;
         }
-        .button-container {
-            position: sticky;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            background-color: #ffffff;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        /* Add these new rules */
+        .container-info {
+            display: none;
+        }
+        .container-form {
+            width: 100%;
+            padding: 10px;  
+        }
+        .page-container {
+            padding: 0;
         }
     }
 </style>
