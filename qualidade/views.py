@@ -4,7 +4,7 @@ from agenda.forms import ProcedimentoForm
 from agenda.views import MONTH_NAMES_PT, get_calendar_dates, get_week_dates
 from registration.models import CustomUser
 from agenda.models import Procedimento
-from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
+from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER, STATUS_FINISHED
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils.translation import gettext as _
@@ -15,6 +15,7 @@ from django.db.models import Q
 import os
 from .forms import AvaliacaoRPAForm
 from .models import AvaliacaoRPA
+from django.views.decorators.http import require_POST
 
 #TODO view que muda o status do procedimento para "Finalizado" e redireciona para a página de avaliaço RPA
 
@@ -284,3 +285,14 @@ def avaliacao_rpa(request, procedimento_id):
         'procedimento': procedimento,
     }
     return render(request, 'avaliacao_rpa.html', context)
+
+@require_POST
+@login_required
+def finalizar_procedimento(request, procedimento_id):
+    try:
+        procedimento = get_object_or_404(Procedimento, id=procedimento_id, group=request.user.group)
+        procedimento.status = STATUS_FINISHED
+        procedimento.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
