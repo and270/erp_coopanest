@@ -2805,3 +2805,45 @@ select {
     background-color: #FFDCDB;
     color: #A92626;
 }
+
+.btn-finalizar {
+    width: 150px;
+    height: 28px;
+    border: 1px solid #1A73E8;
+    border-radius: 5px;
+    background: #FFFFFF;
+    color: #1A73E8;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 14.52px;
+    padding: 0 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-avaliar {
+    width: 101px;
+    height: 28px;
+    background: #1A73E8;
+    border-radius: 5px;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 14.52px;
+    padding: 0 10px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-finalizar:hover {
+    background: #F8FBFF;
+}
+
+.btn-avaliar:hover {
+    background: #1557b0;
+}
