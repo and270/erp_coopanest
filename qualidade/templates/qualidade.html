@@ -227,6 +227,7 @@
 
 <div id="customAlert" class="custom-alert"></div>
 
+
 {% endblock %}
 
 {% block extra_js %}
@@ -240,6 +241,20 @@
     });
 </script>
 
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    showCustomAlert('{{ message }}', 'success');
+                {% elif message.tags == 'error' %}
+                    showCustomAlert('{{ message }}', 'error');
+                {% endif %}
+            {% endfor %}
+        });
+    </script>
+{% endif %}
+
 <script>
     function showCustomAlert(message, type) {
         const alertElement = document.getElementById('customAlert');
@@ -249,7 +264,7 @@
         
         setTimeout(() => {
             alertElement.style.display = 'none';
-        }, 3500);  // Hide after 5 seconds
+        }, 3500);  // Hide after 3.5 seconds
     }
 </script>
 <script>
@@ -722,6 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
 
 
 

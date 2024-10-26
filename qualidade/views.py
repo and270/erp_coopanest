@@ -16,8 +16,8 @@ import os
 from .forms import AvaliacaoRPAForm
 from .models import AvaliacaoRPA
 from django.views.decorators.http import require_POST
+from django.contrib import messages
 
-#TODO view que muda o status do procedimento para "Finalizado" e redireciona para a página de avaliaço RPA
 
 @login_required
 def search_qualidade(request):
@@ -276,6 +276,7 @@ def avaliacao_rpa(request, procedimento_id):
             avaliacao = form.save(commit=False)
             avaliacao.procedimento = procedimento
             avaliacao.save()
+            messages.success(request, 'Avaliação RPA salva com sucesso!')
             return redirect('qualidade')
     else:
         form = AvaliacaoRPAForm(instance=avaliacao_rpa)
