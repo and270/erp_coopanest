@@ -276,7 +276,7 @@ def avaliacao_rpa(request, procedimento_id):
             avaliacao = form.save(commit=False)
             avaliacao.procedimento = procedimento
             avaliacao.save()
-            return redirect('qualidade')  # Redirect to the qualidade page after saving
+            return redirect('qualidade')
     else:
         form = AvaliacaoRPAForm(instance=avaliacao_rpa)
 

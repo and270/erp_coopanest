@@ -45,30 +45,28 @@ class AvaliacaoRPAForm(forms.ModelForm):
         cleaned_data = super().clean()
         evento_adverso = cleaned_data.get('evento_adverso')
         evento_adverso_qual = cleaned_data.get('evento_adverso_qual')
+        escala = cleaned_data.get('escala')
+        dor_pos_operatoria = cleaned_data.get('dor_pos_operatoria')
 
         if evento_adverso and not evento_adverso_qual:
             self.add_error('evento_adverso_qual', 'Este campo é obrigatório quando há evento adverso.')
 
-        escala = cleaned_data.get('escala')
-
-        if escala == 'EVA':
-            # Validate EVA specific fields
-            if cleaned_data.get('') is None:
-                self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
-        elif escala == 'FLACC':
-            # Validate FLACC specific fields
-            for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
-                if cleaned_data.get(field) is None:
-                    self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
-        elif escala == 'BPS':
-            # Validate BPS specific fields
-            for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
-                if cleaned_data.get(field) is None:
-                    self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
-        elif escala == 'PAINAD-B':
-            # Validate PAINAD-B specific fields
-            for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
-                if cleaned_data.get(field) is None:
-                    self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+        # Only validate pain scales if dor_pos_operatoria is True
+        if dor_pos_operatoria and escala:
+            if escala == 'EVA':
+                if cleaned_data.get('eva_score') is None:
+                    self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
+            elif escala == 'FLACC':
+                for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
+                    if cleaned_data.get(field) is None:
+                        self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
+            elif escala == 'BPS':
+                for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
+                    if cleaned_data.get(field) is None:
+                        self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
+            elif escala == 'PAINAD-B':
+                for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
+                    if cleaned_data.get(field) is None:
+                        self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
 
         return cleaned_data
