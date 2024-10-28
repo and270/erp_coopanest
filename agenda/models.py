@@ -13,6 +13,21 @@ class Procedimento(models.Model):
         (EXAME_PROCEDIMENTO , 'Exame'),
     )
 
+    SATISFACTION_CHOICES = [
+        (1, 'Muito Insatisfeito'),
+        (2, 'Insatisfeito'),
+        (3, 'Neutro'),
+        (4, 'Satisfeito'),
+        (5, 'Muito Satisfeito'),
+    ]
+
+
+    COBRANCA_CHOICES = [
+        ('cooperativa', 'Cooperativa'),
+        ('hospital', 'Hospital'),
+        ('particular', 'Particular'),
+    ]
+
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     procedimento_type = models.CharField(
         max_length=40,
@@ -43,14 +58,6 @@ class Procedimento(models.Model):
     foto_anexo = models.ImageField(upload_to='anexos/', blank=True, null=True, verbose_name='Anexo Visita Pré-Anestésica')
     nome_responsavel_visita = models.CharField(max_length=255, blank=True, verbose_name='Nome do Responsável pela Visita', default='')
     
-    # New survey fields
-    SATISFACTION_CHOICES = [
-        (1, 'Muito Insatisfeito'),
-        (2, 'Insatisfeito'),
-        (3, 'Neutro'),
-        (4, 'Satisfeito'),
-        (5, 'Muito Satisfeito'),
-    ]
     satisfacao_geral = models.IntegerField(
         choices=SATISFACTION_CHOICES,
         null=True, 
@@ -83,6 +90,35 @@ class Procedimento(models.Model):
         (STATUS_FINISHED, 'Finalizado'),
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Status')
+
+    #instâncias após a finalização do procedimento:
+    data_horario_inicio_efetivo = models.DateTimeField(verbose_name='Horário de Início Efetivo', null=True, blank=True)
+    data_horario_fim_efetivo = models.DateTimeField(verbose_name='Horário de Término Efetivo', null=True, blank=True)
+    eventos_adversos_graves = models.BooleanField(verbose_name='Eventos adversos graves (broncoaspiração, PCR, etc)', null=True, blank=True)
+    eventos_adversos_graves_desc = models.TextField(verbose_name='Descrição dos eventos adversos graves', null=True, blank=True)
+    reacao_alergica_grave = models.BooleanField(verbose_name='Reação alérgica grave', null=True, blank=True)
+    reacao_alergica_grave_desc = models.TextField(verbose_name='Descrição da reação alérgica grave', null=True, blank=True)
+    encaminhamento_uti = models.BooleanField(verbose_name='Encaminhamentos não programado à UTI', null=True, blank=True)
+    evento_adverso_evitavel = models.BooleanField(verbose_name='Evento adverso evitável', null=True, blank=True)
+    adesao_checklist = models.BooleanField(verbose_name='Adesão ao check list de segurança', null=True, blank=True)
+    uso_tecnicas_assepticas = models.BooleanField(verbose_name='Uso adequado de técnicas assépticas', null=True, blank=True)
+    conformidade_diretrizes = models.BooleanField(verbose_name='Conformidade com diretrizes e protocolos', null=True, blank=True)
+    ponv = models.BooleanField(verbose_name='PONV', null=True, blank=True)
+    adesao_profilaxia = models.BooleanField(verbose_name='Adesão aos protocolos de profilaxia antibiótica e de prevenção de TVP/TEP', null=True, blank=True)
+    tipo_cobranca = models.CharField(
+        max_length=20,
+        choices=COBRANCA_CHOICES,
+        verbose_name='Cobrança via',
+        null=True,
+        blank=True
+    )
+    valor_cobranca = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='Valor (se hospital e particular) / número da guia (se coop)',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = "Procedimento"

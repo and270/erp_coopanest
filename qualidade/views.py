@@ -16,8 +16,8 @@ import os
 from .forms import AvaliacaoRPAForm
 from .models import AvaliacaoRPA
 from django.views.decorators.http import require_POST
+from .forms import ProcedimentoFinalizacaoForm
 from django.contrib import messages
-
 
 @login_required
 def search_qualidade(request):
@@ -277,7 +277,7 @@ def avaliacao_rpa(request, procedimento_id):
             avaliacao.procedimento = procedimento
             avaliacao.save()
             messages.success(request, 'Avaliação RPA salva com sucesso!')
-            return redirect('qualidade')
+            return redirect('qualidade')  # Redirect to the qualidade page after saving
     else:
         form = AvaliacaoRPAForm(instance=avaliacao_rpa)
 
@@ -287,13 +287,25 @@ def avaliacao_rpa(request, procedimento_id):
     }
     return render(request, 'avaliacao_rpa.html', context)
 
-@require_POST
 @login_required
-def finalizar_procedimento(request, procedimento_id):
-    try:
-        procedimento = get_object_or_404(Procedimento, id=procedimento_id, group=request.user.group)
-        procedimento.status = STATUS_FINISHED
-        procedimento.save()
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+def finalizar_procedimento_view(request, procedimento_id):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
+    procedimento = get_object_or_404(Procedimento, id=procedimento_id, group=request.user.group)
+    
+    if request.method == 'POST':
+        form = ProcedimentoFinalizacaoForm(request.POST, instance=procedimento)
+        if form.is_valid():
+            procedimento = form.save(commit=False)
+            procedimento.status = STATUS_FINISHED
+            procedimento.save()
+            return redirect('qualidade')
+    else:
+        form = ProcedimentoFinalizacaoForm(instance=procedimento)
+
+    context = {
+        'form': form,
+        'procedimento': procedimento,
+    }
+    return render(request, 'finalizar_procedimento.html', context)
