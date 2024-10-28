@@ -2806,7 +2806,8 @@ select {
     color: #A92626;
 }
 
-.btn-finalizar {
+.btn-finalizar,
+.btn-ver-finalizacao {
     width: 150px;
     height: 28px;
     border: 1px solid #1A73E8;
@@ -2840,7 +2841,8 @@ select {
     justify-content: center;
 }
 
-.btn-finalizar:hover {
+.btn-finalizar:hover,
+.btn-ver-finalizacao:hover {
     background: #F8FBFF;
 }
 

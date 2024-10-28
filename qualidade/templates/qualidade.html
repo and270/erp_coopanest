@@ -133,6 +133,8 @@
                                         <div class="modal-actions">
                                             {% if procedimento.status != 'finished' %}
                                                 <button class="btn-finalizar" data-procedure-id="{{ procedimento.id }}">Finalizar Procedimento</button>
+                                            {% else %}
+                                                <button class="btn-ver-finalizacao" data-procedure-id="{{ procedimento.id }}">Ver Finalização</button>
                                             {% endif %}
                                             {% if procedimento.avaliacao_rpa %}
                                                 <button class="btn-avaliar ver-rpa" data-procedure-id="{{ procedimento.id }}">Ver RPA</button>
@@ -213,6 +215,8 @@
                                                 <div class="modal-actions">
                                                     {% if procedimento.status != 'finished' %}
                                                         <button class="btn-finalizar" data-procedure-id="{{ procedimento.id }}">Finalizar Procedimento</button>
+                                                    {% else %}
+                                                        <button class="btn-ver-finalizacao" data-procedure-id="{{ procedimento.id }}">Ver Finalização</button>
                                                     {% endif %}
                                                     {% if procedimento.avaliacao_rpa %}
                                                         <button class="btn-avaliar ver-rpa" data-procedure-id="{{ procedimento.id }}">Ver RPA</button>
@@ -708,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.btn-finalizar').forEach(button => {
+    document.querySelectorAll('.btn-finalizar, .btn-ver-finalizacao').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const procedureId = this.getAttribute('data-procedure-id');
