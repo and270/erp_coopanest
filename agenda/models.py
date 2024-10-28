@@ -94,6 +94,7 @@ class Procedimento(models.Model):
     #instâncias após a finalização do procedimento:
     data_horario_inicio_efetivo = models.DateTimeField(verbose_name='Horário de Início Efetivo', null=True, blank=True)
     data_horario_fim_efetivo = models.DateTimeField(verbose_name='Horário de Término Efetivo', null=True, blank=True)
+    dor_pos_operatoria_imediata = models.IntegerField(verbose_name="Dor pós operatória imediata", null=True, blank=True)
     eventos_adversos_graves = models.BooleanField(verbose_name='Eventos adversos graves (broncoaspiração, PCR, etc)', null=True, blank=True)
     eventos_adversos_graves_desc = models.TextField(verbose_name='Descrição dos eventos adversos graves', null=True, blank=True)
     reacao_alergica_grave = models.BooleanField(verbose_name='Reação alérgica grave', null=True, blank=True)

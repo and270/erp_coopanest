@@ -102,6 +102,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         fields = [
             'data_horario_inicio_efetivo',
             'data_horario_fim_efetivo',
+            'dor_pos_operatoria_imediata',
             'eventos_adversos_graves',
             'eventos_adversos_graves_desc',
             'reacao_alergica_grave',
@@ -122,6 +123,10 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             ),
             'data_horario_fim_efetivo': forms.DateTimeInput(
                 attrs={'type': 'datetime-local', 'class': 'form-control'}
+            ),
+            'dor_pos_operatoria_imediata': forms.RadioSelect(
+                choices=[(i, str(i)) for i in range(1, 11)], 
+                attrs={'class': 'form-options-text'}
             ),
             'eventos_adversos_graves': forms.RadioSelect(
                 choices=[(True, 'Sim'), (False, 'Não')],
@@ -178,7 +183,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         
         # All fields are required
         required_fields = [
-            'data_horario_inicio_efetivo', 'data_horario_fim_efetivo',
+            'data_horario_inicio_efetivo', 'data_horario_fim_efetivo', 'dor_pos_operatoria_imediata',
             'eventos_adversos_graves', 'reacao_alergica_grave',
             'encaminhamento_uti', 'evento_adverso_evitavel',
             'adesao_checklist', 'uso_tecnicas_assepticas',

@@ -78,6 +78,31 @@
                 </div>
             </div>
 
+            <div id="dor_pos_operatoria_imediata-fields" class="radio-group scale-container">
+                <label>{{ form.dor_pos_operatoria_imediata.label }}</label>
+                <div class="scale-descriptions">
+                    <span class="scale-description left">Dor leve</span>
+                    <span class="scale-description">Dor moderada</span>
+                    <span class="scale-description right">Dor intensa</span>
+                </div>
+                <div class="rainbow-scale"></div>
+                <div class="horizontal-radio-group">
+                    {% for radio in form.dor_pos_operatoria_imediata %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.eva_score.errors %}
+                <div class="error-message">
+                    {% for error in form.dor_pos_operatoria_imediata.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
             <div class="radio-group">
                 <label>{{ form.eventos_adversos_graves.label }}</label>
                 <div class="radio-options-container">
@@ -141,7 +166,7 @@
             </div>
 
             {% for field in form %}
-                {% if field.field.widget.input_type == "radio" and field.name not in 'eventos_adversos_graves,reacao_alergica_grave' %}
+                {% if field.field.widget.input_type == "radio" and field.name not in 'eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria_imediata' %}
                     <div class="radio-group">
                         <label>{{ field.label }}</label>
                         <div class="radio-options-container">
