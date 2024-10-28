@@ -284,6 +284,10 @@ def avaliacao_rpa(request, procedimento_id):
     context = {
         'form': form,
         'procedimento': procedimento,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
     }
     return render(request, 'avaliacao_rpa.html', context)
 
@@ -310,5 +314,9 @@ def finalizar_procedimento_view(request, procedimento_id):
     context = {
         'form': form,
         'procedimento': procedimento,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
     }
     return render(request, 'finalizar_procedimento.html', context)
