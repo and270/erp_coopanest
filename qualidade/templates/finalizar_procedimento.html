@@ -67,7 +67,6 @@
                 {{ form.eventos_adversos_graves_desc }}
             </div>
 
-            <!-- Similar pattern for other boolean+description fields -->
             <div class="radio-group">
                 <label>{{ form.reacao_alergica_grave.label }}</label>
                 {% for radio in form.reacao_alergica_grave %}
@@ -83,31 +82,21 @@
                 {{ form.reacao_alergica_grave_desc }}
             </div>
 
-            <!-- Other boolean fields -->
             {% for field in form %}
                 {% if field.field.widget.input_type == "radio" and field.name not in 'eventos_adversos_graves,reacao_alergica_grave' %}
                     <div class="radio-group">
                         <label>{{ field.label }}</label>
                         {% for radio in field %}
-                            <div class="radio-option">
-                                <label>{{ radio.tag }}</label>
-                                {{ radio.choice_label }}
-                            </div>
+                            {% if radio.choice_label != '---------' %}
+                                <div class="radio-option">
+                                    <label>{{ radio.tag }}</label>
+                                    {{ radio.choice_label }}
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     </div>
                 {% endif %}
             {% endfor %}
-
-            <!-- Financial information -->
-            <div class="radio-group">
-                <label>{{ form.tipo_cobranca.label }}</label>
-                {% for radio in form.tipo_cobranca %}
-                    <div class="radio-option">
-                        <label>{{ radio.tag }}</label>
-                        {{ radio.choice_label }}
-                    </div>
-                {% endfor %}
-            </div>
 
             <div class="radio-group">
                 <label for="{{ form.valor_cobranca.id_for_label }}">{{ form.valor_cobranca.label }}</label>
@@ -115,7 +104,7 @@
             </div>
 
             <div class="button-container">
-                <button type="submit" class="btn btn-primary">Finalizar</button>
+                <button type="submit" class="btn btn-primary">Salvar</button>
             </div>
         </form>
     </div>
