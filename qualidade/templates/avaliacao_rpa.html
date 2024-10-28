@@ -93,12 +93,14 @@
 
             <div class="radio-group">
                 <label>{{ form.dor_pos_operatoria.label }}</label>
-                {% for radio in form.dor_pos_operatoria %}
-                    <div class="radio-option">
-                        <label>{{ radio.tag }}</label>
-                        {{ radio.choice_label }}
-                    </div>
-                {% endfor %}
+                <div class="radio-options-container">
+                    {% for radio in form.dor_pos_operatoria %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
                 {% if form.dor_pos_operatoria.errors %}
                 <div class="error-message">
                     {% for error in form.dor_pos_operatoria.errors %}
@@ -108,7 +110,7 @@
                 {% endif %}
             </div>
 
-            <div class="radio-group">
+            <div class="radio-group scale-container">
                 <label>{{ form.escala.label }}</label>
                 {% for radio in form.escala %}
                     {% if radio.choice_label != '---------' %}
@@ -260,12 +262,14 @@
             
             <div class="radio-group">
                 <label>{{ form.evento_adverso.label }}</label>
-                {% for radio in form.evento_adverso %}
-                    <div class="radio-option">
-                        <label>{{ radio.tag }}</label>
-                        {{ radio.choice_label }}
-                    </div>
-                {% endfor %}
+                <div class="radio-options-container">
+                    {% for radio in form.evento_adverso %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
                 {% if form.evento_adverso.errors %}
                 <div class="error-message">
                     {% for error in form.evento_adverso.errors %}
@@ -289,12 +293,14 @@
 
             <div class="radio-group">
                 <label>{{ form.ponv.label }}</label>
-                {% for radio in form.ponv %}
-                    <div class="radio-option">
-                        <label>{{ radio.tag }}</label>
-                        {{ radio.choice_label }}
-                    </div>
-                {% endfor %}
+                <div class="radio-options-container">
+                    {% for radio in form.ponv %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
                 {% if form.ponv.errors %}
                 <div class="error-message">
                     {% for error in form.ponv.errors %}

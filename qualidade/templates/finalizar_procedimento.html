@@ -54,12 +54,14 @@
 
             <div class="radio-group">
                 <label>{{ form.eventos_adversos_graves.label }}</label>
-                {% for radio in form.eventos_adversos_graves %}
-                    <div class="radio-option">
-                        <label>{{ radio.tag }}</label>
-                        {{ radio.choice_label }}
-                    </div>
-                {% endfor %}
+                <div class="radio-options-container">
+                    {% for radio in form.eventos_adversos_graves %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
 
             <div class="radio-group" id="eventos_adversos_graves_desc_group" style="display: none;">
@@ -69,12 +71,14 @@
 
             <div class="radio-group">
                 <label>{{ form.reacao_alergica_grave.label }}</label>
-                {% for radio in form.reacao_alergica_grave %}
-                    <div class="radio-option">
-                        <label>{{ radio.tag }}</label>
-                        {{ radio.choice_label }}
-                    </div>
-                {% endfor %}
+                <div class="radio-options-container">
+                    {% for radio in form.reacao_alergica_grave %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
 
             <div class="radio-group" id="reacao_alergica_grave_desc_group" style="display: none;">
@@ -86,14 +90,16 @@
                 {% if field.field.widget.input_type == "radio" and field.name not in 'eventos_adversos_graves,reacao_alergica_grave' %}
                     <div class="radio-group">
                         <label>{{ field.label }}</label>
-                        {% for radio in field %}
-                            {% if radio.choice_label != '---------' %}
-                                <div class="radio-option">
-                                    <label>{{ radio.tag }}</label>
-                                    {{ radio.choice_label }}
-                                </div>
-                            {% endif %}
-                        {% endfor %}
+                        <div class="radio-options-container">
+                            {% for radio in field %}
+                                {% if radio.choice_label != '---------' %}
+                                    <div class="radio-option">
+                                        <label>{{ radio.tag }}</label>
+                                        {{ radio.choice_label }}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
                     </div>
                 {% endif %}
             {% endfor %}

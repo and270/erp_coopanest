@@ -388,3 +388,26 @@
             padding: 0;
         }
     }
+
+    .radio-group:not(.scale-container) {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .radio-group:not(.scale-container) .radio-options-container {
+        display: flex;
+        flex-direction: row;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .radio-group:not(.scale-container) .radio-option {
+        margin-bottom: 0;
+    }
+
+    .scale-container .radio-options-container {
+        display: flex;
+        flex-direction: column;
+    }
