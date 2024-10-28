@@ -81,6 +81,16 @@ class AvaliacaoRPAForm(forms.ModelForm):
         return cleaned_data
 
 class ProcedimentoFinalizacaoForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Preenche os campos datetime se o objeto já existir
+        if self.instance and self.instance.pk:  # verifica se é um objeto existente
+            if self.instance.data_horario_inicio_efetivo:
+                # Converte para o formato aceito pelo input datetime-local
+                self.initial['data_horario_inicio_efetivo'] = self.instance.data_horario_inicio_efetivo.strftime('%Y-%m-%dT%H:%M')
+            if self.instance.data_horario_fim_efetivo:
+                self.initial['data_horario_fim_efetivo'] = self.instance.data_horario_fim_efetivo.strftime('%Y-%m-%dT%H:%M')
+
     class Meta:
         model = Procedimento
         fields = [
