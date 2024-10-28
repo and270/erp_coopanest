@@ -240,6 +240,20 @@
     });
 </script>
 
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    showCustomAlert('{{ message }}', 'success');
+                {% elif message.tags == 'error' %}
+                    showCustomAlert('{{ message }}', 'error');
+                {% endif %}
+            {% endfor %}
+        });
+    </script>
+{% endif %}
+
 <script>
     function showCustomAlert(message, type) {
         const alertElement = document.getElementById('customAlert');
@@ -676,52 +690,13 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const procedureId = this.getAttribute('data-procedure-id');
-            
-            fetch(`/finalizar-procedimento/${procedureId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const modalStatus = this.closest('.procedure-modal-content').querySelector('.modal-status');
-                    if (modalStatus) {
-                        modalStatus.textContent = 'Finalizado';
-                    }
-                    this.style.display = 'none';
-                    showCustomAlert('Procedimento finalizado com sucesso!', 'success');
-                } else {
-                    showCustomAlert('Erro ao finalizar procedimento.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showCustomAlert('Erro ao finalizar procedimento.', 'error');
-            });
+            window.location.href = `/finalizar-procedimento/${procedureId}/`;
         });
     });
-
-    // Helper function to get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
 });
 </script>
 {% endblock %}
+
 
 
 

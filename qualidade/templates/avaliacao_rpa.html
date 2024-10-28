@@ -5,7 +5,7 @@
 {% block title %}Avaliação RPA{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/avaliacao_rpa.css' %}">
+<link rel="stylesheet" href="{% static 'css/formularios.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -68,19 +68,46 @@
         <form method="post" id="avaliacaoRPAForm">
             <h1>Avaliação RPA</h1>
             {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+
             <div class="radio-group">
                 <label for="{{ form.tempo_alta_rpa.id_for_label }}">{{ form.tempo_alta_rpa.label }}</label>
-                <div class="input-width-280">{{ form.tempo_alta_rpa }}</div>
+                <div class="input-width-280">
+                    {{ form.tempo_alta_rpa }}
+                    {% if form.tempo_alta_rpa.errors %}
+                    <div class="error-message">
+                        {% for error in form.tempo_alta_rpa.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
+
             <div class="radio-group">
                 <label>{{ form.dor_pos_operatoria.label }}</label>
-                    {% for radio in form.dor_pos_operatoria %}
-                        <div class="radio-option">
-                            <label>{{ radio.tag }}</label>
-                            {{ radio.choice_label }}
-                        </div>
+                {% for radio in form.dor_pos_operatoria %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
+                        {{ radio.choice_label }}
+                    </div>
+                {% endfor %}
+                {% if form.dor_pos_operatoria.errors %}
+                <div class="error-message">
+                    {% for error in form.dor_pos_operatoria.errors %}
+                        {{ error }}
                     {% endfor %}
+                </div>
+                {% endif %}
             </div>
+
             <div class="radio-group">
                 <label>{{ form.escala.label }}</label>
                 {% for radio in form.escala %}
@@ -91,6 +118,13 @@
                         </div>
                     {% endif %}
                 {% endfor %}
+                {% if form.escala.errors %}
+                <div class="error-message">
+                    {% for error in form.escala.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <!-- EVA specific fields -->
@@ -110,6 +144,13 @@
                         </div>
                     {% endfor %}
                 </div>
+                {% if form.eva_score.errors %}
+                <div class="error-message">
+                    {% for error in form.eva_score.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <!-- FLACC specific fields -->
@@ -132,6 +173,13 @@
                                     </div>
                                 {% endfor %}
                             </div>
+                            {% if field.errors %}
+                            <div class="error-message">
+                                {% for error in field.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                     {% endif %}
                 {% endfor %}
@@ -158,6 +206,13 @@
                                     </div>
                                 {% endfor %}
                             </div>
+                            {% if field.errors %}
+                            <div class="error-message">
+                                {% for error in field.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                     {% endif %}
                 {% endfor %}
@@ -184,13 +239,18 @@
                                         </div>
                                     {% endfor %}
                                 </div>
+                                {% if field.errors %}
+                                <div class="error-message">
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
                         {% endif %}
                     {% endwith %}
                 {% endfor %}
             </div>
-
-            <!-- Common fields -->
 
             <div class="total-container">
                 <span class="total-label">Total:</span>
@@ -200,26 +260,50 @@
             
             <div class="radio-group">
                 <label>{{ form.evento_adverso.label }}</label>
-                    {% for radio in form.evento_adverso %}
-                        <div class="radio-option">
-                            <label>{{ radio.tag }}</label>
-                            {{ radio.choice_label }}
-                        </div>
+                {% for radio in form.evento_adverso %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
+                        {{ radio.choice_label }}
+                    </div>
+                {% endfor %}
+                {% if form.evento_adverso.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso.errors %}
+                        {{ error }}
                     {% endfor %}
+                </div>
+                {% endif %}
             </div>
+
             <div class="radio-group" id="evento_adverso_qual_group" style="display: none;">
                 <label for="{{ form.evento_adverso_qual.id_for_label }}">{{ form.evento_adverso_qual.label }}</label>
                 {{ form.evento_adverso_qual }}
+                {% if form.evento_adverso_qual.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso_qual.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
+
             <div class="radio-group">
                 <label>{{ form.ponv.label }}</label>
-                    {% for radio in form.ponv %}
-                        <div class="radio-option">
-                            <label>{{ radio.tag }}</label>
-                            {{ radio.choice_label }}
-                        </div>
+                {% for radio in form.ponv %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
+                        {{ radio.choice_label }}
+                    </div>
+                {% endfor %}
+                {% if form.ponv.errors %}
+                <div class="error-message">
+                    {% for error in form.ponv.errors %}
+                        {{ error }}
                     {% endfor %}
+                </div>
+                {% endif %}
             </div>
+
             <div class="button-container">
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </div>

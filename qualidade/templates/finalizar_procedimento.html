@@ -1,0 +1,153 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Finalizar Procedimento{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/formularios.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="container-info">
+        <div class="info-section">
+            <h2>Resumo do procedimento</h2>
+            <div class="info-item">
+                <div class="procedure-type">
+                    <span class="type-indicator {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% else %}exame{% endif %}"></span>
+                    {{ procedimento.get_procedimento_type_display }}
+                </div>
+                <div class="procedure-name">{{ procedimento.procedimento }}</div>
+                <div class="info-value">{{ procedimento.data_horario|date:"d/m/Y" }} - {{ procedimento.data_horario|time:"H:i" }} às {{ procedimento.data_horario_fim|time:"H:i" }}</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-item">
+                <div class="info-label">Paciente</div>
+                <div class="info-value">{{ procedimento.nome_paciente|default:"Não informado" }}</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-item">
+                <div class="info-label">Local</div>
+                <div class="info-value">{{ procedimento.hospital|default:"Não informado" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-form">
+        <form method="post" id="finalizarProcedimentoForm">
+            <h1>Finalizar Procedimento</h1>
+            {% csrf_token %}
+            
+            <div class="radio-group">
+                <label for="{{ form.data_horario_inicio_efetivo.id_for_label }}">{{ form.data_horario_inicio_efetivo.label }}</label>
+                <div class="input-width-280">{{ form.data_horario_inicio_efetivo }}</div>
+            </div>
+
+            <div class="radio-group">
+                <label for="{{ form.data_horario_fim_efetivo.id_for_label }}">{{ form.data_horario_fim_efetivo.label }}</label>
+                <div class="input-width-280">{{ form.data_horario_fim_efetivo }}</div>
+            </div>
+
+            <div class="radio-group">
+                <label>{{ form.eventos_adversos_graves.label }}</label>
+                {% for radio in form.eventos_adversos_graves %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
+                        {{ radio.choice_label }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="radio-group" id="eventos_adversos_graves_desc_group" style="display: none;">
+                <label for="{{ form.eventos_adversos_graves_desc.id_for_label }}">{{ form.eventos_adversos_graves_desc.label }}</label>
+                {{ form.eventos_adversos_graves_desc }}
+            </div>
+
+            <!-- Similar pattern for other boolean+description fields -->
+            <div class="radio-group">
+                <label>{{ form.reacao_alergica_grave.label }}</label>
+                {% for radio in form.reacao_alergica_grave %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
+                        {{ radio.choice_label }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="radio-group" id="reacao_alergica_grave_desc_group" style="display: none;">
+                <label for="{{ form.reacao_alergica_grave_desc.id_for_label }}">{{ form.reacao_alergica_grave_desc.label }}</label>
+                {{ form.reacao_alergica_grave_desc }}
+            </div>
+
+            <!-- Other boolean fields -->
+            {% for field in form %}
+                {% if field.field.widget.input_type == "radio" and field.name not in 'eventos_adversos_graves,reacao_alergica_grave' %}
+                    <div class="radio-group">
+                        <label>{{ field.label }}</label>
+                        {% for radio in field %}
+                            <div class="radio-option">
+                                <label>{{ radio.tag }}</label>
+                                {{ radio.choice_label }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Financial information -->
+            <div class="radio-group">
+                <label>{{ form.tipo_cobranca.label }}</label>
+                {% for radio in form.tipo_cobranca %}
+                    <div class="radio-option">
+                        <label>{{ radio.tag }}</label>
+                        {{ radio.choice_label }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="radio-group">
+                <label for="{{ form.valor_cobranca.id_for_label }}">{{ form.valor_cobranca.label }}</label>
+                <div class="input-width-280">{{ form.valor_cobranca }}</div>
+            </div>
+
+            <div class="button-container">
+                <button type="submit" class="btn btn-primary">Finalizar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('finalizarProcedimentoForm');
+    
+    // Toggle description fields based on radio selections
+    function setupToggleField(radioName, descGroup) {
+        const radioInputs = form.querySelectorAll(`input[name="${radioName}"]`);
+        const descGroupElement = document.getElementById(descGroup);
+        
+        function toggleDesc() {
+            const selectedValue = form.querySelector(`input[name="${radioName}"]:checked`)?.value;
+            descGroupElement.style.display = selectedValue === 'True' ? 'block' : 'none';
+        }
+        
+        radioInputs.forEach(input => {
+            input.addEventListener('change', toggleDesc);
+        });
+        
+        toggleDesc(); // Initial state
+    }
+    
+    setupToggleField('eventos_adversos_graves', 'eventos_adversos_graves_desc_group');
+    setupToggleField('reacao_alergica_grave', 'reacao_alergica_grave_desc_group');
+});
+</script>
+{% endblock %}
+

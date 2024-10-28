@@ -1,5 +1,6 @@
 from django import forms
 from .models import AvaliacaoRPA
+from agenda.models import Procedimento
 
 class AvaliacaoRPAForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -45,30 +46,130 @@ class AvaliacaoRPAForm(forms.ModelForm):
         cleaned_data = super().clean()
         evento_adverso = cleaned_data.get('evento_adverso')
         evento_adverso_qual = cleaned_data.get('evento_adverso_qual')
+        escala = cleaned_data.get('escala')
+        dor_pos_operatoria = cleaned_data.get('dor_pos_operatoria')
 
-        if evento_adverso and not evento_adverso_qual:
+        # Validate common required fields first
+        required_fields = ['tempo_alta_rpa', 'dor_pos_operatoria', 'evento_adverso', 'ponv']
+        for field in required_fields:
+            if cleaned_data.get(field) is None:
+                self.add_error(field, 'Este campo é obrigatório.')
+
+        if evento_adverso is True and not evento_adverso_qual:
             self.add_error('evento_adverso_qual', 'Este campo é obrigatório quando há evento adverso.')
 
-        escala = cleaned_data.get('escala')
+        if not escala:
+            self.add_error('escala', 'É necessário selecionar uma escala')
 
-        if escala == 'EVA':
-            # Validate EVA specific fields
-            if cleaned_data.get('') is None:
-                self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
-        elif escala == 'FLACC':
-            # Validate FLACC specific fields
-            for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
-                if cleaned_data.get(field) is None:
-                    self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
-        elif escala == 'BPS':
-            # Validate BPS specific fields
-            for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
-                if cleaned_data.get(field) is None:
-                    self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
-        elif escala == 'PAINAD-B':
-            # Validate PAINAD-B specific fields
-            for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
-                if cleaned_data.get(field) is None:
-                    self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+        if escala:
+            if escala == 'EVA':
+                if cleaned_data.get('eva_score') is None:
+                    self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
+            elif escala == 'FLACC':
+                for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
+                    if cleaned_data.get(field) is None:
+                        self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
+            elif escala == 'BPS':
+                for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
+                    if cleaned_data.get(field) is None:
+                        self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
+            elif escala == 'PAINAD-B':
+                for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
+                    if cleaned_data.get(field) is None:
+                        self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+
+        return cleaned_data
+
+class ProcedimentoFinalizacaoForm(forms.ModelForm):
+    class Meta:
+        model = Procedimento
+        fields = [
+            'data_horario_inicio_efetivo',
+            'data_horario_fim_efetivo',
+            'eventos_adversos_graves',
+            'eventos_adversos_graves_desc',
+            'reacao_alergica_grave',
+            'reacao_alergica_grave_desc',
+            'encaminhamento_uti',
+            'evento_adverso_evitavel',
+            'adesao_checklist',
+            'uso_tecnicas_assepticas',
+            'conformidade_diretrizes',
+            'ponv',
+            'adesao_profilaxia',
+            'tipo_cobranca',
+            'valor_cobranca',
+        ]
+        widgets = {
+            'data_horario_inicio_efetivo': forms.DateTimeInput(
+                attrs={'type': 'datetime-local', 'class': 'form-control'}
+            ),
+            'data_horario_fim_efetivo': forms.DateTimeInput(
+                attrs={'type': 'datetime-local', 'class': 'form-control'}
+            ),
+            'eventos_adversos_graves': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'eventos_adversos_graves_desc': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 3}
+            ),
+            'reacao_alergica_grave': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'reacao_alergica_grave_desc': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 3}
+            ),
+            'encaminhamento_uti': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'evento_adverso_evitavel': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'adesao_checklist': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'uso_tecnicas_assepticas': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'conformidade_diretrizes': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'ponv': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'adesao_profilaxia': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'tipo_cobranca': forms.RadioSelect(
+                attrs={'class': 'form-check-inline'}
+            ),
+            'valor_cobranca': forms.NumberInput(
+                attrs={'class': 'form-control'}
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        eventos_adversos_graves = cleaned_data.get('eventos_adversos_graves')
+        eventos_adversos_graves_desc = cleaned_data.get('eventos_adversos_graves_desc')
+        reacao_alergica_grave = cleaned_data.get('reacao_alergica_grave')
+        reacao_alergica_grave_desc = cleaned_data.get('reacao_alergica_grave_desc')
+
+        if eventos_adversos_graves and not eventos_adversos_graves_desc:
+            self.add_error('eventos_adversos_graves_desc', 
+                          'Este campo é obrigatório quando há eventos adversos graves.')
+
+        if reacao_alergica_grave and not reacao_alergica_grave_desc:
+            self.add_error('reacao_alergica_grave_desc', 
+                          'Este campo é obrigatório quando há reação alérgica grave.')
 
         return cleaned_data
