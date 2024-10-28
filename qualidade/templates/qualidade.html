@@ -134,7 +134,11 @@
                                             {% if procedimento.status != 'finished' %}
                                                 <button class="btn-finalizar" data-procedure-id="{{ procedimento.id }}">Finalizar Procedimento</button>
                                             {% endif %}
-                                            <button class="btn-avaliar avaliar-rpa">Avaliar RPA</button>
+                                            {% if procedimento.avaliacao_rpa %}
+                                                <button class="btn-avaliar ver-rpa" data-procedure-id="{{ procedimento.id }}">Ver RPA</button>
+                                            {% else %}
+                                                <button class="btn-avaliar avaliar-rpa" data-procedure-id="{{ procedimento.id }}">Avaliar RPA</button>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -210,7 +214,11 @@
                                                     {% if procedimento.status != 'finished' %}
                                                         <button class="btn-finalizar" data-procedure-id="{{ procedimento.id }}">Finalizar Procedimento</button>
                                                     {% endif %}
-                                                    <button class="btn-avaliar avaliar-rpa">Avaliar RPA</button>
+                                                    {% if procedimento.avaliacao_rpa %}
+                                                        <button class="btn-avaliar ver-rpa" data-procedure-id="{{ procedimento.id }}">Ver RPA</button>
+                                                    {% else %}
+                                                        <button class="btn-avaliar avaliar-rpa" data-procedure-id="{{ procedimento.id }}">Avaliar RPA</button>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </div>
@@ -454,12 +462,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const modal = document.getElementById(`procedure-details-modal-${procedureId}`);
 
             if (modal) {
-                modal.style.display = 'block'; // Show the modal
+                modal.style.display = 'block';
+                
+                // Handle both RPA buttons
                 const avaliarRPABtn = modal.querySelector('.avaliar-rpa');
-                avaliarRPABtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    window.location.href = `/qualidade/avaliacao-rpa/${procedureId}/`;
-                });
+                const verRPABtn = modal.querySelector('.ver-rpa');
+                
+                if (avaliarRPABtn) {
+                    avaliarRPABtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.location.href = `/qualidade/avaliacao-rpa/${procedureId}/`;
+                    });
+                }
+                
+                if (verRPABtn) {
+                    verRPABtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.location.href = `/qualidade/avaliacao-rpa/${procedureId}/`;
+                    });
+                }
             }
         });
     });
