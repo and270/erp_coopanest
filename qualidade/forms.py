@@ -159,17 +159,26 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        eventos_adversos_graves = cleaned_data.get('eventos_adversos_graves')
-        eventos_adversos_graves_desc = cleaned_data.get('eventos_adversos_graves_desc')
-        reacao_alergica_grave = cleaned_data.get('reacao_alergica_grave')
-        reacao_alergica_grave_desc = cleaned_data.get('reacao_alergica_grave_desc')
+        
+        # All fields are required
+        required_fields = [
+            'data_horario_inicio_efetivo', 'data_horario_fim_efetivo',
+            'eventos_adversos_graves', 'reacao_alergica_grave',
+            'encaminhamento_uti', 'evento_adverso_evitavel',
+            'adesao_checklist', 'uso_tecnicas_assepticas',
+            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia',
+            'tipo_cobranca', 'valor_cobranca'
+        ]
+        
+        for field in required_fields:
+            if cleaned_data.get(field) is None:
+                self.add_error(field, 'Este campo é obrigatório.')
 
-        if eventos_adversos_graves and not eventos_adversos_graves_desc:
-            self.add_error('eventos_adversos_graves_desc', 
-                          'Este campo é obrigatório quando há eventos adversos graves.')
+        # Check description fields when related fields are True
+        if cleaned_data.get('eventos_adversos_graves') and not cleaned_data.get('eventos_adversos_graves_desc'):
+            self.add_error('eventos_adversos_graves_desc', 'Este campo é obrigatório quando há eventos adversos graves.')
 
-        if reacao_alergica_grave and not reacao_alergica_grave_desc:
-            self.add_error('reacao_alergica_grave_desc', 
-                          'Este campo é obrigatório quando há reação alérgica grave.')
+        if cleaned_data.get('reacao_alergica_grave') and not cleaned_data.get('reacao_alergica_grave_desc'):
+            self.add_error('reacao_alergica_grave_desc', 'Este campo é obrigatório quando há reação alérgica grave.')
 
         return cleaned_data

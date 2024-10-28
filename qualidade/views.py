@@ -300,7 +300,10 @@ def finalizar_procedimento_view(request, procedimento_id):
             procedimento = form.save(commit=False)
             procedimento.status = STATUS_FINISHED
             procedimento.save()
+            messages.success(request, 'Procedimento finalizado com sucesso!')
             return redirect('qualidade')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
     else:
         form = ProcedimentoFinalizacaoForm(instance=procedimento)
 

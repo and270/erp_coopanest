@@ -136,7 +136,8 @@
         max-width: 280px;
     }
     .input-width-280 input[type="time"],
-    .input-width-280 input[type="datetime-local"] {
+    .input-width-280 input[type="datetime-local"],
+    .input-width-280 input[type="number"] {
         border: 1px solid #E6E6E6;
         padding: 8px;
         border-radius: 5px;

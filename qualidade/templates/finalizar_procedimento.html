@@ -42,14 +42,40 @@
             <h1>Finalizar Procedimento</h1>
             {% csrf_token %}
             
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+            
             <div class="radio-group">
                 <label for="{{ form.data_horario_inicio_efetivo.id_for_label }}">{{ form.data_horario_inicio_efetivo.label }}</label>
-                <div class="input-width-280">{{ form.data_horario_inicio_efetivo }}</div>
+                <div class="input-width-280">
+                    {{ form.data_horario_inicio_efetivo }}
+                    {% if form.data_horario_inicio_efetivo.errors %}
+                    <div class="error-message">
+                        {% for error in form.data_horario_inicio_efetivo.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="radio-group">
                 <label for="{{ form.data_horario_fim_efetivo.id_for_label }}">{{ form.data_horario_fim_efetivo.label }}</label>
-                <div class="input-width-280">{{ form.data_horario_fim_efetivo }}</div>
+                <div class="input-width-280">
+                    {{ form.data_horario_fim_efetivo }}
+                    {% if form.data_horario_fim_efetivo.errors %}
+                    <div class="error-message">
+                        {% for error in form.data_horario_fim_efetivo.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="radio-group">
@@ -62,11 +88,25 @@
                         </div>
                     {% endfor %}
                 </div>
+                {% if form.eventos_adversos_graves.errors %}
+                <div class="error-message">
+                    {% for error in form.eventos_adversos_graves.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="radio-group" id="eventos_adversos_graves_desc_group" style="display: none;">
                 <label for="{{ form.eventos_adversos_graves_desc.id_for_label }}">{{ form.eventos_adversos_graves_desc.label }}</label>
                 {{ form.eventos_adversos_graves_desc }}
+                {% if form.eventos_adversos_graves_desc.errors %}
+                <div class="error-message">
+                    {% for error in form.eventos_adversos_graves_desc.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="radio-group">
@@ -79,11 +119,25 @@
                         </div>
                     {% endfor %}
                 </div>
+                {% if form.reacao_alergica_grave.errors %}
+                <div class="error-message">
+                    {% for error in form.reacao_alergica_grave.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="radio-group" id="reacao_alergica_grave_desc_group" style="display: none;">
                 <label for="{{ form.reacao_alergica_grave_desc.id_for_label }}">{{ form.reacao_alergica_grave_desc.label }}</label>
                 {{ form.reacao_alergica_grave_desc }}
+                {% if form.reacao_alergica_grave_desc.errors %}
+                <div class="error-message">
+                    {% for error in form.reacao_alergica_grave_desc.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             {% for field in form %}
@@ -100,13 +154,29 @@
                                 {% endif %}
                             {% endfor %}
                         </div>
+                        {% if field.errors %}
+                        <div class="error-message">
+                            {% for error in field.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                 {% endif %}
             {% endfor %}
 
             <div class="radio-group">
                 <label for="{{ form.valor_cobranca.id_for_label }}">{{ form.valor_cobranca.label }}</label>
-                <div class="input-width-280">{{ form.valor_cobranca }}</div>
+                <div class="input-width-280">
+                    {{ form.valor_cobranca }}
+                    {% if form.valor_cobranca.errors %}
+                    <div class="error-message">
+                        {% for error in form.valor_cobranca.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="button-container">
