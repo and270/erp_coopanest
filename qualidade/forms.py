@@ -83,6 +83,12 @@ class AvaliacaoRPAForm(forms.ModelForm):
 class ProcedimentoFinalizacaoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Add custom labels
+        self.fields['data_horario_inicio_efetivo'].label = 'Horário de Início'
+        self.fields['data_horario_fim_efetivo'].label = 'Horário de Término'
+        self.fields['eventos_adversos_graves_desc'].label = 'Qual'
+        self.fields['reacao_alergica_grave_desc'].label = 'Qual'
+        
         # Preenche os campos datetime se o objeto já existir
         if self.instance and self.instance.pk:  # verifica se é um objeto existente
             if self.instance.data_horario_inicio_efetivo:
