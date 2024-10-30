@@ -50,31 +50,33 @@
             </div>
             {% endif %}
             
-            <div class="radio-group">
-                <label for="{{ form.data_horario_inicio_efetivo.id_for_label }}">{{ form.data_horario_inicio_efetivo.label }}</label>
-                <div class="input-width-280">
-                    {{ form.data_horario_inicio_efetivo }}
-                    {% if form.data_horario_inicio_efetivo.errors %}
-                    <div class="error-message">
-                        {% for error in form.data_horario_inicio_efetivo.errors %}
-                            {{ error }}
-                        {% endfor %}
+            <div class="time-inputs-row">
+                <div class="radio-group">
+                    <label for="{{ form.data_horario_inicio_efetivo.id_for_label }}">{{ form.data_horario_inicio_efetivo.label }}</label>
+                    <div class="input-width-280">
+                        {{ form.data_horario_inicio_efetivo }}
+                        {% if form.data_horario_inicio_efetivo.errors %}
+                        <div class="error-message">
+                            {% for error in form.data_horario_inicio_efetivo.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
-            </div>
 
-            <div class="radio-group">
-                <label for="{{ form.data_horario_fim_efetivo.id_for_label }}">{{ form.data_horario_fim_efetivo.label }}</label>
-                <div class="input-width-280">
-                    {{ form.data_horario_fim_efetivo }}
-                    {% if form.data_horario_fim_efetivo.errors %}
-                    <div class="error-message">
-                        {% for error in form.data_horario_fim_efetivo.errors %}
-                            {{ error }}
-                        {% endfor %}
+                <div class="radio-group">
+                    <label for="{{ form.data_horario_fim_efetivo.id_for_label }}">{{ form.data_horario_fim_efetivo.label }}</label>
+                    <div class="input-width-280">
+                        {{ form.data_horario_fim_efetivo }}
+                        {% if form.data_horario_fim_efetivo.errors %}
+                        <div class="error-message">
+                            {% for error in form.data_horario_fim_efetivo.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
             </div>
 

@@ -429,3 +429,25 @@
         font-size: 12px;
         line-height: 14.52px;
     }
+
+    .time-inputs-row {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 20px;
+        justify-content: flex-start;
+    }
+
+    .time-inputs-row .radio-group {
+        flex: 0 0 280px;
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 768px) {
+        .time-inputs-row {
+            flex-direction: column;
+            gap: 20px;
+        }
+        .time-inputs-row .radio-group {
+            margin-bottom: 20px;
+        }
+    }
