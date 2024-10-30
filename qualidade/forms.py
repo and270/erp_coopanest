@@ -1,6 +1,7 @@
 from django import forms
 from .models import AvaliacaoRPA
 from agenda.models import Procedimento
+import pytz
 
 class AvaliacaoRPAForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -89,19 +90,25 @@ class AvaliacaoRPAForm(forms.ModelForm):
 class ProcedimentoFinalizacaoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
         # Add custom labels
         self.fields['data_horario_inicio_efetivo'].label = 'Horário de Início'
         self.fields['data_horario_fim_efetivo'].label = 'Horário de Término'
         self.fields['eventos_adversos_graves_desc'].label = 'Qual'
         self.fields['reacao_alergica_grave_desc'].label = 'Qual'
         
-        # Preenche os campos datetime se o objeto já existir
-        if self.instance and self.instance.pk:  # verifica se é um objeto existente
+        # Modify the widget to include timezone info
+        self.fields['data_horario_inicio_efetivo'].input_formats = ['%Y-%m-%dT%H:%M']
+        self.fields['data_horario_fim_efetivo'].input_formats = ['%Y-%m-%dT%H:%M']
+        
+        if self.instance and self.instance.pk:
             if self.instance.data_horario_inicio_efetivo:
-                # Converte para o formato aceito pelo input datetime-local
-                self.initial['data_horario_inicio_efetivo'] = self.instance.data_horario_inicio_efetivo.strftime('%Y-%m-%dT%H:%M')
+                # Convert to local time for display
+                local_time = self.instance.data_horario_inicio_efetivo.astimezone(pytz.timezone('America/Sao_Paulo'))
+                self.initial['data_horario_inicio_efetivo'] = local_time.strftime('%Y-%m-%dT%H:%M')
             if self.instance.data_horario_fim_efetivo:
-                self.initial['data_horario_fim_efetivo'] = self.instance.data_horario_fim_efetivo.strftime('%Y-%m-%dT%H:%M')
+                local_time = self.instance.data_horario_fim_efetivo.astimezone(pytz.timezone('America/Sao_Paulo'))
+                self.initial['data_horario_fim_efetivo'] = local_time.strftime('%Y-%m-%dT%H:%M')
 
     class Meta:
         model = Procedimento
@@ -125,10 +132,18 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         ]
         widgets = {
             'data_horario_inicio_efetivo': forms.DateTimeInput(
-                attrs={'type': 'datetime-local', 'class': 'form-control'}
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control',
+                    'data-timezone': 'America/Sao_Paulo'
+                }
             ),
             'data_horario_fim_efetivo': forms.DateTimeInput(
-                attrs={'type': 'datetime-local', 'class': 'form-control'}
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control',
+                    'data-timezone': 'America/Sao_Paulo'
+                }
             ),
             'dor_pos_operatoria_imediata': forms.RadioSelect(
                 choices=[(i, str(i)) for i in range(1, 11)], 
@@ -187,6 +202,23 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         
+        inicio = cleaned_data.get('data_horario_inicio_efetivo')
+        fim = cleaned_data.get('data_horario_fim_efetivo')
+
+        if inicio:
+            # Convert to UTC, then back to Sao Paulo to preserve the exact time
+            sp_timezone = pytz.timezone('America/Sao_Paulo')
+            inicio = inicio.replace(tzinfo=None)  # Remove any timezone info
+            inicio = sp_timezone.localize(inicio)  # Add Sao Paulo timezone
+            cleaned_data['data_horario_inicio_efetivo'] = inicio
+
+        if fim:
+            # Same treatment for end time
+            sp_timezone = pytz.timezone('America/Sao_Paulo')
+            fim = fim.replace(tzinfo=None)  # Remove any timezone info
+            fim = sp_timezone.localize(fim)  # Add Sao Paulo timezone
+            cleaned_data['data_horario_fim_efetivo'] = fim
+
         # All fields are required
         required_fields = [
             'data_horario_inicio_efetivo', 'data_horario_fim_efetivo', 'dor_pos_operatoria_imediata',
