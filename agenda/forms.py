@@ -70,10 +70,10 @@ class ProcedimentoForm(forms.ModelForm):
         }
 
         if user:
-            # Filter the ForeignKey fields by the user's group
-            self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group)
-            self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group)
-            self.fields['anestesistas_responsaveis'].queryset = Anesthesiologist.objects.filter(group=user.group)
+            # Filter and order all ForeignKey fields by name
+            self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
+            self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
+            self.fields['anestesistas_responsaveis'].queryset = Anesthesiologist.objects.filter(group=user.group).order_by('name')
 
         # Add CSS classes to the conditional fields
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
