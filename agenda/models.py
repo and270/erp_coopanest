@@ -38,7 +38,7 @@ class Procedimento(models.Model):
     nome_paciente = models.CharField(max_length=255, verbose_name='Nome do Paciente', default='')
     #telefone_paciente = models.CharField(max_length=20, verbose_name='Telefone do Paciente', blank=True, null=True)
     email_paciente = models.EmailField(verbose_name='Email do Paciente', blank=True, null=True)
-    cpf_paciente = models.CharField(max_length=15, blank=True, null=True, default='000.000.000-00', verbose_name='CPF do Paciente')
+    cpf_paciente = models.CharField(max_length=15, blank=True, null=True, verbose_name='CPF do Paciente')
     convenio = models.CharField(max_length=255, blank=True, null=True, verbose_name='Convênio')
     procedimento = models.CharField(max_length=255, verbose_name='Procedimento', default='')
     data_horario = models.DateTimeField(verbose_name='Data e Horário Marcados', default=timezone.now)

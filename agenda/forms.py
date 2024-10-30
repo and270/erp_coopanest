@@ -25,7 +25,8 @@ class ProcedimentoForm(forms.ModelForm):
 
     cpf_paciente = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
-        label="CPF do Paciente"
+        label="CPF do Paciente",
+        required=False
     )
 
     anestesistas_responsaveis = forms.ModelMultipleChoiceField(
