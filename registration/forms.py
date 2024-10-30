@@ -8,7 +8,11 @@ from django.utils.translation import gettext_lazy as _
 
 
 class CustomUserCreationForm(UserCreationForm):
-    group = forms.ModelChoiceField(queryset=Groups.objects.all(), required=False, label='Selecione seu Grupo')
+    group = forms.ModelChoiceField(
+        queryset=Groups.objects.all().order_by('name'), 
+        required=False, 
+        label='Selecione seu Grupo'
+    )
     new_group = forms.CharField(required=False, label='Registre o nome do seu Grupo')
     new_group_email = forms.EmailField(required=False, label='E-mail do Grupo')
     create_new_group = forms.BooleanField(
@@ -112,7 +116,10 @@ class AnesthesiologistForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if user:
-            self.fields['user'].queryset = CustomUser.objects.filter(user_type=ANESTESISTA_USER, group=user.group)
+            self.fields['user'].queryset = CustomUser.objects.filter(
+                user_type=ANESTESISTA_USER, 
+                group=user.group
+            ).order_by('email')
         
         # Add this line to change the empty label
         self.fields['user'].empty_label = "Selecione se for um Anestesista cadastrado"
