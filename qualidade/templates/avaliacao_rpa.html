@@ -319,6 +319,18 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+    $(document).ready(function(){
+        $('.time-mask').mask('00:00', {
+            clearIfNotMatch: true,
+            translation: {
+                '0': {pattern: /[0-9]/}
+            }
+        });
+    });
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('avaliacaoRPAForm');

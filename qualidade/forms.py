@@ -21,7 +21,13 @@ class AvaliacaoRPAForm(forms.ModelForm):
             'linguagem_corporal', 'consolabilidade_painad'
         ]
         widgets = {
-            'tempo_alta_rpa': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control form-options-text'}),
+            'tempo_alta_rpa': forms.TextInput(
+                attrs={
+                    'type': 'text',
+                    'class': 'form-control form-options-text time-input time-mask',
+                    'placeholder': 'hh:mm',
+                }
+            ),
             'dor_pos_operatoria': forms.RadioSelect(choices=[(True, 'Sim'), (False, 'Não')], attrs={'class': 'form-options-text'}),
             'escala': forms.RadioSelect(attrs={'class': 'form-options-text'}),
             'eva_score': forms.RadioSelect(choices=[(i, str(i)) for i in range(1, 11)], attrs={'class': 'form-options-text'}),
