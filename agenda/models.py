@@ -229,7 +229,7 @@ class Procedimento(models.Model):
     valor_cobranca = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        verbose_name='Valor (se hospital e particular) / número da guia (se coop)',
+        verbose_name='Valor',
         null=True,
         blank=True
     )
