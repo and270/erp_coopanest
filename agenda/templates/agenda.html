@@ -126,7 +126,7 @@
                                         <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
                                         <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                         <br>
-                                        <p>Procedimento: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                        <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
                                         <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                         <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                         <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
@@ -199,7 +199,7 @@
                                                 <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
                                                 <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                                 <br>
-                                                <p>Procedimento: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                                <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
                                                 <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                                 <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                                 <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
