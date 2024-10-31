@@ -187,7 +187,10 @@ def get_procedure(request, procedure_id):
         'email_paciente': procedure.email_paciente,
         'convenio': procedure.convenio,
         'cpf_paciente': procedure.cpf_paciente,
-        'procedimento': procedure.procedimento,
+        'procedimento_principal': {
+            'id': procedure.procedimento_principal.id,
+            'text': procedure.procedimento_principal.name
+        } if procedure.procedimento_principal else None,
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
         'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',

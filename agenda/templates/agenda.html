@@ -801,7 +801,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_email_paciente').value = data.email_paciente;
                 document.getElementById('id_convenio').value = data.convenio;
                 document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
-                document.getElementById('id_procedimento').value = data.procedimento;
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
                 document.getElementById('id_cirurgiao').value = data.cirurgiao;
@@ -810,6 +809,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
                 
                 document.querySelectorAll('.selected-anesthesiologist').forEach(el => el.remove());
+
+                if (data.procedimento_principal) {
+                    const procedimentoSelect = $('#id_procedimento_principal');
+                    const newOption = new Option(
+                        data.procedimento_principal.text, 
+                        data.procedimento_principal.id, 
+                        true, 
+                        true
+                    );
+                    procedimentoSelect.append(newOption).trigger('change');
+                }
+            
                 
                 data.anestesistas_responsaveis.forEach(anestesista => {
                     const option = Array.from(anesthesiologistSelect.options).find(opt => opt.value == anestesista.id);
