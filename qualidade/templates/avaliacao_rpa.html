@@ -20,7 +20,7 @@
                     <span class="type-indicator {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% else %}exame{% endif %}"></span>
                     {{ procedimento.get_procedimento_type_display }}
                 </div>
-                <div class="procedure-name">{{ procedimento.procedimento }}</div>
+                <div class="procedure-name">{{ procedimento.procedimento_principal.name }}</div>
                 <div class="info-value">{{ procedimento.data_horario|date:"d/m/Y" }} - {{ procedimento.data_horario|time:"H:i" }} às {{ procedimento.data_horario_fim|time:"H:i" }}</div>
             </div>
         </div>

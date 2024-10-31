@@ -6,6 +6,12 @@ from django.contrib.postgres.fields import ArrayField
 import uuid
 from django.utils.safestring import mark_safe
 
+class ProcedimentoDetalhes(models.Model):
+    name = models.CharField(max_length=500, unique=True)
+
+    def __str__(self):
+        return self.name
+    
 class Procedimento(models.Model):
 
     PROCEDIMENTO_TYPE = (
@@ -41,7 +47,13 @@ class Procedimento(models.Model):
     email_paciente = models.EmailField(verbose_name='Email do Paciente', blank=True, null=True)
     cpf_paciente = models.CharField(max_length=15, blank=True, null=True, verbose_name='CPF do Paciente')
     convenio = models.CharField(max_length=255, blank=True, null=True, verbose_name='Convênio')
-    procedimento = models.CharField(max_length=255, verbose_name='Procedimento Principal', default='')
+    procedimento_principal = models.ForeignKey(
+        ProcedimentoDetalhes,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Procedimento Principal'
+    )
     data_horario = models.DateTimeField(verbose_name='Data e Horário Marcados', default=timezone.now)
     data_horario_fim = models.DateTimeField(verbose_name='Previsão de Término', default=timezone.now().replace(hour=20, minute=0, second=0, microsecond=0))
     hospital = models.ForeignKey(HospitalClinic, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hospital/Clínica')

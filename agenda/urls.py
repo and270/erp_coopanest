@@ -8,6 +8,7 @@ urlpatterns = [
     path('get-procedure/<int:procedure_id>/', views.get_procedure, name='get_procedure'),
     path('delete-procedure/<int:procedure_id>/', views.delete_procedure, name='delete_procedure'),
     path('create-procedure/', views.create_procedure, name='create_procedure'),
+     path('procedure-autocomplete/', views.ProcedureAutocomplete.as_view(), name='procedure-autocomplete'),
     path('escala/', views.escala_view, name='escala'),
     path('create-escala/', views.create_escala, name='create_escala'),
     path('update-escala/<int:escala_id>/', views.update_escala, name='update_escala'),

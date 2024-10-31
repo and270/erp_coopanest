@@ -112,7 +112,7 @@
                             {% if procedimento.data_horario.date == date.day.date %}
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
-                                    <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                    <span class="procedure-name">{{ procedimento.procedimento_principal.name }}</span>
                                     <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
                                         {% for anestesista in procedimento.anestesistas_responsaveis.all %}
                                             {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
@@ -126,7 +126,7 @@
                                         <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
                                         <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                         <br>
-                                        <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                        <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                         <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                         <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                         <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
@@ -185,7 +185,7 @@
                                                 <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             </div>
-                                            <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name }}</span>
                                             <span class="procedure-anesthesiologist">
                                                 {% for anestesista in procedimento.anestesistas_responsaveis.all %}
                                                     {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
@@ -199,7 +199,7 @@
                                                 <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
                                                 <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                                 <br>
-                                                <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                                <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                                 <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                                 <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                                 <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
@@ -293,8 +293,8 @@
             
             
             <div class="form-group">
-                <label for="{{ form.procedimento.id_for_label }}">{{ form.procedimento.label }}<span class="required-asterisk">*</span></label>
-                {{ form.procedimento }}
+                <label for="{{ form.procedimento_principal.id_for_label }}">{{ form.procedimento_principal.label }}<span class="required-asterisk">*</span></label>
+                {{ form.procedimento_principal }}
             </div>
             
             <div class="form-group">
@@ -351,6 +351,41 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Initialize Select2 -->
+<script>
+    $(document).ready(function() {
+        $('#{{ form.procedimento_principal.auto_id }}').select2({
+            placeholder: 'Digite para buscar...',
+            minimumInputLength: 2,
+            language: 'pt-BR',
+            ajax: {
+                url: '{% url "procedure-autocomplete" %}',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        page: params.page
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            }
+        });
+    });
+</script>
+
+<!-- Portuguese language for Select2 -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/pt-BR.js"></script>
+
 <script>
     $(document).ready(function() {
         $('#{{ form.cpf_paciente.id_for_label }}').mask('000.000.000-00', {reverse: true});

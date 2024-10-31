@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from registration.models import Anesthesiologist, CustomUser
-from .models import Procedimento, EscalaAnestesiologista
+from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes
 from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange, weekday
@@ -20,6 +20,7 @@ import calendar
 from django.db.models import Q
 from django.core.mail import send_mail
 from django.urls import reverse
+from dal_select2.views import Select2QuerySetView
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -386,6 +387,18 @@ def survey_view(request, nps_token):
         'procedimento': procedimento,
     }
     return render(request, 'survey_form.html', context)
+
+class ProcedureAutocomplete(Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return ProcedimentoDetalhes.objects.none()
+
+        qs = ProcedimentoDetalhes.objects.all()
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs.order_by('name')
 
 @login_required
 def agenda_view(request):

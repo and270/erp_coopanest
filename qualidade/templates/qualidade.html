@@ -93,7 +93,7 @@
                             {% if procedimento.data_horario.date == date.day.date %}
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
-                                    <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                    <span class="procedure-name">{{ procedimento.procedimento_principal.name }}</span>
                                     <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
                                         {% for anestesista in procedimento.anestesistas_responsaveis.all %}
                                             {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
@@ -108,7 +108,7 @@
                                         <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                         <br>
                                         <p>Status: <strong><span class="modal-status">{{ procedimento.get_status_display }}</span></strong></p>
-                                        <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                        <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                         <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                         <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                         <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
@@ -175,7 +175,7 @@
                                                 <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             </div>
-                                            <span class="procedure-name">{{ procedimento.procedimento }}</span>
+                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name }}</span>
                                             <span class="procedure-anesthesiologist">
                                                 {% for anestesista in procedimento.anestesistas_responsaveis.all %}
                                                     {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
@@ -190,7 +190,7 @@
                                                 <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                                 <br>
                                                 <p>Status: <strong><span class="modal-status">{{ procedimento.get_status_display }}</span></strong></p>
-                                                <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento }}</span></strong></p>
+                                                <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                                 <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                                 <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
                                                 <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>

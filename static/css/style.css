@@ -410,6 +410,58 @@ main {
     color: #ffffff;
 }
 
+/* Select2 Autocomplete Styling */
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 38px !important;
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    background-color: #fff !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    padding: 8px !important;
+    border: 1px solid #ced4da !important;
+}
+
+.select2-dropdown {
+    border: 1px solid #ced4da !important;
+}
+
+.select2-results__option {
+    padding: 8px !important;
+    font-size: 14px !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #1A73E8 !important;
+}
+
+/* Override any conflicting form-group select styles */
+.form-group .select2-container--default .select2-selection--single {
+    background-image: none !important;
+}
+
+.form-group select:not([class*="select2"]) {
+    /* Your existing select styles */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%204%205%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M2%200L0%202h4zm0%205L0%203h4z%22/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px top 50%;
+    background-size: 12px auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 /* Remove dropdown arrow for anesthesiologist select across all browsers */
 #id_anestesistas_responsaveis {
     /* Remove default arrow */
