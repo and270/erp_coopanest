@@ -41,7 +41,7 @@ class Procedimento(models.Model):
     email_paciente = models.EmailField(verbose_name='Email do Paciente', blank=True, null=True)
     cpf_paciente = models.CharField(max_length=15, blank=True, null=True, verbose_name='CPF do Paciente')
     convenio = models.CharField(max_length=255, blank=True, null=True, verbose_name='Convênio')
-    procedimento = models.CharField(max_length=255, verbose_name='Procedimento', default='')
+    procedimento = models.CharField(max_length=255, verbose_name='Procedimento Principal', default='')
     data_horario = models.DateTimeField(verbose_name='Data e Horário Marcados', default=timezone.now)
     data_horario_fim = models.DateTimeField(verbose_name='Previsão de Término', default=timezone.now().replace(hour=20, minute=0, second=0, microsecond=0))
     hospital = models.ForeignKey(HospitalClinic, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hospital/Clínica')
@@ -184,7 +184,7 @@ class Procedimento(models.Model):
 
     data_horario_inicio_efetivo = models.DateTimeField(verbose_name='Horário de Início Efetivo', null=True, blank=True)
     data_horario_fim_efetivo = models.DateTimeField(verbose_name='Horário de Término Efetivo', null=True, blank=True)
-    dor_pos_operatoria = models.BooleanField(verbose_name="Dor pós operatória imediata", default=False)
+    dor_pos_operatoria = models.BooleanField(verbose_name="Dor pós operatória imediata", null=True, blank=True)
     escala = models.CharField(max_length=10, choices=ESCALA_CHOICES, verbose_name="Qual escala?", null=True, blank=True)
     # EVA specific fields
     eva_score = models.IntegerField(verbose_name="Quanto?", null=True, blank=True)

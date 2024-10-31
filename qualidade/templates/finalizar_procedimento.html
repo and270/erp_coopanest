@@ -316,7 +316,7 @@
 
             <!-- Exclude already handled fields from the general radio fields loop -->
             {% for field in form %}
-                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad'|split:',' %}
+                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca'|split:',' %}
                     {% if field.field.widget.input_type == "radio" and field.name not in excluded_fields %}
                         <div class="radio-group">
                             <label>{{ field.label }}</label>
@@ -343,6 +343,27 @@
             {% endfor %}
 
             <div class="radio-group">
+                <label>{{ form.tipo_cobranca.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.tipo_cobranca %}
+                        {% if radio.choice_label != '---------' %}
+                            <div class="radio-option">
+                                <label>{{ radio.tag }}</label>
+                                {{ radio.choice_label }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% if form.tipo_cobranca.errors %}
+                <div class="error-message">
+                    {% for error in form.tipo_cobranca.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group" id="valor_cobranca_container">
                 <label for="{{ form.valor_cobranca.id_for_label }}">{{ form.valor_cobranca.label }}</label>
                 <div class="input-width-280">
                     {{ form.valor_cobranca }}
@@ -369,13 +390,36 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('finalizarProcedimentoForm');
-    
-    // Scale fields visibility handling
+
     const escalaInputs = form.querySelectorAll('input[name="escala"]');
     const evaFields = document.getElementById('eva-fields');
     const flaccFields = document.getElementById('flacc-fields');
     const bpsFields = document.getElementById('bps-fields');
     const painadBFields = document.getElementById('painad-b-fields');
+    const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]');
+    const valorCobrancaContainer = document.getElementById('valor_cobranca_container');
+
+    function handleTipoCobrancaChange() {
+        // Get the selected radio button
+        const selectedValue = document.querySelector('input[name="tipo_cobranca"]:checked')?.value;
+        console.log('Tipo cobrança changed:', selectedValue);
+        
+        // If Cooperativa is selected, hide the valor_cobranca field
+        if (selectedValue === 'cooperativa') {
+            valorCobrancaContainer.style.display = 'none';
+            document.getElementById('id_valor_cobranca').value = '';
+        } else {
+            valorCobrancaContainer.style.display = 'block';
+        }
+    }
+
+    // Add change event listener to all tipo_cobranca radio buttons
+    tipoCobrancaInputs.forEach(input => {
+        input.addEventListener('change', handleTipoCobrancaChange);
+    });
+    
+    // Run on page load to handle initial state
+    handleTipoCobrancaChange();
 
     function showRelevantFields() {
         const selectedScale = form.querySelector('input[name="escala"]:checked');

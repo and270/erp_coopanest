@@ -114,6 +114,12 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 local_time = self.instance.data_horario_fim_efetivo.astimezone(pytz.timezone('America/Sao_Paulo'))
                 self.initial['data_horario_fim_efetivo'] = local_time.strftime('%Y-%m-%dT%H:%M')
 
+        # Add data attributes to tipo_cobranca widget
+        self.fields['tipo_cobranca'].widget.attrs.update({
+            'class': 'form-check-inline',
+            'data-controls': 'valor_cobranca'
+        })
+
     class Meta:
         model = Procedimento
         fields = [
@@ -217,7 +223,11 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 attrs={'class': 'form-check-inline'}
             ),
             'valor_cobranca': forms.NumberInput(
-                attrs={'class': 'form-control'}
+                attrs={
+                    'class': 'form-control',
+                    'data-dependent-on': 'tipo_cobranca',
+                    'id': 'id_valor_cobranca'
+                }
             ),
         }
 
@@ -250,14 +260,13 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'encaminhamento_uti', 'evento_adverso_evitavel',
             'adesao_checklist', 'uso_tecnicas_assepticas',
             'conformidade_diretrizes', 'ponv', 'adesao_profilaxia',
-            'tipo_cobranca', 'valor_cobranca'
+            'tipo_cobranca'
         ]
         
         for field in required_fields:
             if cleaned_data.get(field) is None:
                 self.add_error(field, 'Este campo é obrigatório.')
 
-        # Check description fields when related fields are True
         if cleaned_data.get('eventos_adversos_graves') and not cleaned_data.get('eventos_adversos_graves_desc'):
             self.add_error('eventos_adversos_graves_desc', 'Este campo é obrigatório quando há eventos adversos graves.')
 
@@ -283,5 +292,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
                     if cleaned_data.get(field) is None:
                         self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+
+        tipo_cobranca = cleaned_data.get('tipo_cobranca')
+        if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_cobranca'):
+            self.add_error('valor_cobranca', 'Este campo é obrigatório para este tipo de cobrança.')
 
         return cleaned_data
