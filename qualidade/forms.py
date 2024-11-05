@@ -181,8 +181,10 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
             ),
-            'eventos_adversos_graves_desc': forms.Textarea(
-                attrs={'class': 'form-control', 'rows': 3}
+            'eventos_adversos_graves_desc': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
             ),
             'reacao_alergica_grave': forms.RadioSelect(
                 choices=[(True, 'Sim'), (False, 'Não')],
@@ -238,6 +240,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         fim = cleaned_data.get('data_horario_fim_efetivo')
         escala = cleaned_data.get('escala')
         dor_pos_operatoria = cleaned_data.get('dor_pos_operatoria')
+        eventos_adversos_graves = cleaned_data.get('eventos_adversos_graves')
+        eventos_adversos_graves_desc = cleaned_data.get('eventos_adversos_graves_desc')
+        tipo_cobranca = cleaned_data.get('tipo_cobranca')
 
         if inicio:
             # Convert to UTC, then back to Sao Paulo to preserve the exact time
@@ -267,9 +272,6 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             if cleaned_data.get(field) is None:
                 self.add_error(field, 'Este campo é obrigatório.')
 
-        if cleaned_data.get('eventos_adversos_graves') and not cleaned_data.get('eventos_adversos_graves_desc'):
-            self.add_error('eventos_adversos_graves_desc', 'Este campo é obrigatório quando há eventos adversos graves.')
-
         if cleaned_data.get('reacao_alergica_grave') and not cleaned_data.get('reacao_alergica_grave_desc'):
             self.add_error('reacao_alergica_grave_desc', 'Este campo é obrigatório quando há reação alérgica grave.')
 
@@ -293,8 +295,10 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                     if cleaned_data.get(field) is None:
                         self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
 
-        tipo_cobranca = cleaned_data.get('tipo_cobranca')
         if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_cobranca'):
             self.add_error('valor_cobranca', 'Este campo é obrigatório para este tipo de cobrança.')
+
+        if eventos_adversos_graves and not eventos_adversos_graves_desc:
+            self.add_error('eventos_adversos_graves_desc', 'Este campo é obrigatório quando há eventos adversos graves.')
 
         return cleaned_data
