@@ -379,6 +379,20 @@
                 </div>
             </div>
 
+            <div class="radio-group" id="tipo_pagamento_direto_container" style="display: none;">
+                <label>{{ form.tipo_pagamento_direto.label }}</label>
+                <div class="input-width-280">
+                    {{ form.tipo_pagamento_direto }}
+                    {% if form.tipo_pagamento_direto.errors %}
+                    <div class="error-message">
+                        {% for error in form.tipo_pagamento_direto.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="button-container">
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </div>
@@ -400,18 +414,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const painadBFields = document.getElementById('painad-b-fields');
     const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]');
     const valorCobrancaContainer = document.getElementById('valor_cobranca_container');
+    const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
 
     function handleTipoCobrancaChange() {
-        // Get the selected radio button
         const selectedValue = document.querySelector('input[name="tipo_cobranca"]:checked')?.value;
         console.log('Tipo cobrança changed:', selectedValue);
         
-        // If Cooperativa is selected, hide the valor_cobranca field
         if (selectedValue === 'cooperativa') {
             valorCobrancaContainer.style.display = 'none';
+            tipoPagamentoDiretoContainer.style.display = 'none';
             document.getElementById('id_valor_cobranca').value = '';
+            document.getElementById('id_tipo_pagamento_direto').value = '';
         } else {
             valorCobrancaContainer.style.display = 'block';
+            tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
+            if (selectedValue !== 'particular') {
+                document.getElementById('id_tipo_pagamento_direto').value = '';
+            }
         }
     }
 
