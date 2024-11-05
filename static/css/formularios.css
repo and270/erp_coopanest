@@ -137,7 +137,8 @@
     }
     .input-width-280 input[type="time"],
     .input-width-280 input[type="datetime-local"],
-    .input-width-280 input[type="number"] {
+    .input-width-280 input[type="number"],
+    .input-width-280 select {
         border: 1px solid #E6E6E6;
         padding: 8px;
         border-radius: 5px;
@@ -451,4 +452,20 @@
             flex: none;
             margin-bottom: 5px;
         }
+    }
+
+    select[name="eventos_adversos_graves_desc"] {
+        border: 1px solid #E6E6E6;
+        padding: 8px;
+        border-radius: 5px;
+        width: 100%;
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        line-height: 14.52px;
+        background-color: #ffffff;
+    }
+
+    select[name="eventos_adversos_graves_desc"]:focus {
+        outline: none;
+        border-color: #1A73E8;
     }
