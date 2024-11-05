@@ -273,7 +273,9 @@
 
             <div class="radio-group" id="eventos_adversos_graves_desc_group" style="display: none;">
                 <label for="{{ form.eventos_adversos_graves_desc.id_for_label }}">{{ form.eventos_adversos_graves_desc.label }}</label>
-                {{ form.eventos_adversos_graves_desc }}
+                <div class="input-width-280">
+                    {{ form.eventos_adversos_graves_desc }}
+                </div>
                 {% if form.eventos_adversos_graves_desc.errors %}
                 <div class="error-message">
                     {% for error in form.eventos_adversos_graves_desc.errors %}
@@ -377,6 +379,20 @@
                 </div>
             </div>
 
+            <div class="radio-group" id="tipo_pagamento_direto_container" style="display: none;">
+                <label>{{ form.tipo_pagamento_direto.label }}</label>
+                <div class="input-width-280">
+                    {{ form.tipo_pagamento_direto }}
+                    {% if form.tipo_pagamento_direto.errors %}
+                    <div class="error-message">
+                        {% for error in form.tipo_pagamento_direto.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="button-container">
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </div>
@@ -398,18 +414,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const painadBFields = document.getElementById('painad-b-fields');
     const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]');
     const valorCobrancaContainer = document.getElementById('valor_cobranca_container');
+    const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
 
     function handleTipoCobrancaChange() {
-        // Get the selected radio button
         const selectedValue = document.querySelector('input[name="tipo_cobranca"]:checked')?.value;
         console.log('Tipo cobrança changed:', selectedValue);
         
-        // If Cooperativa is selected, hide the valor_cobranca field
         if (selectedValue === 'cooperativa') {
             valorCobrancaContainer.style.display = 'none';
+            tipoPagamentoDiretoContainer.style.display = 'none';
             document.getElementById('id_valor_cobranca').value = '';
+            document.getElementById('id_tipo_pagamento_direto').value = '';
         } else {
             valorCobrancaContainer.style.display = 'block';
+            tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
+            if (selectedValue !== 'particular') {
+                document.getElementById('id_tipo_pagamento_direto').value = '';
+            }
         }
     }
 
@@ -516,6 +537,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Calculate initial total
     calculateTotal();
+
+    // Eventos Adversos Graves handler
+    const eventosAdversosGravesInputs = document.querySelectorAll('input[name="eventos_adversos_graves"]');
+    const eventosAdversosGravesDescGroup = document.getElementById('eventos_adversos_graves_desc_group');
+
+    function handleEventosAdversosGravesChange(event) {
+        const selectedValue = event.target.value === 'True';
+        eventosAdversosGravesDescGroup.style.display = selectedValue ? 'block' : 'none';
+        
+        if (!selectedValue) {
+            const select = document.querySelector('select[name="eventos_adversos_graves_desc"]');
+            if (select) select.value = '';
+        }
+    }
+
+    eventosAdversosGravesInputs.forEach(input => {
+        input.addEventListener('change', handleEventosAdversosGravesChange);
+    });
+
+    // Run on page load to handle initial states
+    const initialEventosAdversos = document.querySelector('input[name="eventos_adversos_graves"]:checked');
+    if (initialEventosAdversos) {
+        handleEventosAdversosGravesChange({ target: initialEventosAdversos });
+    }
+
+    // Reação Alérgica Grave handler
+    const reacaoAlergicaGraveInputs = document.querySelectorAll('input[name="reacao_alergica_grave"]');
+    const reacaoAlergicaGraveDescGroup = document.getElementById('reacao_alergica_grave_desc_group');
+
+    function handleReacaoAlergicaGraveChange(event) {
+        const selectedValue = event.target.value === 'True';
+        reacaoAlergicaGraveDescGroup.style.display = selectedValue ? 'block' : 'none';
+        
+        if (!selectedValue) {
+            const textarea = document.querySelector('textarea[name="reacao_alergica_grave_desc"]');
+            if (textarea) textarea.value = '';
+        }
+    }
+
+    reacaoAlergicaGraveInputs.forEach(input => {
+        input.addEventListener('change', handleReacaoAlergicaGraveChange);
+    });
+
+    // Run on page load to handle initial states
+    const initialReacaoAlergica = document.querySelector('input[name="reacao_alergica_grave"]:checked');
+    if (initialReacaoAlergica) {
+        handleReacaoAlergicaGraveChange({ target: initialReacaoAlergica });
+    }
 });
 </script>
 {% endblock %}

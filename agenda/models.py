@@ -32,7 +32,16 @@ class Procedimento(models.Model):
     COBRANCA_CHOICES = [
         ('cooperativa', 'Cooperativa'),
         ('hospital', 'Hospital'),
-        ('particular', 'Particular'),
+        ('particular', 'Direta'),
+    ]
+
+    DIRECT_PAYMENT_CHOICES = [
+        ('cartao', 'Cartão'),
+        ('cheque', 'Cheque'),
+        ('dinheiro', 'Dinheiro'),
+        ('pix', 'Pix'),
+        ('transferencia', 'Transferência'),
+        ('boleto', 'Boleto'),
     ]
 
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
@@ -194,6 +203,29 @@ class Procedimento(models.Model):
         }
     }
 
+    EVENTOS_ADVERSOS_CHOICES = [
+        ('broncoaspiracao', 'Broncoaspiração'),
+        ('pcr', 'Parada Cardiorrespiratória (PCR)'),
+        ('hemorragia', 'Hemorragia Maciça'),
+        ('embolia', 'Embolia Pulmonar'),
+        ('choque_anafilatico', 'Choque Anafilático'),
+        ('lesao_orgao', 'Lesão de Órgão Não-Alvo'),
+        ('iam', 'Infarto Agudo do Miocárdio'),
+        ('avc', 'Acidente Vascular Cerebral (AVC)'),
+        ('sirs', 'Síndrome da Resposta Inflamatória Sistêmica (SIRS)'),
+        ('tvp', 'Trombose Venosa Profunda (TVP)'),
+        ('ira', 'Insuficiência Renal Aguda'),
+        ('pneumotorax', 'Pneumotórax'),
+        ('sind_compartimental', 'Síndrome Compartimental'),
+        ('hipertermia', 'Hipertermia Maligna'),
+        ('deiscencia', 'Deiscência de Sutura'),
+        ('lesao_nervo', 'Lesão de Nervo Periférico'),
+        ('cegueira', 'Cegueira Pós-Operatória'),
+        ('sdra', 'Síndrome do Desconforto Respiratório Agudo (SDRA)'),
+        ('reacao_transfusional', 'Reação Transfusional Hemolítica Aguda'),
+        ('sepse', 'Sepse Pós-Operatória'),
+    ]
+
     data_horario_inicio_efetivo = models.DateTimeField(verbose_name='Horário de Início Efetivo', null=True, blank=True)
     data_horario_fim_efetivo = models.DateTimeField(verbose_name='Horário de Término Efetivo', null=True, blank=True)
     dor_pos_operatoria = models.BooleanField(verbose_name="Dor pós operatória imediata", null=True, blank=True)
@@ -221,7 +253,13 @@ class Procedimento(models.Model):
     consolabilidade_painad = models.IntegerField(verbose_name="Consolabilidade", null=True, blank=True)
     
     eventos_adversos_graves = models.BooleanField(verbose_name='Eventos adversos graves (broncoaspiração, PCR, etc)', null=True, blank=True)
-    eventos_adversos_graves_desc = models.TextField(verbose_name='Descrição dos eventos adversos graves', null=True, blank=True)
+    eventos_adversos_graves_desc = models.CharField(
+        max_length=50,
+        choices=EVENTOS_ADVERSOS_CHOICES,
+        verbose_name='Descrição do evento adverso grave',
+        null=True,
+        blank=True
+    )
     reacao_alergica_grave = models.BooleanField(verbose_name='Reação alérgica grave', null=True, blank=True)
     reacao_alergica_grave_desc = models.TextField(verbose_name='Descrição da reação alérgica grave', null=True, blank=True)
     encaminhamento_uti = models.BooleanField(verbose_name='Encaminhamentos não programado à UTI', null=True, blank=True)
@@ -242,6 +280,13 @@ class Procedimento(models.Model):
         max_digits=15,
         decimal_places=2,
         verbose_name='Valor',
+        null=True,
+        blank=True
+    )
+    tipo_pagamento_direto = models.CharField(
+        max_length=20,
+        choices=DIRECT_PAYMENT_CHOICES,
+        verbose_name='Tipo de pagamento direto',
         null=True,
         blank=True
     )
