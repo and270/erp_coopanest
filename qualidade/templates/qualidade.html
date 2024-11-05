@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 {% load static %}
 
-{% block title %}Agenda{% endblock %}
+{% block title %}Qualidade{% endblock %}
 
 {% block content %}
 <!--
@@ -28,25 +28,6 @@
 </div>
 -->
 <div class="agenda-container">
-    <div class="agenda-header">
-        <div class="left-controls">
-            Agenda
-        </div>
-
-        <div class="center-controls">
-            <!-- This div is now empty but still maintains the space -->
-        </div>
-
-        <div class="right-controls">
-            <div class="agenda-scale">
-                <input type="radio" id="scale-view" name="view-toggle">
-                <label for="scale-view"><b>Escala</b></label>
-                <input type="radio" id="agenda-view" name="view-toggle" checked>
-                <label for="agenda-view"><b>Agenda</b></label>
-            </div>
-        </div>
-    </div>
-
     <div class="calendar-container">
         <div class="calendar-sidebar">
             <div class="mini-calendar">
@@ -112,7 +93,7 @@
                             {% if procedimento.data_horario.date == date.day.date %}
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
-                                    <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
+                                    <span class="procedure-name">{{ procedimento.procedimento_principal.name }}</span>
                                     <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
                                         {% for anestesista in procedimento.anestesistas_responsaveis.all %}
                                             {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
@@ -126,6 +107,7 @@
                                         <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
                                         <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                         <br>
+                                        <p>Status: <strong><span class="modal-status">{{ procedimento.get_status_display }}</span></strong></p>
                                         <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                         <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                         <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
@@ -149,8 +131,16 @@
                                             {% endif %}
                                         </p>
                                         <div class="modal-actions">
-                                            <button class="btn btn-primary edit-procedure">Editar</button>
-                                            <button class="btn btn-danger delete-procedure">Excluir</button>
+                                            {% if procedimento.status != 'finished' %}
+                                                <button class="btn-finalizar" data-procedure-id="{{ procedimento.id }}">Finalizar Procedimento</button>
+                                            {% else %}
+                                                <button class="btn-ver-finalizacao" data-procedure-id="{{ procedimento.id }}">Ver Finalização</button>
+                                            {% endif %}
+                                            {% if procedimento.avaliacao_rpa %}
+                                                <button class="btn-avaliar ver-rpa" data-procedure-id="{{ procedimento.id }}">Ver RPA</button>
+                                            {% else %}
+                                                <button class="btn-avaliar avaliar-rpa" data-procedure-id="{{ procedimento.id }}">Avaliação da RPA</button>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -185,7 +175,7 @@
                                                 <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             </div>
-                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
+                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name }}</span>
                                             <span class="procedure-anesthesiologist">
                                                 {% for anestesista in procedimento.anestesistas_responsaveis.all %}
                                                     {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
@@ -199,6 +189,7 @@
                                                 <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
                                                 <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
                                                 <br>
+                                                <p>Status: <strong><span class="modal-status">{{ procedimento.get_status_display }}</span></strong></p>
                                                 <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                                 <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                                 <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
@@ -222,8 +213,16 @@
                                                     {% endif %}
                                                 </p>
                                                 <div class="modal-actions">
-                                                    <button class="btn btn-primary edit-procedure">Editar</button>
-                                                    <button class="btn btn-danger delete-procedure">Excluir</button>
+                                                    {% if procedimento.status != 'finished' %}
+                                                        <button class="btn-finalizar" data-procedure-id="{{ procedimento.id }}">Finalizar Procedimento</button>
+                                                    {% else %}
+                                                        <button class="btn-ver-finalizacao" data-procedure-id="{{ procedimento.id }}">Ver Finalização</button>
+                                                    {% endif %}
+                                                    {% if procedimento.avaliacao_rpa %}
+                                                        <button class="btn-avaliar ver-rpa" data-procedure-id="{{ procedimento.id }}">Ver RPA</button>
+                                                    {% else %}
+                                                        <button class="btn-avaliar avaliar-rpa" data-procedure-id="{{ procedimento.id }}">Avaliação da RPA</button>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </div>
@@ -238,111 +237,8 @@
     </div>
 </div>
 
-<button class="btn btn-primary" id="agendar-btn">Agendar</button>
-<div id="procedimento-form-modal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Agendamento</h2>
-        <span class="required-field-text"><span class="required-asterisk">*</span>Campo de preenchimento obrigatório</span><br><br>
-        <form method="POST" enctype="multipart/form-data" id="procedimento-form">
-            {% csrf_token %}
-            <input type="hidden" name="procedure_id" id="procedure_id">
-            {{ form.non_field_errors }}
-            
-            <div class="form-group">
-                <label for="{{ form.procedimento_type.id_for_label }}">{{ form.procedimento_type.label }}<span class="required-asterisk">*</span></label>
-                {{ form.procedimento_type }}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.data.id_for_label }}">{{ form.data.label }}<span class="required-asterisk">*</span></label>
-                {{ form.data }}
-            </div>
-            
-            <div class="time-inputs">
-                <div class="form-group">
-                    <label for="{{ form.time.id_for_label }}">{{ form.time.label }}<span class="required-asterisk">*</span></label>
-                    {{ form.time }}
-                </div>
-                
-                <div class="form-group">
-                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}<span class="required-asterisk">*</span></label>
-                    {{ form.end_time }}
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.nome_paciente.id_for_label }}">{{ form.nome_paciente.label }}<span class="required-asterisk">*</span></label>
-                {{ form.nome_paciente }}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.email_paciente.id_for_label }}">{{ form.email_paciente.label }}</label>
-                {{ form.email_paciente }}
-            </div>
-
-            <div class="form-group">
-                <label for="{{ form.convenio.id_for_label }}">{{ form.convenio.label }}</label>
-                {{ form.convenio }}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.cpf_paciente.id_for_label }}">{{ form.cpf_paciente.label }}</label>
-                {{ form.cpf_paciente }}
-            </div>
-            
-            
-            <div class="form-group">
-                <label for="{{ form.procedimento_principal.id_for_label }}">{{ form.procedimento_principal.label }}<span class="required-asterisk">*</span></label>
-                {{ form.procedimento_principal }}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.hospital.id_for_label }}">{{ form.hospital.label }}</label>
-                {{ form.hospital }}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.outro_local.id_for_label }}">{{ form.outro_local.label }}</label>
-                {{ form.outro_local }}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.cirurgiao.id_for_label }}">{{ form.cirurgiao.label }}</label>
-                {{ form.cirurgiao }}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.anestesistas_responsaveis.id_for_label }}">{{ form.anestesistas_responsaveis.label }}</label>
-                {{ form.anestesistas_responsaveis }}
-                <button type="button" id="add-anesthesiologist" class="btn btn-secondary btn-sm mt-2">+ Adicionar Anestesista</button>
-            </div>
-            
-            <div class="form-group-inline">
-                <label for="{{ form.visita_pre_anestesica.id_for_label }}">{{ form.visita_pre_anestesica.label }}</label>
-                {{ form.visita_pre_anestesica }}
-            </div>
-            
-            <div class="conditional-container" style="display:none;">
-                <div class="form-group">
-                    <label for="{{ form.data_visita_pre_anestesica.id_for_label }}">{{ form.data_visita_pre_anestesica.label }}</label>
-                    {{ form.data_visita_pre_anestesica }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.foto_anexo.id_for_label }}">{{ form.foto_anexo.label }}</label>
-                    {{ form.foto_anexo }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.nome_responsavel_visita.id_for_label }}">{{ form.nome_responsavel_visita.label }}</label>
-                    {{ form.nome_responsavel_visita }}
-                </div>
-            </div>
-            
-            <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Agendamento</button>
-        </form>
-    </div>
-</div>
 <div id="customAlert" class="custom-alert"></div>
+
 
 {% endblock %}
 
@@ -351,72 +247,26 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
-
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<!-- Initialize Select2 -->
-<script>
-    $(document).ready(function() {
-        $('#{{ form.procedimento_principal.auto_id }}').select2({
-            placeholder: 'Digite para buscar...',
-            minimumInputLength: 2,
-            language: 'pt-BR',
-            ajax: {
-                url: '{% url "procedure-autocomplete" %}',
-                dataType: 'json',
-                delay: 250,
-                data: function(params) {
-                    return {
-                        q: params.term,
-                        page: params.page
-                    };
-                },
-                processResults: function(data) {
-                    return {
-                        results: data.results
-                    };
-                },
-                cache: true
-            }
-        });
-    });
-</script>
-
-<!-- Portuguese language for Select2 -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/pt-BR.js"></script>
-
 <script>
     $(document).ready(function() {
         $('#{{ form.cpf_paciente.id_for_label }}').mask('000.000.000-00', {reverse: true});
     });
 </script>
-<script>
-    function openFormModal(date, time) {
-    const formModal = document.getElementById('procedimento-form-modal');
-    const dateField = document.getElementById('id_data');
-    const timeField = document.getElementById('id_time');
-    const formSubmitBtn = document.getElementById('form-submit-btn');  // Define formSubmitBtn here
 
-    // Reset the form and clear procedure_id
-    document.querySelector('#procedimento-form-modal form').reset();
-    document.getElementById('procedure_id').value = '';
-    formSubmitBtn.textContent = 'Criar Agendamento'; // Reset button text to default
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    showCustomAlert('{{ message }}', 'success');
+                {% elif message.tags == 'error' %}
+                    showCustomAlert('{{ message }}', 'error');
+                {% endif %}
+            {% endfor %}
+        });
+    </script>
+{% endif %}
 
-    // Pre-fill the date and time fields
-    $(dateField).inputmask("setvalue", date);
-    if (time) {
-        $(timeField).inputmask("setvalue", time);
-    } else {
-        $(timeField).inputmask("setvalue", "");
-    }
-
-    // Show the form modal
-    formModal.style.display = 'block';
-    hideAgendarButton();
-}
-
-</script>
 <script>
     function showCustomAlert(message, type) {
         const alertElement = document.getElementById('customAlert');
@@ -426,7 +276,7 @@
         
         setTimeout(() => {
             alertElement.style.display = 'none';
-        }, 3500);  // Hide after 5 seconds
+        }, 3500);  // Hide after 3.5 seconds
     }
 </script>
 <script>
@@ -465,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadView(year, month, weekStart) {
-        const base_url = '{% url 'agenda' %}';
+        const base_url = '{% url 'qualidade' %}';
         const url = new URL(window.location.origin + base_url);
         url.searchParams.set('year', year);
         url.searchParams.set('month', month);
@@ -554,35 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Adjust for local time zone
         date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
         return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-
-    // Month view event listener
-    document.querySelectorAll('.calendar-grid.month-view .day').forEach(cell => {
-        cell.addEventListener('click', function() {
-            const date = this.getAttribute('data-date');
-            if (date) {
-                const formattedDate = formatDate(date);
-                openFormModal(formattedDate);
-            }
-        });
-    });
-
-    // Week view event listener
-    document.querySelectorAll('.calendar-grid.week-view .hour-slot').forEach(cell => {
-        cell.addEventListener('click', function(e) {
-            if (!e.target.closest('.procedure-card')) {
-                const dayColumn = this.closest('.day-column');
-                const date = dayColumn.getAttribute('data-date');
-                const hour = this.getAttribute('data-hour');
-                if (date && hour) {
-                    const formattedDate = formatDate(date);
-                    const formattedTime = `${hour}:00`;
-                    openFormModal(formattedDate, formattedTime);
-                }
-            }
-        });
-    });
-    
+    }    
 });
 
 </script>
@@ -636,114 +458,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const procedureCards = document.querySelectorAll('.calendar-grid .procedure-card');
-    const procedureFormModal = document.getElementById('procedimento-form-modal');
-    const formSubmitBtn = document.getElementById('form-submit-btn');
-    const procedimentoForm = document.getElementById('procedimento-form');
-    const addAnesthesiologistBtn = document.getElementById('add-anesthesiologist');
-    const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
-
-    addAnesthesiologistBtn.addEventListener('click', function() {
-        const selectedOptions = Array.from(anesthesiologistSelect.selectedOptions);
-        
-        if (selectedOptions.length > 0) {
-            selectedOptions.forEach(option => {
-                const newDiv = document.createElement('div');
-                newDiv.className = 'selected-anesthesiologist';
-                newDiv.innerHTML = `
-                    ${option.text}
-                    <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
-                `;
-                anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
-                option.selected = false;
-            });
-        }
-    });
-
-    document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('remove-anesthesiologist')) {
-            e.target.parentElement.remove();
-        }
-    });
-    
-    procedimentoForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Change button text to spinner
-        const originalText = formSubmitBtn.textContent;
-        formSubmitBtn.innerHTML = '<span class="spinner"></span> Processando...';
-        formSubmitBtn.disabled = true;
-
-        // Mark all selected anesthesiologists as selected in the form's select field
-        const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
-        const selectedAnesthesiologists = document.querySelectorAll('.selected-anesthesiologist');
-        selectedAnesthesiologists.forEach(div => {
-            const anesthesiologistName = div.textContent.trim().replace('Remover', '').trim();
-            const option = Array.from(anesthesiologistSelect.options).find(opt => opt.text === anesthesiologistName);
-            if (option) {
-                option.selected = true;
-            }
-        });
-
-        const formData = new FormData(this);
-        const procedureId = document.getElementById('procedure_id').value;
-
-        for (const pair of formData.entries()) {
-            console.log(pair[0]+ ', ' + pair[1]); 
-        }
-        
-        // Reset previous error messages
-        document.querySelectorAll('.error-message').forEach(el => el.remove());
-        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-
-        fetch(procedureId ? `/update-procedure/${procedureId}/` : '/create-procedure/', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                let message = procedureId ? 'Procedimento editado com sucesso.' : 'Procedimento criado com sucesso.'
-                if (data.email_sent === false && data.email_try === true) {
-                    message += ` Porém, não foi possível enviar o link de pesquisa para o email do paciente devido a: ${data.email_error}`;
-                } else if (data.email_sent === true) {
-                    message += ' O link de pesquisa foi enviado para o email do paciente.';
-                }
-                showCustomAlert(message, 'success');
-                showAgendarButton(); 
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                const errors = JSON.parse(data.errors);
-                Object.keys(errors).forEach(fieldName => {
-                    const field = document.getElementById(`id_${fieldName}`);
-                    if (field) {
-                        field.classList.add('is-invalid');
-                        const errorMessage = document.createElement('div');
-                        errorMessage.className = 'invalid-feedback error-message';
-                        errorMessage.textContent = errors[fieldName][0].message;
-                        field.parentNode.appendChild(errorMessage);
-                    }
-                });
-                showCustomAlert('Erro ao salvar o procedimento. Verifique os campos e tente novamente.', 'error');
-                
-                // Reset button state
-                formSubmitBtn.innerHTML = originalText;
-                formSubmitBtn.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showCustomAlert('Ocorreu um erro ao processar a solicitação. Por favor, tente novamente.', 'error');
-            
-            // Reset button state
-            formSubmitBtn.innerHTML = originalText;
-            formSubmitBtn.disabled = false;
-        });
-    });
 
     procedureCards.forEach(card => {
         card.addEventListener('click', function(e) {
@@ -752,151 +466,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const modal = document.getElementById(`procedure-details-modal-${procedureId}`);
 
             if (modal) {
-                modal.style.display = 'block'; // Show the modal
-            }
-        });
-    });
-    
-    // Edit button click handler
-    document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('edit-procedure')) {
-            const modal = e.target.closest('.procedure-modal');
-            const procedureId = modal.id.split('-').pop();
-            
-            // Hide the details modal
-            modal.style.display = 'none';
-            
-            // Load the procedure data into the form
-            loadProcedureDataIntoForm(procedureId);
-        }
-    });
-    
-    // Delete button click handler
-    document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('delete-procedure')) {
-            const modal = e.target.closest('.procedure-modal');
-            const procedureId = modal.getAttribute('id').split('-').pop();
-            
-            if (confirm('Tem certeza que deseja excluir este agendamento?')) {
-                deleteProcedure(procedureId);
-            }
-        }
-    });
-
-    
-    // Function to load procedure data into the form
-    function loadProcedureDataIntoForm(procedureId) {
-        fetch(`/get-procedure/${procedureId}/`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('procedure_id').value = procedureId;
-                document.getElementById('id_procedimento_type').value = data.procedimento_type;
-                document.getElementById('id_data').value = data.data;
+                modal.style.display = 'block';
                 
-                // Directly use the time strings from the server
-                document.getElementById('id_time').value = data.time;
-                document.getElementById('id_end_time').value = data.end_time;
+                // Handle both RPA buttons
+                const avaliarRPABtn = modal.querySelector('.avaliar-rpa');
+                const verRPABtn = modal.querySelector('.ver-rpa');
                 
-                document.getElementById('id_nome_paciente').value = data.nome_paciente;
-                document.getElementById('id_email_paciente').value = data.email_paciente;
-                document.getElementById('id_convenio').value = data.convenio;
-                document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
-                document.getElementById('id_hospital').value = data.hospital;
-                document.getElementById('id_outro_local').value = data.outro_local;
-                document.getElementById('id_cirurgiao').value = data.cirurgiao;
-                document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
-                document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
-                document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
-                
-                document.querySelectorAll('.selected-anesthesiologist').forEach(el => el.remove());
-
-                if (data.procedimento_principal) {
-                    const procedimentoSelect = $('#id_procedimento_principal');
-                    const newOption = new Option(
-                        data.procedimento_principal.text, 
-                        data.procedimento_principal.id, 
-                        true, 
-                        true
-                    );
-                    procedimentoSelect.append(newOption).trigger('change');
+                if (avaliarRPABtn) {
+                    avaliarRPABtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.location.href = `/qualidade/avaliacao-rpa/${procedureId}/`;
+                    });
                 }
-            
                 
-                data.anestesistas_responsaveis.forEach(anestesista => {
-                    const option = Array.from(anesthesiologistSelect.options).find(opt => opt.value == anestesista.id);
-                    if (option) {
-                        const newDiv = document.createElement('div');
-                        newDiv.className = 'selected-anesthesiologist';
-                        newDiv.innerHTML = `
-                            ${anestesista.name}
-                            <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
-                        `;
-                        anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
-                    }
-                });
-
-                procedureFormModal.style.display = 'block';
-                formSubmitBtn.textContent = 'Salvar Alterações';
-                hideAgendarButton();
-            });
-    }
-    
-    // Function to delete a procedure
-    function deleteProcedure(procedureId) {
-        if (!procedureId) {
-            console.error('Invalid procedure ID');
-            return;
-        }
-
-        fetch(`/delete-procedure/${procedureId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                showCustomAlert('Falha ao deletar o procedimento. Por favor, tente novamente.', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showCustomAlert('Ocorreu um erro ao deletar o procedimento. Por favor, tente novamente.', 'error');
-        });
-    }
-    
-    // Helper function to get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+                if (verRPABtn) {
+                    verRPABtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.location.href = `/qualidade/avaliacao-rpa/${procedureId}/`;
+                    });
                 }
             }
-        }
-        return cookieValue;
-    }
-    
-    // Reset form when opening for a new procedure
-    document.getElementById('agendar-btn').addEventListener('click', function() {
-        document.querySelector('#procedimento-form-modal form').reset();
-        document.getElementById('procedure_id').value = '';
-        formSubmitBtn.textContent = 'Criar Agendamento';
-        procedureFormModal.style.display = 'block';
-        hideAgendarButton();
+        });
     });
 });
 </script>
@@ -926,146 +516,70 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+    // Mini calendar: Implements functionality for the small calendar in the sidebar
     document.addEventListener('DOMContentLoaded', function() {
-        const agendaRadio = document.getElementById('agenda-view');
-        const escalaRadio = document.getElementById('scale-view');
-        
-        // Add an event listener for the "ESCALA" view
-        escalaRadio.addEventListener('change', function() {
-            if (escalaRadio.checked) {
-                window.location.href = "{% url 'escala' %}";  // Redirect to escala view
+        const miniPrevBtn = document.getElementById('mini-prev-btn');
+        const miniNextBtn = document.getElementById('mini-next-btn');
+        const miniCurrentMonth = document.getElementById('mini-current-month');
+        const miniCalendarDates = document.getElementById('mini-calendar-dates');
+    
+        let miniCurrentYear = new Date().getFullYear();
+        let miniCurrentMonthIndex = new Date().getMonth();
+    
+        const MONTH_NAMES_PT = {
+            0: 'Janeiro', 1: 'Fevereiro', 2: 'Março', 3: 'Abril',
+            4: 'Maio', 5: 'Junho', 6: 'Julho', 7: 'Agosto',
+            8: 'Setembro', 9: 'Outubro', 10: 'Novembro', 11: 'Dezembro'
+        };
+    
+        function updateMiniCalendar() {
+            const monthName = MONTH_NAMES_PT[miniCurrentMonthIndex];
+            miniCurrentMonth.textContent = `${monthName} ${miniCurrentYear}`;
+    
+            const firstDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex, 1);
+            const lastDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex + 1, 0);
+            const firstDayWeekday = firstDayOfMonth.getDay();
+            const lastDate = lastDayOfMonth.getDate();
+    
+            miniCalendarDates.innerHTML = '';
+    
+            // Fill in the days from the previous month
+            for (let i = 0; i < firstDayWeekday; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.classList.add('mini-calendar-date', 'empty');
+                miniCalendarDates.appendChild(emptyCell);
             }
-        });
-
-        // Add an event listener for the "AGENDA" view, in case you need to toggle back
-        agendaRadio.addEventListener('change', function() {
-            if (agendaRadio.checked) {
-                window.location.href = "{% url 'agenda' %}";  // Redirect to agenda view
+    
+            // Fill in the days of the current month
+            for (let date = 1; date <= lastDate; date++) {
+                const dateCell = document.createElement('div');
+                dateCell.classList.add('mini-calendar-date');
+                dateCell.textContent = date;
+                miniCalendarDates.appendChild(dateCell);
             }
-        });
-    });
-</script>
-<script>
-// Mini calendar: Implements functionality for the small calendar in the sidebar
-document.addEventListener('DOMContentLoaded', function() {
-    const miniPrevBtn = document.getElementById('mini-prev-btn');
-    const miniNextBtn = document.getElementById('mini-next-btn');
-    const miniCurrentMonth = document.getElementById('mini-current-month');
-    const miniCalendarDates = document.getElementById('mini-calendar-dates');
-
-    let miniCurrentYear = new Date().getFullYear();
-    let miniCurrentMonthIndex = new Date().getMonth();
-
-    const MONTH_NAMES_PT = {
-        0: 'Janeiro', 1: 'Fevereiro', 2: 'Março', 3: 'Abril',
-        4: 'Maio', 5: 'Junho', 6: 'Julho', 7: 'Agosto',
-        8: 'Setembro', 9: 'Outubro', 10: 'Novembro', 11: 'Dezembro'
-    };
-
-    // Add event listeners to month view cells
-    const monthViewCells = document.querySelectorAll('.calendar-grid.month-view .day');
-    monthViewCells.forEach(cell => {
-        cell.addEventListener('click', function() {
-            const date = this.querySelector('span').textContent.trim().padStart(2, '0');
-            const month = currentMonth.toString().padStart(2, '0');
-            const year = currentYear;
-            const formattedDate = `${date}/${month}/${year}`;
-            openFormModal(formattedDate);
-        });
-    });
-
-    // Add event listeners to week view cells
-    const weekViewCells = document.querySelectorAll('.calendar-grid.week-view .hour-slot');
-    weekViewCells.forEach(cell => {
-        cell.addEventListener('click', function(e) {
-            // Prevent opening the form if clicking on an existing procedure card
-            if (!e.target.closest('.procedure-card')) {
-                const dayColumn = this.closest('.day-column');
-                const date = dayColumn.getAttribute('data-date');
-                const hour = this.closest('.time-slot').textContent.trim().split(':')[0];
-                const formattedDate = new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const formattedTime = `${hour}:00`;
-                openFormModal(formattedDate, formattedTime);
+        }
+    
+        miniPrevBtn.addEventListener('click', function() {
+            miniCurrentMonthIndex--;
+            if (miniCurrentMonthIndex < 0) {
+                miniCurrentMonthIndex = 11;
+                miniCurrentYear--;
             }
+            updateMiniCalendar();
         });
-    });
-
-    // Add event listeners to mini calendar dates
-    function addMiniCalendarEventListeners() {
-        const miniCalendarDates = document.querySelectorAll('.mini-calendar-date');
-        miniCalendarDates.forEach(cell => {
-            cell.addEventListener('click', function() {
-                const date = this.textContent.trim().padStart(2, '0');
-                const month = (miniCurrentMonthIndex + 1).toString().padStart(2, '0');
-                const year = miniCurrentYear;
-                const formattedDate = `${date}/${month}/${year}`;
-                console.log(`Mini calendar date clicked: ${formattedDate}`); // Debugging line
-                openFormModal(formattedDate);
-            });
+    
+        miniNextBtn.addEventListener('click', function() {
+            miniCurrentMonthIndex++;
+            if (miniCurrentMonthIndex > 11) {
+                miniCurrentMonthIndex = 0;
+                miniCurrentYear++;
+            }
+            updateMiniCalendar();
         });
-    }
-
-    // Call the function to add event listeners to mini calendar dates
-    addMiniCalendarEventListeners();
-
-    // Update mini calendar function to re-attach event listeners after updating the calendar
-    function updateMiniCalendar() {
-        const monthName = MONTH_NAMES_PT[miniCurrentMonthIndex];
-        miniCurrentMonth.textContent = `${monthName} ${miniCurrentYear}`;
-
-        const firstDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex, 1);
-        const lastDayOfMonth = new Date(miniCurrentYear, miniCurrentMonthIndex + 1, 0);
-        const firstDayWeekday = firstDayOfMonth.getDay();
-        const lastDate = lastDayOfMonth.getDate();
-
-        miniCalendarDates.innerHTML = '';
-
-        // Fill in the days from the previous month
-        for (let i = 0; i < firstDayWeekday; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.classList.add('mini-calendar-date', 'empty');
-            miniCalendarDates.appendChild(emptyCell);
-        }
-
-        // Fill in the days of the current month
-        for (let date = 1; date <= lastDate; date++) {
-            const dateCell = document.createElement('div');
-            dateCell.classList.add('mini-calendar-date');
-            dateCell.textContent = date;
-            miniCalendarDates.appendChild(dateCell);
-        }
-
-        // Re-attach event listeners to the new mini calendar dates
-        addMiniCalendarEventListeners();
-    }
-
-    miniPrevBtn.addEventListener('click', function() {
-        miniCurrentMonthIndex--;
-        if (miniCurrentMonthIndex < 0) {
-            miniCurrentMonthIndex = 11;
-            miniCurrentYear--;
-        }
+    
+        // Initial call to set up the mini calendar
         updateMiniCalendar();
     });
-
-    miniNextBtn.addEventListener('click', function() {
-        miniCurrentMonthIndex++;
-        if (miniCurrentMonthIndex > 11) {
-            miniCurrentMonthIndex = 0;
-            miniCurrentYear++;
-        }
-        updateMiniCalendar();
-    });
-
-    updateMiniCalendar();
-});
-</script>
-
-<script>
-    $(document).ready(function(){
-    $("input[name='data'], #search-date-input").inputmask("99/99/9999");  // dd/mm/yyyy
-    $("input[name='time'], input[name='end_time']").inputmask("99:99");  // hh:mm
-});
 </script>
 
 <script>
@@ -1195,4 +709,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-finalizar, .btn-ver-finalizacao').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const procedureId = this.getAttribute('data-procedure-id');
+            window.location.href = `/finalizar-procedimento/${procedureId}/`;
+        });
+    });
+});
+</script>
 {% endblock %}
+
+
+
+
+
+
+
+
+
+

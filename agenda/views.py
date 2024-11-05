@@ -1,15 +1,14 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from registration.models import Anesthesiologist, CustomUser
-from .models import Procedimento, EscalaAnestesiologista
+from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes
 from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
-from calendar import monthrange, weekday, SUNDAY
+from calendar import monthrange, weekday
 from datetime import datetime, timedelta, date
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 from django.http import JsonResponse, HttpResponseForbidden
-from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
 from django.forms.utils import ErrorDict
 from django.http import HttpResponse, Http404
@@ -21,6 +20,7 @@ import calendar
 from django.db.models import Q
 from django.core.mail import send_mail
 from django.urls import reverse
+from dal_select2.views import Select2QuerySetView
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -187,7 +187,10 @@ def get_procedure(request, procedure_id):
         'email_paciente': procedure.email_paciente,
         'convenio': procedure.convenio,
         'cpf_paciente': procedure.cpf_paciente,
-        'procedimento': procedure.procedimento,
+        'procedimento_principal': {
+            'id': procedure.procedimento_principal.id,
+            'text': procedure.procedimento_principal.name
+        } if procedure.procedimento_principal else None,
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
         'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
@@ -325,27 +328,6 @@ def search_agenda(request):
     }
     return render(request, 'agenda.html', context)
 
-@login_required
-def get_procedimento_details(request, procedimento_id):
-    procedimento = get_object_or_404(Procedimento, id=procedimento_id)
-    
-    if not request.user.validado or request.user.group != procedimento.group:
-        return HttpResponseForbidden("You don't have permission to view this procedure.")
-    
-    data = {
-        'nome_paciente': procedimento.nome_paciente,
-        'email_paciente': procedimento.email_paciente,
-        'convenio': procedimento.convenio,
-        'procedimento': procedimento.procedimento,
-        'hospital': procedimento.hospital.name if procedimento.hospital else procedimento.outro_local,
-        'data_horario': procedimento.data_horario.strftime('%d/%m/%Y %H:%M'),
-        'cirurgiao': procedimento.cirurgiao.name,
-        'anestesista_responsavel': procedimento.anestesista_responsavel.name,
-        'visita_pre_anestesica': procedimento.visita_pre_anestesica,
-        'data_visita_pre_anestesica': procedimento.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedimento.data_visita_pre_anestesica else None,
-    }
-    return JsonResponse(data)
-
 def search_pacientes(request):
 
     if not request.user.validado:
@@ -408,6 +390,18 @@ def survey_view(request, nps_token):
         'procedimento': procedimento,
     }
     return render(request, 'survey_form.html', context)
+
+class ProcedureAutocomplete(Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return ProcedimentoDetalhes.objects.none()
+
+        qs = ProcedimentoDetalhes.objects.all()
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs.order_by('name')
 
 @login_required
 def agenda_view(request):

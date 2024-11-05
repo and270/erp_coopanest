@@ -41,8 +41,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'import_export',
+    'dal',
+    'dal_select2',
     'registration',
     'agenda',
+    'qualidade',
 ]
 
 MIDDLEWARE = [

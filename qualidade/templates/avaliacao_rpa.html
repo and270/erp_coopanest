@@ -1,0 +1,457 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Avaliação RPA{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/formularios.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <div class="container-info">
+        <div class="info-section">
+            <h2>Resumo do procedimento</h2>
+            <div class="info-item">
+                <div class="procedure-type">
+                    <span class="type-indicator {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% else %}exame{% endif %}"></span>
+                    {{ procedimento.get_procedimento_type_display }}
+                </div>
+                <div class="procedure-name">{{ procedimento.procedimento_principal.name }}</div>
+                <div class="info-value">{{ procedimento.data_horario|date:"d/m/Y" }} - {{ procedimento.data_horario|time:"H:i" }} às {{ procedimento.data_horario_fim|time:"H:i" }}</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-item">
+                <div class="info-label">Paciente</div>
+                <div class="info-value">{{ procedimento.nome_paciente|default:"Não informado" }}</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-item">
+                <div class="info-label">Local</div>
+                <div class="info-value">{{ procedimento.hospital|default:"Não informado" }}</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-item">
+                <div class="info-label">Email</div>
+                <div class="info-value">{{ procedimento.email_paciente|default:"Não informado" }}</div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-item">
+                <div class="info-label">Visita Pré-Anestésica</div>
+                <div class="info-value">{% if procedimento.visita_pre_anestesica %}Realizada{% else %}Não informada{% endif %}</div>
+            </div>
+            {% if procedimento.visita_pre_anestesica %}
+                {% if procedimento.foto_anexo %}
+                    <div class="info-item">
+                        <div class="info-label">Anexo Visita Pré-Anestésica:</div>
+                        <div class="info-value">
+                            <a href="{% url 'serve_protected_file' procedimento.foto_anexo %}" target="_blank">Ver anexo</a>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="container-form">
+        <form method="post" id="avaliacaoRPAForm">
+            <h1>Avaliação RPA</h1>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="radio-group">
+                <label for="{{ form.tempo_alta_rpa.id_for_label }}">{{ form.tempo_alta_rpa.label }}</label>
+                <div class="input-width-280">
+                    {{ form.tempo_alta_rpa }}
+                    {% if form.tempo_alta_rpa.errors %}
+                    <div class="error-message">
+                        {% for error in form.tempo_alta_rpa.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="radio-group">
+                <label>{{ form.dor_pos_operatoria.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.dor_pos_operatoria %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.dor_pos_operatoria.errors %}
+                <div class="error-message">
+                    {% for error in form.dor_pos_operatoria.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group scale-container">
+                <label>{{ form.escala.label }}</label>
+                {% for radio in form.escala %}
+                    {% if radio.choice_label != '---------' %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                {% if form.escala.errors %}
+                <div class="error-message">
+                    {% for error in form.escala.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- EVA specific fields -->
+            <div id="eva-fields" class="radio-group scale-container">
+                <label>{{ form.eva_score.label }}</label>
+                <div class="scale-descriptions">
+                    <span class="scale-description left">Dor leve</span>
+                    <span class="scale-description">Dor moderada</span>
+                    <span class="scale-description right">Dor intensa</span>
+                </div>
+                <div class="rainbow-scale"></div>
+                <div class="horizontal-radio-group">
+                    {% for radio in form.eva_score %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.eva_score.errors %}
+                <div class="error-message">
+                    {% for error in form.eva_score.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- FLACC specific fields -->
+            <div id="flacc-fields" class="radio-group">
+                {% for field in form %}
+                    {% if field.name in 'face,pernas,atividade,choro,consolabilidade' %}
+                        <div class="scale-container">
+                            <label>{{ field.label }}</label>
+                            <div class="scale-descriptions">
+                                <span class="scale-description left">{{ form.FLACC_DESCRIPTIONS|get_item:field.name|get_item:'low' }}</span>
+                                <span class="scale-description">{{ form.FLACC_DESCRIPTIONS|get_item:field.name|get_item:'mid' }}</span>
+                                <span class="scale-description right">{{ form.FLACC_DESCRIPTIONS|get_item:field.name|get_item:'high' }}</span>
+                            </div>
+                            <div class="rainbow-scale"></div>
+                            <div class="horizontal-radio-group">
+                                {% for radio in field %}
+                                    <div class="radio-option">
+                                        <label>{{ radio.tag }}</label>
+                                        {{ radio.choice_label }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if field.errors %}
+                            <div class="error-message">
+                                {% for error in field.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- BPS specific fields -->
+            <div id="bps-fields" class="radio-group">
+                {% for field in form %}
+                    {% if field.name in 'expressao_facial,movimentos_membros_superiores,adaptacao_ventilador' %}
+                        <div class="scale-container">
+                            <label>{{ field.label }}</label>
+                            <div class="scale-descriptions">
+                                <span class="scale-description left">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'low' }}</span>
+                                <span class="scale-description">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'mid' }}</span>
+                                <span class="scale-description">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'high' }}</span>
+                                <span class="scale-description right">{{ form.BPS_DESCRIPTIONS|get_item:field.name|get_item:'extreme' }}</span>
+                            </div>
+                            <div class="rainbow-scale"></div>
+                            <div class="horizontal-radio-group">
+                                {% for radio in field %}
+                                    <div class="radio-option">
+                                        <label>{{ radio.tag }}</label>
+                                        {{ radio.choice_label }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if field.errors %}
+                            <div class="error-message">
+                                {% for error in field.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- PAINAD-B specific fields -->
+            <div id="painad-b-fields" class="radio-group">
+                {% for field in form %}
+                    {% with painad_fields='respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad'|split:',' %}
+                        {% if field.name in painad_fields %}
+                            <div class="scale-container">
+                                <label>{{ field.label }}</label>
+                                <div class="scale-descriptions">
+                                    <span class="scale-description left">{{ form.PAINAD_B_DESCRIPTIONS|get_item:field.name|get_item:'low' }}</span>
+                                    <span class="scale-description">{{ form.PAINAD_B_DESCRIPTIONS|get_item:field.name|get_item:'mid' }}</span>
+                                    <span class="scale-description right">{{ form.PAINAD_B_DESCRIPTIONS|get_item:field.name|get_item:'high' }}</span>
+                                </div>
+                                <div class="rainbow-scale"></div>
+                                <div class="horizontal-radio-group">
+                                    {% for radio in field %}
+                                        <div class="radio-option">
+                                            <label>{{ radio.tag }}</label>
+                                            {{ radio.choice_label }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if field.errors %}
+                                <div class="error-message">
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            </div>
+
+            <div class="total-container">
+                <span class="total-label">Total:</span>
+                <span class="total-value" id="total-score">0</span>
+                <span class="pain-classification" id="pain-classification"></span>
+            </div>
+            
+            <div class="radio-group">
+                <label>{{ form.evento_adverso.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.evento_adverso %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.evento_adverso.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group" id="evento_adverso_qual_group" style="display: none;">
+                <label for="{{ form.evento_adverso_qual.id_for_label }}">{{ form.evento_adverso_qual.label }}</label>
+                {{ form.evento_adverso_qual }}
+                {% if form.evento_adverso_qual.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso_qual.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group">
+                <label>{{ form.ponv.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.ponv %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.ponv.errors %}
+                <div class="error-message">
+                    {% for error in form.ponv.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="button-container">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+    $(document).ready(function(){
+        $('.time-mask').mask('00:00', {
+            clearIfNotMatch: true,
+            translation: {
+                '0': {pattern: /[0-9]/}
+            }
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('avaliacaoRPAForm');
+        const escalaInputs = form.querySelectorAll('input[name="escala"]');
+        const evaFields = document.getElementById('eva-fields');
+        const flaccFields = document.getElementById('flacc-fields');
+        const bpsFields = document.getElementById('bps-fields');
+        const painadBFields = document.getElementById('painad-b-fields');
+
+        function showRelevantFields() {
+            const selectedScale = form.querySelector('input[name="escala"]:checked');
+            const selectedValue = selectedScale ? selectedScale.value : null;
+
+            evaFields.style.display = selectedValue === 'EVA' ? 'block' : 'none';
+            flaccFields.style.display = selectedValue === 'FLACC' ? 'block' : 'none';
+            bpsFields.style.display = selectedValue === 'BPS' ? 'block' : 'none';
+            painadBFields.style.display = selectedValue === 'PAINAD-B' ? 'block' : 'none';
+
+            // If no scale is selected, hide all specific fields
+            if (!selectedValue) {
+                evaFields.style.display = 'none';
+                flaccFields.style.display = 'none';
+                bpsFields.style.display = 'none';
+                painadBFields.style.display = 'none';
+            }
+        }
+
+        escalaInputs.forEach(input => {
+            input.addEventListener('change', showRelevantFields);
+        });
+
+        // Show relevant fields on page load
+        showRelevantFields();
+
+        // Add evento_adverso handling
+        const eventoAdversoInputs = form.querySelectorAll('input[name="evento_adverso"]');
+        const eventoAdversoQualGroup = document.getElementById('evento_adverso_qual_group');
+
+        function toggleEventoAdversoQual() {
+            const selectedEvento = form.querySelector('input[name="evento_adverso"]:checked');
+            eventoAdversoQualGroup.style.display = selectedEvento && selectedEvento.value === 'True' ? 'block' : 'none';
+        }
+
+        eventoAdversoInputs.forEach(input => {
+            input.addEventListener('change', toggleEventoAdversoQual);
+        });
+
+        // Show/hide on page load
+        toggleEventoAdversoQual();
+
+        function getPainClassification(scale, total) {
+            if (scale === 'BPS') {
+                if (total === 3) return "Sem dor";
+                if (total >= 4 && total <= 5) return "Dor Leve";
+                if (total >= 6 && total <= 8) return "Dor moderada";
+                if (total >= 9 && total <= 12) return "Dor forte";
+            }
+            else if (scale === 'PAINAD-B') {
+                if (total === 0) return "Sem dor";
+                if (total >= 1 && total <= 3) return "Dor Leve";
+                if (total >= 4 && total <= 7) return "Dor moderada";
+                if (total >= 8 && total <= 10) return "Dor forte";
+            }
+            return ""; // Retorna vazio para outras escalas
+        }
+
+        function calculateTotal() {
+            const selectedScale = form.querySelector('input[name="escala"]:checked');
+            if (!selectedScale) return;
+
+            let total = 0;
+            
+            switch(selectedScale.value) {
+                case 'EVA':
+                    const evaScore = form.querySelector('input[name="eva_score"]:checked');
+                    total = evaScore ? parseInt(evaScore.value) : 0;
+                    break;
+                    
+                case 'FLACC':
+                    const flaccFields = ['face', 'pernas', 'atividade', 'choro', 'consolabilidade'];
+                    flaccFields.forEach(field => {
+                        const checked = form.querySelector(`input[name="${field}"]:checked`);
+                        total += checked ? parseInt(checked.value) : 0;
+                    });
+                    break;
+                    
+                case 'BPS':
+                    const bpsFields = ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador'];
+                    bpsFields.forEach(field => {
+                        const checked = form.querySelector(`input[name="${field}"]:checked`);
+                        total += checked ? parseInt(checked.value) : 0;
+                    });
+                    break;
+                    
+                case 'PAINAD-B':
+                    const painadFields = ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 
+                                       'linguagem_corporal', 'consolabilidade_painad'];
+                    painadFields.forEach(field => {
+                        const checked = form.querySelector(`input[name="${field}"]:checked`);
+                        total += checked ? parseInt(checked.value) : 0;
+                    });
+                    break;
+            }
+            
+            document.getElementById('total-score').textContent = total;
+            
+            // Atualiza a classificação da dor
+            const classification = getPainClassification(selectedScale.value, total);
+            const classificationElement = document.getElementById('pain-classification');
+            classificationElement.textContent = classification ? `- ${classification}` : '';
+        }
+
+        // Adicionar event listeners para todos os campos que afetam o total
+        const allScaleInputs = form.querySelectorAll('input[type="radio"]');
+        allScaleInputs.forEach(input => {
+            input.addEventListener('change', calculateTotal);
+        });
+
+        // Calcular total inicial
+        calculateTotal();
+    });
+</script>
+{% endblock %}
+

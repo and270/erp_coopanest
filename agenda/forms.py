@@ -1,10 +1,24 @@
 from django import forms
 
 from registration.models import Anesthesiologist, HospitalClinic, Surgeon
-from .models import Procedimento, EscalaAnestesiologista
+from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes
 from datetime import datetime, timedelta
+from dal import autocomplete
+from dal_select2 import widgets as dal_widgets
 
 class ProcedimentoForm(forms.ModelForm):
+
+    procedimento_principal = forms.ModelChoiceField(
+        queryset=ProcedimentoDetalhes.objects.all(),
+        widget=dal_widgets.ModelSelect2(
+            url='procedure-autocomplete',
+            attrs={
+                'data-placeholder': 'Digite para buscar...',
+                'data-minimum-input-length': 2,
+            }
+        ),
+        label='Procedimento Principal',
+    )
 
     data = forms.DateField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'dd/mm/aaaa'}),
@@ -25,7 +39,8 @@ class ProcedimentoForm(forms.ModelForm):
 
     cpf_paciente = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
-        label="CPF do Paciente"
+        label="CPF do Paciente",
+        required=False
     )
 
     anestesistas_responsaveis = forms.ModelMultipleChoiceField(
@@ -56,7 +71,7 @@ class ProcedimentoForm(forms.ModelForm):
             'nome_paciente': self.fields['nome_paciente'],
             'email_paciente': self.fields['email_paciente'],
             'convenio': self.fields['convenio'],
-            'procedimento': self.fields['procedimento'],
+            'procedimento_principal': self.fields['procedimento_principal'],
             'hospital': self.fields['hospital'],
             'outro_local': self.fields['outro_local'],
             'cirurgiao': self.fields['cirurgiao'],
@@ -69,10 +84,10 @@ class ProcedimentoForm(forms.ModelForm):
         }
 
         if user:
-            # Filter the ForeignKey fields by the user's group
-            self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group)
-            self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group)
-            self.fields['anestesistas_responsaveis'].queryset = Anesthesiologist.objects.filter(group=user.group)
+            # Filter and order all ForeignKey fields by name
+            self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
+            self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
+            self.fields['anestesistas_responsaveis'].queryset = Anesthesiologist.objects.filter(group=user.group).order_by('name')
 
         # Add CSS classes to the conditional fields
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
