@@ -107,6 +107,7 @@ main {
     background-color: #ffffff; 
     height: 100vh;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .main-title {
@@ -114,6 +115,8 @@ main {
     font-weight: 500;
     color: #000000;
     margin-bottom: 5px;
+    box-sizing: border-box;
+    word-wrap: break-word;
 }
 
 .sub-title {
@@ -121,6 +124,8 @@ main {
     font-weight: 500;
     color: #00124F; 
     margin-bottom: 60px;
+    box-sizing: border-box;
+    word-wrap: break-word;
 }
 
 .cards {
