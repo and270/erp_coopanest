@@ -137,8 +137,8 @@ main {
 }
 
 .card {
-    width: 200px;
-    height: 250px;
+    width: 225px;
+    height: 225px;
     margin: 5px;
     display: flex;
     align-items: flex-end;
@@ -151,13 +151,26 @@ main {
     color: #ffffff;
 }
 
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
 .card span {
+    position: relative;
+    z-index: 2;
     display: block;
     width: 100%;
     padding: 10px;
     background: linear-gradient(180deg, rgba(0, 18, 79, 0) 0%, rgba(0, 18, 79, 0.8) 65%);
     font-size: 25px;
-    font-weight: 500;
+    font-weight: 400;
     text-align: left;
     text-underline-position: from-font;
 }
@@ -1199,8 +1212,9 @@ select {
 
     .card {
         flex: 0 0 auto;
-        margin-right: 10px; /* Space between cards */
-        width: 180px; /* Slightly reduce the width to fit better in smaller screens */
+        margin-right: 10px;
+        width: 180px;
+        height: 180px;
     }
 
     /* Remove right margin from the last card */
