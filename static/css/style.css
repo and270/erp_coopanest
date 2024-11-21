@@ -1126,6 +1126,13 @@ select {
 
 /* Media Query for Mobile Devices */
 @media (max-width: 768px) {
+
+    .home-container {
+        overflow-x: hidden;
+        padding: 20px 10px;
+        box-sizing: border-box;
+    }
+
     .logo img {
         height: 100px; /* Reduce logo size on mobile */
     }
@@ -1173,14 +1180,16 @@ select {
     }
 
     .cards {
-        justify-content: flex-start; /* Align cards to the start */
+        justify-content: flex-start; 
         flex-wrap: nowrap;
         overflow-x: auto;
-        padding: 20px 0; /* Add vertical padding */
-        padding-left: 20px; /* Add left padding to make the first card visible */
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
-        scrollbar-width: none; /* Hide scrollbar for Firefox */
-        -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+        padding: 20px 0; 
+        padding-left: 0;
+        padding-right: 0;
+        -webkit-overflow-scrolling: touch; 
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        box-sizing: border-box;
     }
 
     /* Hide scrollbar for Webkit browsers */
