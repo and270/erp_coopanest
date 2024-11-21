@@ -101,8 +101,8 @@
                         {% for hospital in hospitals %}
                             <tr>
                                 <td>{{ hospital.name }}</td>
-                                <td>{{ hospital.address }}</td>
-                                <td>{{ hospital.surgery_center_phone }}</td>
+                                <td>{{ hospital.address|default:"--" }}</td>
+                                <td>{{ hospital.surgery_center_phone|default:"--" }}</td>
                                 <td>
                                     <div class="actions-dropdown">
                                         <button class="actions-button">Ações ▼</button>

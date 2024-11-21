@@ -104,21 +104,28 @@ main {
 .home-container {
     text-align: center;
     padding: 20px;
-    background-color: #1c2630;
+    background-color: #ffffff; 
     height: 100vh;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .main-title {
-    font-size: 1.8rem;
-    color: #ffffff;
-    margin-bottom: 10px;
+    font-size: 24px;
+    font-weight: 500;
+    color: #000000;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+    word-wrap: break-word;
 }
 
 .sub-title {
-    font-size: 1.2rem;
-    color: #418FDE;
-    margin-bottom: 20px;
+    font-size: 20px;
+    font-weight: 500;
+    color: #00124F; 
+    margin-bottom: 60px;
+    box-sizing: border-box;
+    word-wrap: break-word;
 }
 
 .cards {
@@ -130,8 +137,8 @@ main {
 }
 
 .card {
-    width: 200px;
-    height: 250px;
+    width: 225px;
+    height: 225px;
     margin: 5px;
     display: flex;
     align-items: flex-end;
@@ -144,16 +151,32 @@ main {
     color: #ffffff;
 }
 
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
 .card span {
+    position: relative;
+    z-index: 2;
     display: block;
     width: 100%;
-    padding: 10px 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    font-weight: bold;
+    padding: 10px;
+    background: linear-gradient(180deg, rgba(0, 18, 79, 0) 0%, rgba(0, 18, 79, 0.8) 65%);
+    font-size: 25px;
+    font-weight: 400;
+    text-align: left;
+    text-underline-position: from-font;
 }
 
 .card:hover span {
-    background-color: rgba(0, 0, 0, 0.9);
+    background: linear-gradient(180deg, rgba(0, 18, 79, 0) 0%, rgba(0, 18, 79, 0.9) 65%);
 }
 
 .card a {
@@ -171,17 +194,17 @@ main {
 }
 
 .card.cadastro {
-    background: url("../cadastro.png") no-repeat center center;
+    background: url("../cadastro.jpg") no-repeat center center;
     background-size: cover;
 }
 
 .card.agenda {
-    background: url("../agenda.png") no-repeat center center;
+    background: url("../agenda.jpg") no-repeat center center;
     background-size: cover;
 }
 
 .card.financas {
-    background: url("../financas.png") no-repeat center center;
+    background: url("../financas.jpg") no-repeat center center;
     background-size: cover;
 }
 
@@ -191,7 +214,7 @@ main {
 }
 
 .card.dashboard {
-    background: url("../dashboard.png") no-repeat center center;
+    background: url("../dashboard.jpg") no-repeat center center;
     background-size: cover;
 }
 
@@ -1116,6 +1139,13 @@ select {
 
 /* Media Query for Mobile Devices */
 @media (max-width: 768px) {
+
+    .home-container {
+        overflow-x: hidden;
+        padding: 20px 10px;
+        box-sizing: border-box;
+    }
+
     .logo img {
         height: 100px; /* Reduce logo size on mobile */
     }
@@ -1163,14 +1193,16 @@ select {
     }
 
     .cards {
-        justify-content: flex-start; /* Align cards to the start */
+        justify-content: flex-start; 
         flex-wrap: nowrap;
         overflow-x: auto;
-        padding: 20px 0; /* Add vertical padding */
-        padding-left: 20px; /* Add left padding to make the first card visible */
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
-        scrollbar-width: none; /* Hide scrollbar for Firefox */
-        -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+        padding: 20px 0; 
+        padding-left: 0;
+        padding-right: 0;
+        -webkit-overflow-scrolling: touch; 
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        box-sizing: border-box;
     }
 
     /* Hide scrollbar for Webkit browsers */
@@ -1180,8 +1212,9 @@ select {
 
     .card {
         flex: 0 0 auto;
-        margin-right: 10px; /* Space between cards */
-        width: 180px; /* Slightly reduce the width to fit better in smaller screens */
+        margin-right: 10px;
+        width: 180px;
+        height: 180px;
     }
 
     /* Remove right margin from the last card */

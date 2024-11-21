@@ -186,6 +186,9 @@ class HospitalClinicForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['address'].required = False
+        self.fields['surgery_center_phone'].required = False
+        self.fields['hospital_phone'].required = False
         for field in self.fields:
             self.fields[field].initial = None
 
