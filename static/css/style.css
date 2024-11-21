@@ -104,21 +104,23 @@ main {
 .home-container {
     text-align: center;
     padding: 20px;
-    background-color: #1c2630;
+    background-color: #ffffff; 
     height: 100vh;
     width: 100%;
 }
 
 .main-title {
-    font-size: 1.8rem;
-    color: #ffffff;
-    margin-bottom: 10px;
+    font-size: 24px;
+    font-weight: 500;
+    color: #000000;
+    margin-bottom: 5px;
 }
 
 .sub-title {
-    font-size: 1.2rem;
-    color: #418FDE;
-    margin-bottom: 20px;
+    font-size: 20px;
+    font-weight: 500;
+    color: #00124F; 
+    margin-bottom: 60px;
 }
 
 .cards {
@@ -147,13 +149,16 @@ main {
 .card span {
     display: block;
     width: 100%;
-    padding: 10px 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    font-weight: bold;
+    padding: 10px;
+    background: linear-gradient(180deg, rgba(0, 18, 79, 0) 0%, rgba(0, 18, 79, 0.8) 65%);
+    font-size: 25px;
+    font-weight: 500;
+    text-align: left;
+    text-underline-position: from-font;
 }
 
 .card:hover span {
-    background-color: rgba(0, 0, 0, 0.9);
+    background: linear-gradient(180deg, rgba(0, 18, 79, 0) 0%, rgba(0, 18, 79, 0.9) 65%);
 }
 
 .card a {
@@ -171,17 +176,17 @@ main {
 }
 
 .card.cadastro {
-    background: url("../cadastro.png") no-repeat center center;
+    background: url("../cadastro.jpg") no-repeat center center;
     background-size: cover;
 }
 
 .card.agenda {
-    background: url("../agenda.png") no-repeat center center;
+    background: url("../agenda.jpg") no-repeat center center;
     background-size: cover;
 }
 
 .card.financas {
-    background: url("../financas.png") no-repeat center center;
+    background: url("../financas.jpg") no-repeat center center;
     background-size: cover;
 }
 
@@ -191,7 +196,7 @@ main {
 }
 
 .card.dashboard {
-    background: url("../dashboard.png") no-repeat center center;
+    background: url("../dashboard.jpg") no-repeat center center;
     background-size: cover;
 }
 
