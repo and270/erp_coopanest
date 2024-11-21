@@ -108,9 +108,9 @@ class Surgeon(models.Model):
 class HospitalClinic(models.Model):
     name = models.CharField(max_length=255, default='', verbose_name='Nome')
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
-    address = models.CharField(max_length=255, default='No address provided', verbose_name='Endereço')
-    surgery_center_phone = models.CharField(max_length=15, default='0000000000', verbose_name='Telefone do Centro Cirúrgico')
-    hospital_phone = models.CharField(max_length=15, default='0000000000', verbose_name='Telefone do Hospital')
+    address = models.CharField(max_length=255, blank=True, null=True, verbose_name='Endereço')
+    surgery_center_phone = models.CharField(max_length=15, blank=True, null=True, verbose_name='Telefone do Centro Cirúrgico')
+    hospital_phone = models.CharField(max_length=15, blank=True, null=True, verbose_name='Telefone do Hospital')
 
     class Meta:
         verbose_name = "Hospital / Clínica"
