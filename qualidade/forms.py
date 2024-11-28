@@ -1,15 +1,17 @@
 from django import forms
-from .models import AvaliacaoRPA
-from agenda.models import Procedimento
+
+from constants import STATUS_FINISHED
+from .models import BPS_DESCRIPTIONS, EVA_DESCRIPTIONS, FLACC_DESCRIPTIONS, PAINAD_B_DESCRIPTIONS, AvaliacaoRPA, ProcedimentoQualidade
+from financas.models import ProcedimentoFinancas
 import pytz
 
 class AvaliacaoRPAForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.EVA_DESCRIPTIONS = AvaliacaoRPA.EVA_DESCRIPTIONS
-        self.FLACC_DESCRIPTIONS = AvaliacaoRPA.FLACC_DESCRIPTIONS
-        self.BPS_DESCRIPTIONS = AvaliacaoRPA.BPS_DESCRIPTIONS
-        self.PAINAD_B_DESCRIPTIONS = AvaliacaoRPA.PAINAD_B_DESCRIPTIONS
+        self.EVA_DESCRIPTIONS = EVA_DESCRIPTIONS
+        self.FLACC_DESCRIPTIONS = FLACC_DESCRIPTIONS
+        self.BPS_DESCRIPTIONS = BPS_DESCRIPTIONS
+        self.PAINAD_B_DESCRIPTIONS = PAINAD_B_DESCRIPTIONS
 
     class Meta:
         model = AvaliacaoRPA
@@ -88,12 +90,34 @@ class AvaliacaoRPAForm(forms.ModelForm):
         return cleaned_data
 
 class ProcedimentoFinalizacaoForm(forms.ModelForm):
+    # Add financial fields
+    tipo_cobranca = forms.ChoiceField(
+        choices=ProcedimentoFinancas.COBRANCA_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
+        required=True
+    )
+    valor_cobranca = forms.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'data-dependent-on': 'tipo_cobranca',
+            'id': 'id_valor_cobranca'
+        })
+    )
+    tipo_pagamento_direto = forms.ChoiceField(
+        choices=ProcedimentoFinancas.DIRECT_PAYMENT_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.EVA_DESCRIPTIONS = AvaliacaoRPA.EVA_DESCRIPTIONS
-        self.FLACC_DESCRIPTIONS = AvaliacaoRPA.FLACC_DESCRIPTIONS
-        self.BPS_DESCRIPTIONS = AvaliacaoRPA.BPS_DESCRIPTIONS
-        self.PAINAD_B_DESCRIPTIONS = AvaliacaoRPA.PAINAD_B_DESCRIPTIONS
+        self.EVA_DESCRIPTIONS = EVA_DESCRIPTIONS
+        self.FLACC_DESCRIPTIONS = FLACC_DESCRIPTIONS
+        self.BPS_DESCRIPTIONS = BPS_DESCRIPTIONS
+        self.PAINAD_B_DESCRIPTIONS = PAINAD_B_DESCRIPTIONS
         
         # Add custom labels
         self.fields['data_horario_inicio_efetivo'].label = 'Horário de Início'
@@ -108,51 +132,30 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             if self.instance.data_horario_inicio_efetivo:
                 # Convert to local time for display
-                local_time = self.instance.data_horario_inicio_efetivo.astimezone(pytz.timezone('America/Sao_Paulo'))
+                local_tz = pytz.timezone('America/Sao_Paulo')
+                local_time = self.instance.data_horario_inicio_efetivo.astimezone(local_tz)
                 self.initial['data_horario_inicio_efetivo'] = local_time.strftime('%Y-%m-%dT%H:%M')
+            
             if self.instance.data_horario_fim_efetivo:
-                local_time = self.instance.data_horario_fim_efetivo.astimezone(pytz.timezone('America/Sao_Paulo'))
+                # Convert to local time for display
+                local_tz = pytz.timezone('America/Sao_Paulo')
+                local_time = self.instance.data_horario_fim_efetivo.astimezone(local_tz)
                 self.initial['data_horario_fim_efetivo'] = local_time.strftime('%Y-%m-%dT%H:%M')
 
-        # Add data attributes to tipo_cobranca widget
-        self.fields['tipo_cobranca'].widget.attrs.update({
-            'class': 'form-check-inline',
-            'data-controls': 'valor_cobranca'
-        })
-
-        # Add tipo_pagamento_direto to the form
-        self.fields['tipo_pagamento_direto'].widget.attrs.update({
-            'class': 'form-control',
-            'data-dependent-on': 'tipo_cobranca',
-            'data-show-on': 'particular'
-        })
-
     class Meta:
-        model = Procedimento
+        model = ProcedimentoQualidade
         fields = [
-            'data_horario_inicio_efetivo',
-            'data_horario_fim_efetivo',
-            'dor_pos_operatoria',
-            'escala', 
-            'eva_score',
+            'data_horario_inicio_efetivo', 'data_horario_fim_efetivo',
+            'dor_pos_operatoria', 'escala', 'eva_score',
             'face', 'pernas', 'atividade', 'choro', 'consolabilidade',
             'expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador',
             'respiracao', 'vocalizacao_negativa', 'expressao_facial_painad',
             'linguagem_corporal', 'consolabilidade_painad',
-            'eventos_adversos_graves',
-            'eventos_adversos_graves_desc',
-            'reacao_alergica_grave',
-            'reacao_alergica_grave_desc',
-            'encaminhamento_uti',
-            'evento_adverso_evitavel',
-            'adesao_checklist',
-            'uso_tecnicas_assepticas',
-            'conformidade_diretrizes',
-            'ponv',
-            'adesao_profilaxia',
-            'tipo_cobranca',
-            'tipo_pagamento_direto',
-            'valor_cobranca',
+            'eventos_adversos_graves', 'eventos_adversos_graves_desc',
+            'reacao_alergica_grave', 'reacao_alergica_grave_desc',
+            'encaminhamento_uti', 'evento_adverso_evitavel',
+            'adesao_checklist', 'uso_tecnicas_assepticas',
+            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia'
         ]
         widgets = {
             'data_horario_inicio_efetivo': forms.DateTimeInput(
@@ -243,6 +246,28 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 }
             ),
         }
+
+    def save(self, commit=True):
+        qualidade_instance = super().save(commit=False)
+        
+        if commit:
+            qualidade_instance.save()
+            
+            # Create or update ProcedimentoFinancas
+            financas, _ = ProcedimentoFinancas.objects.get_or_create(
+                procedimento=qualidade_instance.procedimento
+            )
+            financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
+            financas.valor_cobranca = self.cleaned_data['valor_cobranca']
+            financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
+            financas.save()
+            
+            # Update Procedimento status
+            procedimento = qualidade_instance.procedimento
+            procedimento.status = STATUS_FINISHED
+            procedimento.save()
+
+        return qualidade_instance
 
     def clean(self):
         cleaned_data = super().clean()
