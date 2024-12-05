@@ -1,4 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from financas.models import ProcedimentoFinancas
+from qualidade.models import ProcedimentoQualidade
 from registration.models import Anesthesiologist, CustomUser
 from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes
 from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
@@ -48,7 +50,6 @@ def update_procedure(request, procedure_id):
         email_sent = False
         email_error = None
 
-        # Check if the email has changed and is not empty
         if updated_procedure.email_paciente and updated_procedure.email_paciente != old_email:
             email_try = True
             try:
@@ -347,10 +348,14 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 def survey_view(request, nps_token):
+    # First find the procedure using the nps_token
     procedimento = get_object_or_404(Procedimento, nps_token=nps_token)
+    
+    # Get or create the associated ProcedimentoQualidade instance
+    qualidade, _ = ProcedimentoQualidade.objects.get_or_create(procedimento=procedimento)
 
     if request.method == 'POST':
-        form = SurveyForm(request.POST, instance=procedimento)
+        form = SurveyForm(request.POST, instance=qualidade)
         if form.is_valid():
             survey_response = form.save()
             
@@ -383,7 +388,7 @@ def survey_view(request, nps_token):
             
             return render(request, 'survey_thanks.html')
     else:
-        form = SurveyForm(instance=procedimento)
+        form = SurveyForm(instance=qualidade)
 
     context = {
         'form': form,

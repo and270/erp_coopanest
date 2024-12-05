@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'registration',
     'agenda',
     'qualidade',
+    'financas',
 ]
 
 MIDDLEWARE = [

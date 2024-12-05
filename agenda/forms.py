@@ -1,5 +1,6 @@
 from django import forms
 
+from qualidade.models import ProcedimentoQualidade
 from registration.models import Anesthesiologist, HospitalClinic, Surgeon
 from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes
 from datetime import datetime, timedelta
@@ -52,50 +53,27 @@ class ProcedimentoForm(forms.ModelForm):
 
     class Meta:
         model = Procedimento
-        exclude = ['group', 'data_horario', 'data_horario_fim', 'nps_token', 'csat_score', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca', 'comentario_adicional']
+        fields = [
+            'procedimento_type', 'nome_paciente', 'email_paciente', 'cpf_paciente',
+            'convenio', 'procedimento_principal', 'hospital', 'outro_local',
+            'cirurgiao', 'anestesistas_responsaveis', 'visita_pre_anestesica',
+            'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita'
+        ]
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-
         super(ProcedimentoForm, self).__init__(*args, **kwargs)
-
-        self.fields['procedimento_type'].label = 'Tipo de Procedimento'
-        self.fields['data'].label = 'Data do Procedimento'
-        self.fields['time'].label = 'Hora do Procedimento'
-
-        self.fields = {
-            'procedimento_type': self.fields['procedimento_type'],
-            'data': self.fields['data'],
-            'time': self.fields['time'],
-            'end_time': self.fields['end_time'],
-            'nome_paciente': self.fields['nome_paciente'],
-            'email_paciente': self.fields['email_paciente'],
-            'convenio': self.fields['convenio'],
-            'procedimento_principal': self.fields['procedimento_principal'],
-            'hospital': self.fields['hospital'],
-            'outro_local': self.fields['outro_local'],
-            'cirurgiao': self.fields['cirurgiao'],
-            'anestesistas_responsaveis': self.fields['anestesistas_responsaveis'],
-            'visita_pre_anestesica': self.fields['visita_pre_anestesica'],
-            'data_visita_pre_anestesica': self.fields['data_visita_pre_anestesica'],
-            'foto_anexo': self.fields['foto_anexo'],
-            'nome_responsavel_visita': self.fields['nome_responsavel_visita'],
-            'cpf_paciente': self.fields['cpf_paciente'],
-        }
-
+        
         if user:
-            # Filter and order all ForeignKey fields by name
             self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
             self.fields['anestesistas_responsaveis'].queryset = Anesthesiologist.objects.filter(group=user.group).order_by('name')
 
-        # Add CSS classes to the conditional fields
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['foto_anexo'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['nome_responsavel_visita'].widget.attrs.update({'class': 'form-control conditional-field'})
 
     def save(self, commit=True):
-        # Combine the date and time fields to form the `data_horario`
         instance = super().save(commit=False)
         date = self.cleaned_data['data']
         time = self.cleaned_data['time']
@@ -108,7 +86,7 @@ class ProcedimentoForm(forms.ModelForm):
     
 class SurveyForm(forms.ModelForm):
     class Meta:
-        model = Procedimento
+        model = ProcedimentoQualidade
         fields = ['satisfacao_geral', 'clareza_informacoes', 'comunicacao_disponibilidade', 'conforto_seguranca', 'comentario_adicional']
         widgets = {
             'satisfacao_geral': forms.RadioSelect(attrs={'class': 'satisfaction-radio'}),

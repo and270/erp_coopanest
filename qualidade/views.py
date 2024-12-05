@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.shortcuts import render, get_object_or_404, redirect
 from agenda.forms import ProcedimentoForm
 from agenda.views import MONTH_NAMES_PT, get_calendar_dates, get_week_dates
+from financas.models import ProcedimentoFinancas
 from registration.models import CustomUser
 from agenda.models import Procedimento
 from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER, STATUS_FINISHED
@@ -14,7 +15,7 @@ from django.utils import timezone
 from django.db.models import Q
 import os
 from .forms import AvaliacaoRPAForm
-from .models import AvaliacaoRPA
+from .models import AvaliacaoRPA, ProcedimentoQualidade
 from django.views.decorators.http import require_POST
 from .forms import ProcedimentoFinalizacaoForm
 from django.contrib import messages
@@ -298,22 +299,28 @@ def finalizar_procedimento_view(request, procedimento_id):
     
     procedimento = get_object_or_404(Procedimento, id=procedimento_id, group=request.user.group)
     
+    # Get or create related models
+    qualidade, _ = ProcedimentoQualidade.objects.get_or_create(procedimento=procedimento)
+    financas, _ = ProcedimentoFinancas.objects.get_or_create(procedimento=procedimento)
+    
     if request.method == 'POST':
-        form = ProcedimentoFinalizacaoForm(request.POST, instance=procedimento)
+        form = ProcedimentoFinalizacaoForm(request.POST, instance=qualidade)
         if form.is_valid():
-            procedimento = form.save(commit=False)
-            procedimento.status = STATUS_FINISHED
-            procedimento.save()
+            form.save()
             messages.success(request, 'Procedimento finalizado com sucesso!')
             return redirect('qualidade')
-        else:
-            messages.error(request, 'Por favor, corrija os erros abaixo.')
     else:
-        form = ProcedimentoFinalizacaoForm(instance=procedimento)
-
+        initial_data = {
+            'tipo_cobranca': financas.tipo_cobranca,
+            'valor_cobranca': financas.valor_cobranca,
+            'tipo_pagamento_direto': financas.tipo_pagamento_direto,
+        }
+        form = ProcedimentoFinalizacaoForm(instance=qualidade, initial=initial_data)
+    
     context = {
         'form': form,
         'procedimento': procedimento,
+        'financas': financas,
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
