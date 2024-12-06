@@ -67,7 +67,7 @@ class Procedimento(models.Model):
         verbose_name_plural = "Procedimentos"
 
     def __str__(self):
-        return f'{self.procedimento} - {self.nome_paciente}'
+        return f'{self.procedimento_principal} - {self.nome_paciente}'
 
 class EscalaAnestesiologista(models.Model):
 
