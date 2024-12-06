@@ -43,15 +43,15 @@
 
 .metric-value {
     font-family: Inter;
-    font-size: 54px;
+    font-size: 42px;
     font-weight: 600;
-    line-height: 65.35px;
+    line-height: 1.2;
     color: #01124A;
 }
 
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 24px;
 }
 
@@ -123,12 +123,115 @@
     display: none;
 }
 
+/* CSAT Card Styling */
+.csat {
+    grid-column: 4;  /* Position in last column */
+    grid-row: 1;     /* First row */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.csat-label {
+    font-family: Inter;
+    font-size: 16px;
+    font-weight: 500;
+    color: #0D0D0D;
+}
+
+.csat-value {
+    font-family: Inter;
+    font-size: 24px;
+    font-weight: 600;
+    color: #01124A;
+    margin: 8px 0;
+}
+
+.csat-emoji {
+    font-size: 32px;
+}
+
+/* Column organization with adjusted heights */
+.metrics-column-1 {
+    grid-column: 1;
+    grid-row: 2 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+.metrics-column-1 .metric-card {
+    flex: 1;  /* Each card takes equal space */
+    min-height: 0;  /* Allow cards to shrink */
+    height: calc((100% - 48px) / 3);  /* Divide available space by 3, accounting for gaps */
+}
+
+.metrics-column-2, .metrics-column-3 {
+    grid-column: auto;
+    grid-row: 2 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+.metrics-column-2 .metric-card,
+.metrics-column-3 .metric-card {
+    flex: 1;
+    min-height: 0;
+    height: calc((100% - 24px) / 2);  /* Divide available space by 2, accounting for gap */
+}
+
+.metrics-column-4 {
+    grid-column: 4;
+    grid-row: 2 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+.metrics-column-4 .metric-card {
+    flex: 1;
+    min-height: 0;
+    height: calc((100% - 48px) / 3);  /* Divide available space by 3, accounting for gaps */
+}
+
 @media (max-width: 768px) {
     .metrics-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr;  /* Single column layout */
+        gap: 16px;  /* Slightly reduced gap for mobile */
     }
     
+    /* Reset all column spans and heights */
+    .csat,
+    .metrics-column-1,
+    .metrics-column-2,
+    .metrics-column-3,
+    .metrics-column-4 {
+        grid-column: 1;
+        grid-row: auto;
+        height: auto;
+    }
+
+    /* Reset card heights for mobile */
+    .metrics-column-1 .metric-card,
+    .metrics-column-2 .metric-card,
+    .metrics-column-3 .metric-card,
+    .metrics-column-4 .metric-card {
+        height: auto;
+        min-height: auto;
+    }
+
+    /* Adjust progress section for mobile */
     .progress-section {
         flex-direction: column;
+        gap: 16px;
+    }
+
+    .progress-card {
+        width: 100%;
     }
 }

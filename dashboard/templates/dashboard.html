@@ -34,59 +34,89 @@
             <div class="csat-emoji">😊</div>
         </div>
 
-        <!-- Main metrics -->
-        <div class="metric-card">
-            <h3>Taxa de eventos adversos graves</h3>
-            <div class="metric-value">{{ metrics.eventos_adversos|floatformat:0 }}%</div>
-            <div class="procedure-filter">
-                <select id="procedimentoFilter">
-                    <option value="">Tipo de Procedimento</option>
-                    {% for proc in procedimentos %}
-                        <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
-                            {{ proc.name }}
-                        </option>
-                    {% endfor %}
-                </select>
+        <!-- Column 1 -->
+        <div class="metrics-column-1">
+            <div class="metric-card">
+                <h3>Taxa de eventos adversos graves</h3>
+                <div class="metric-value">{{ metrics.eventos_adversos|floatformat:0 }}%</div>
+                <div class="procedure-filter">
+                    <select id="procedimentoFilter">
+                        <option value="">Tipo de Procedimento</option>
+                        {% for proc in procedimentos %}
+                            <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
+                                {{ proc.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Tempo de atraso médio para início da cirurgia</h3>
+                <div class="metric-value">{{ metrics.atraso_medio }}</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Tempo médio de duração das cirurgias</h3>
+                <div class="metric-value">{{ metrics.duracao_media|default_if_none:"00:00"|stringformat:".6s" }}</div>
             </div>
         </div>
 
-        <div class="metric-card">
-            <h3>Tempo de atraso médio para início da cirurgia</h3>
-            <div class="metric-value">{{ metrics.atraso_medio }}</div>
-        </div>
-
-        <div class="metric-card">
-            <h3>Tempo médio de duração das cirurgias</h3>
-            <div class="metric-value">{{ metrics.duracao_media|default_if_none:"00:00"|stringformat:".6s" }}</div>
-        </div>
-
-        <!-- Additional metrics -->
-        <div class="metric-card">
-            <h3>Taxa de Reações Alérgicas</h3>
-            <div class="metric-value">{{ metrics.reacoes_alergicas|floatformat:0 }}%</div>
-        </div>
-
-        <div class="metric-card">
-            <h3>Encaminhamentos não programados ao CTI</h3>
-            <div class="metric-value">{{ metrics.encaminhamentos_uti|floatformat:0 }}%</div>
-        </div>
-
-        <!-- Progress bars -->
-        <div class="progress-section">
-            <div class="progress-card">
-                <div class="progress-bar">
-                    <div class="progress" style="height: {{ metrics.conformidade_protocolos }}%"></div>
-                </div>
-                <div class="progress-label">{{ metrics.conformidade_protocolos|floatformat:0 }}%</div>
-                <div class="progress-title">Conformidade com os protocolos</div>
+        <!-- Column 2 -->
+        <div class="metrics-column-2">
+            <div class="metric-card">
+                <h3>Taxa de Reações Alérgicas</h3>
+                <div class="metric-value">{{ metrics.reacoes_alergicas|floatformat:0 }}%</div>
             </div>
 
-            <div class="progress-card">
-                <div class="progress-bar">
-                    <div class="progress" style="height: {{ metrics.tecnicas_assepticas }}%"></div>
+            <div class="metric-card">
+                <h3>Encaminhamentos não programados ao CTI</h3>
+                <div class="metric-value">{{ metrics.encaminhamentos_uti|floatformat:0 }}%</div>
+            </div>
+        </div>
+
+        <!-- Column 3 -->
+        <div class="metrics-column-3">
+            <div class="metric-card">
+                <h3>PONV Imediato RPA</h3>
+                <div class="metric-value">{{ metrics.ponv|floatformat:0 }}%</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Dor pós-operatória imediata RPA</h3>
+                <div class="metric-value">{{ metrics.dor_pos_operatoria|floatformat:0 }}%</div>
+            </div>
+        </div>
+
+        <!-- Column 4 -->
+        <div class="metrics-column-4">
+            <div class="metric-card">
+                <h3>Eventos adversos evitáveis</h3>
+                <div class="metric-value">25%</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Adesão ao checklist de segurança</h3>
+                <div class="metric-value">{{ metrics.adesao_checklist|floatformat:0 }}%</div>
+            </div>
+
+            <!-- Progress bars -->
+            <div class="progress-section">
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {{ metrics.conformidade_protocolos }}%"></div>
+                    </div>
+                    <div class="progress-label">{{ metrics.conformidade_protocolos|floatformat:0 }}%</div>
+                    <div class="progress-title">Conformidade com os protocolos</div>
                 </div>
-                <div class="progress-label">{{ metrics.tecnicas_assepticas|floatformat:0 }}%</div>
-                <div class="progress-title">Uso de técnicas assépticas</div>
+
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {{ metrics.tecnicas_assepticas }}%"></div>
+                    </div>
+                    <div class="progress-label">{{ metrics.tecnicas_assepticas|floatformat:0 }}%</div>
+                    <div class="progress-title">Uso de técnicas assépticas</div>
+                </div>
             </div>
         </div>
     </div>
