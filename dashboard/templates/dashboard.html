@@ -31,7 +31,7 @@
         <div class="metric-card csat">
             <div class="csat-text">
                 <div class="csat-label">CSAT</div>
-                <div class="csat-value">{{ metrics.csat_score|floatformat:1 }}</div>
+                <div class="csat-value">{% if metrics.csat_score %}{{ metrics.csat_score|floatformat:1 }}{% else %}--{% endif %}</div>
             </div>
             <div class="csat-emoji">
                 {% if metrics.csat_score >= 8 %}
@@ -48,7 +48,7 @@
         <div class="metrics-column-1">
             <div class="metric-card">
                 <h3>Taxa de eventos adversos graves</h3>
-                <div class="metric-value">{{ metrics.eventos_adversos|floatformat:0 }}%</div>
+                <div class="metric-value">{% if metrics.eventos_adversos %}{{ metrics.eventos_adversos|floatformat:0 }}%{% else %}--{% endif %}</div>
                 <div class="procedure-filter">
                     <select id="procedimentoFilter">
                         <option value="">Tipo de Procedimento</option>
@@ -63,12 +63,12 @@
 
             <div class="metric-card">
                 <h3>Tempo de atraso médio para início da cirurgia</h3>
-                <div class="metric-value">{{ metrics.atraso_medio }}</div>
+                <div class="metric-value">{% if metrics.duracao_media %}{{ metrics.duracao_media }}{% else %}--:--{% endif %}</div>
             </div>
 
             <div class="metric-card">
                 <h3>Tempo médio de duração das cirurgias</h3>
-                <div class="metric-value">{{ metrics.duracao_media|default_if_none:"00:00"|stringformat:".6s" }}</div>
+                <div class="metric-value">{% if metrics.duracao_media %}{{ metrics.duracao_media }}{% else %}--:--{% endif %}</div>
             </div>
         </div>
 
@@ -76,12 +76,12 @@
         <div class="metrics-column-2">
             <div class="metric-card">
                 <h3>Taxa de Reações Alérgicas</h3>
-                <div class="metric-value">{{ metrics.reacoes_alergicas|floatformat:0 }}%</div>
+                <div class="metric-value">{% if metrics.reacoes_alergicas %}{{ metrics.reacoes_alergicas|floatformat:0 }}%{% else %}--{% endif %}</div>
             </div>
 
             <div class="metric-card">
                 <h3>Encaminhamentos não programados ao CTI</h3>
-                <div class="metric-value">{{ metrics.encaminhamentos_uti|floatformat:0 }}%</div>
+                <div class="metric-value">{% if metrics.encaminhamentos_uti %}{{ metrics.encaminhamentos_uti|floatformat:0 }}%{% else %}--{% endif %}</div>
             </div>
         </div>
 
@@ -89,12 +89,12 @@
         <div class="metrics-column-3">
             <div class="metric-card">
                 <h3>PONV Imediato RPA</h3>
-                <div class="metric-value">{{ metrics.ponv|floatformat:0 }}%</div>
+                <div class="metric-value">{% if metrics.ponv %}{{ metrics.ponv|floatformat:0 }}%{% else %}--{% endif %}</div>
             </div>
 
             <div class="metric-card">
                 <h3>Dor pós-operatória imediata RPA</h3>
-                <div class="metric-value">{{ metrics.dor_pos_operatoria|floatformat:0 }}%</div>
+                <div class="metric-value">{% if metrics.dor_pos_operatoria %}{{ metrics.dor_pos_operatoria|floatformat:0 }}%{% else %}--{% endif %}</div>
             </div>
         </div>
 
@@ -107,24 +107,24 @@
 
             <div class="metric-card">
                 <h3>Adesão ao checklist de segurança</h3>
-                <div class="metric-value">{{ metrics.adesao_checklist|floatformat:0 }}%</div>
+                <div class="metric-value">{% if metrics.adesao_checklist %}{{ metrics.adesao_checklist|floatformat:0 }}%{% else %}--{% endif %}</div>
             </div>
 
             <!-- Progress bars -->
             <div class="progress-section">
                 <div class="progress-card">
                     <div class="progress-bar">
-                        <div class="progress" style="height: {{ metrics.conformidade_protocolos }}%"></div>
+                        <div class="progress" style="height: {% if metrics.conformidade_protocolos %}{{ metrics.conformidade_protocolos }}{% else %}0{% endif %}%"></div>
                     </div>
-                    <div class="progress-label">{{ metrics.conformidade_protocolos|floatformat:0 }}%</div>
+                    <div class="progress-label">{% if metrics.conformidade_protocolos %}{{ metrics.conformidade_protocolos|floatformat:0 }}%{% else %}--{% endif %}</div>
                     <div class="progress-title">Conformidade com os protocolos</div>
                 </div>
 
                 <div class="progress-card">
                     <div class="progress-bar">
-                        <div class="progress" style="height: {{ metrics.tecnicas_assepticas }}%"></div>
+                        <div class="progress" style="height: {% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas }}{% else %}0{% endif %}%"></div>
                     </div>
-                    <div class="progress-label">{{ metrics.tecnicas_assepticas|floatformat:0 }}%</div>
+                    <div class="progress-label">{% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas|floatformat:0 }}%{% else %}--{% endif %}</div>
                     <div class="progress-title">Uso de técnicas assépticas</div>
                 </div>
             </div>
