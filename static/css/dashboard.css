@@ -128,9 +128,16 @@
     grid-column: 4;  /* Position in last column */
     grid-row: 1;     /* First row */
     display: flex;
-    flex-direction: column;
+    flex-direction: row;  /* Changed to row from column */
+    justify-content: space-between;  /* Space between text and emoji */
     align-items: center;
-    justify-content: center;
+    padding: 16px 24px;  /* Adjusted padding */
+}
+
+.csat-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .csat-label {
@@ -145,11 +152,15 @@
     font-size: 24px;
     font-weight: 600;
     color: #01124A;
-    margin: 8px 0;
 }
 
 .csat-emoji {
-    font-size: 32px;
+    width: 40px;  /* Fixed width for the emoji container */
+}
+
+.csat-emoji img {
+    width: 100%;
+    height: auto;
 }
 
 /* Column organization with adjusted heights */

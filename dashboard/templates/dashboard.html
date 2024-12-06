@@ -29,9 +29,19 @@
     <div class="metrics-grid">
         <!-- CSAT Score -->
         <div class="metric-card csat">
-            <div class="csat-label">CSAT</div>
-            <div class="csat-value">Muito bom</div>
-            <div class="csat-emoji">😊</div>
+            <div class="csat-text">
+                <div class="csat-label">CSAT</div>
+                <div class="csat-value">{{ metrics.csat_score|floatformat:1 }}</div>
+            </div>
+            <div class="csat-emoji">
+                {% if metrics.csat_score >= 8 %}
+                    <img src="{% static 'csat_grade_faces/happy.png' %}" alt="Happy face">
+                {% elif metrics.csat_score >= 6 %}
+                    <img src="{% static 'csat_grade_faces/neutral.png' %}" alt="Neutral face">
+                {% else %}
+                    <img src="{% static 'csat_grade_faces/sad.png' %}" alt="Sad face">
+                {% endif %}
+            </div>
         </div>
 
         <!-- Column 1 -->
