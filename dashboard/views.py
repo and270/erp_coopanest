@@ -29,17 +29,23 @@ def dashboard_view(request):
         )
 
     total_count = queryset.count()
+    avg_delay = queryset.aggregate(
+        avg_delay=Avg(F('data_horario_inicio_efetivo') - F('procedimento__data_horario'))
+    )['avg_delay']
+
     metrics = {
         'eventos_adversos': queryset.filter(eventos_adversos_graves=True).count() / total_count * 100 if total_count > 0 else 0,
-        'atraso_medio': queryset.aggregate(
-            avg_delay=Avg(F('data_horario_inicio_efetivo') - F('procedimento__data_horario'))
-        )['avg_delay'],
-        'duracao_media': queryset.aggregate(
+        'atraso_medio': (f"{avg_delay.days} dias, {int((avg_delay.seconds // 3600)):02d}:{int((avg_delay.seconds % 3600) // 60):02d}" 
+                        if avg_delay and avg_delay.days > 0 
+                        else f"{int(avg_delay.seconds // 3600):02d}:{int((avg_delay.seconds % 3600) // 60):02d}" if avg_delay 
+                        else "00:00"),
+        'duracao_media': str(queryset.aggregate(
             avg_duration=Avg(F('data_horario_fim_efetivo') - F('data_horario_inicio_efetivo'))
-        )['avg_duration'],
+        )['avg_duration']).split('.')[0].rsplit(':', 1)[0] if total_count > 0 else "00:00",
         'reacoes_alergicas': queryset.filter(reacao_alergica_grave=True).count() / total_count * 100 if total_count > 0 else 0,
         'encaminhamentos_uti': queryset.filter(encaminhamento_uti=True).count() / total_count * 100 if total_count > 0 else 0,
         'ponv': queryset.filter(ponv=True).count() / total_count * 100 if total_count > 0 else 0,
+        'dor_pos_operatoria': queryset.filter(dor_pos_operatoria=True).count() / total_count * 100 if total_count > 0 else 0,
         'adesao_checklist': queryset.filter(adesao_checklist=True).count() / total_count * 100 if total_count > 0 else 0,
         'conformidade_protocolos': queryset.filter(conformidade_diretrizes=True).count() / total_count * 100 if total_count > 0 else 0,
         'tecnicas_assepticas': queryset.filter(uso_tecnicas_assepticas=True).count() / total_count * 100 if total_count > 0 else 0,
@@ -51,6 +57,7 @@ def dashboard_view(request):
         procedimento__group=user_group
     ).distinct()
 
+    print(f"duracao_media: {metrics['duracao_media']}")
     return render(request, 'dashboard.html', {
         'metrics': metrics,
         'procedimentos': procedimentos,
