@@ -9,4 +9,5 @@ urlpatterns = [
     path('', include('registration.urls')),
     path('', include('agenda.urls')),
     path('', include('qualidade.urls')),
+    path('', include('dashboard.urls')),
 ]
