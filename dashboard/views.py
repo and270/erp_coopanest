@@ -55,7 +55,7 @@ def dashboard_view(request):
     # Get procedure types for filter (only from the same group)
     procedimentos = ProcedimentoDetalhes.objects.filter(
         procedimento__group=user_group
-    ).distinct()
+    ).order_by('name').distinct()
 
     print(f"duracao_media: {metrics['duracao_media']}")
     return render(request, 'dashboard.html', {

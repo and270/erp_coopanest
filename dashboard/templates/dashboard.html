@@ -12,16 +12,6 @@
     <div class="dashboard-header">
         <h1>Dashboard de Qualidade</h1>
         <div class="dashboard-actions">
-            <div class="filter-container">
-                <select id="procedimentoFilter">
-                    <option value="">Tipo de Procedimento</option>
-                    {% for proc in procedimentos %}
-                        <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
-                            {{ proc.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
             <button class="export-btn">Exportar</button>
         </div>
     </div>
@@ -54,7 +44,7 @@
                         <option value="">Tipo de Procedimento</option>
                         {% for proc in procedimentos %}
                             <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
-                                {{ proc.name }}
+                                {{ proc.name|truncatechars:25 }}
                             </option>
                         {% endfor %}
                     </select>
@@ -136,7 +126,20 @@
 {% block extra_js %}
 <script>
 document.getElementById('procedimentoFilter').addEventListener('change', function() {
-    window.location.href = '?procedimento=' + this.value;
+    const selectedValue = this.value;
+    console.log('Selected value:', selectedValue);
+    
+    if (selectedValue) {
+        const newUrl = '?procedimento=' + encodeURIComponent(selectedValue);
+        console.log('Redirecting to:', newUrl);
+        window.location.href = newUrl;
+    } else {
+        console.log('Resetting to base URL');
+        window.location.href = window.location.pathname;
+    }
 });
+
+// Log on page load to verify the element exists
+console.log('Filter element:', document.getElementById('procedimentoFilter'));
 </script>
 {% endblock %}
