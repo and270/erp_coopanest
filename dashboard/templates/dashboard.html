@@ -12,7 +12,26 @@
     <div class="dashboard-header">
         <h1>Dashboard de Qualidade</h1>
         <div class="dashboard-actions">
-            <button class="export-btn">Exportar</button>
+            <div class="period-filter">
+                <button class="filter-btn" id="periodFilterBtn">
+                    <i class="fas fa-calendar"></i>
+                    Filtrar por período
+                </button>
+                <div id="periodFilter" class="period-dropdown" style="display: none;">
+                    <div class="period-option" data-value="7" {% if selected_period == '7' %}data-selected{% endif %}>Últimos 7 dias</div>
+                    <div class="period-option" data-value="14" {% if selected_period == '14' %}data-selected{% endif %}>Últimos 14 dias</div>
+                    <div class="period-option" data-value="30" {% if selected_period == '30' %}data-selected{% endif %}>Últimos 30 dias</div>
+                    <div class="period-option" data-value="90" {% if selected_period == '90' %}data-selected{% endif %}>Últimos 3 meses</div>
+                    <div class="period-option" data-value="180" {% if selected_period == '180' %}data-selected{% endif %}>Últimos 6 meses</div>
+                    <div class="period-option" data-value="365" {% if selected_period == '365' %}data-selected{% endif %}>Último ano</div>
+                    <div class="period-option" data-value="540" {% if selected_period == '540' %}data-selected{% endif %}>Último 1 ano e meio</div>
+                    <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
+                </div>
+            </div>
+            <button class="export-btn" id="exportBtn">
+                <i class="fas fa-download"></i>
+                Exportar
+            </button>
         </div>
     </div>
 
@@ -125,6 +144,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 document.getElementById('procedimentoFilter').addEventListener('change', function() {
     const selectedValue = this.value;
@@ -142,5 +162,42 @@ document.getElementById('procedimentoFilter').addEventListener('change', functio
 
 // Log on page load to verify the element exists
 console.log('Filter element:', document.getElementById('procedimentoFilter'));
+
+document.getElementById('periodFilterBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = document.getElementById('periodFilter');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('periodFilter');
+    if (!e.target.closest('.period-filter')) {
+        dropdown.style.display = 'none';
+    }
+});
+
+// Handle option clicks
+document.querySelectorAll('.period-option').forEach(option => {
+    option.addEventListener('click', function() {
+        const value = this.dataset.value;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period', value);
+        window.location.href = currentUrl.toString();
+    });
+});
+
+document.getElementById('exportBtn').addEventListener('click', function() {
+    const element = document.querySelector('.dashboard-container');
+    const opt = {
+        margin: 1,
+        filename: 'dashboard-qualidade.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+});
 </script>
 {% endblock %}

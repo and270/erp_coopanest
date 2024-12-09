@@ -4,6 +4,8 @@ from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from qualidade.models import ProcedimentoQualidade
 from agenda.models import ProcedimentoDetalhes, Procedimento
 from django.contrib.auth.decorators import login_required
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 @login_required
 def dashboard_view(request):
@@ -27,6 +29,17 @@ def dashboard_view(request):
         queryset = queryset.filter(
             procedimento__procedimento_principal__name=procedimento
         )
+
+    # Get period filter
+    period_days = request.GET.get('period', '30')  # Default to 30 days
+    try:
+        period_days = int(period_days)
+        start_date = timezone.now() - timedelta(days=period_days)
+        queryset = queryset.filter(
+            procedimento__data_horario__gte=start_date
+        )
+    except ValueError:
+        pass  # Invalid period parameter, ignore filter
 
     total_count = queryset.count()
     avg_delay = queryset.aggregate(
@@ -62,6 +75,7 @@ def dashboard_view(request):
         'metrics': metrics,
         'procedimentos': procedimentos,
         'selected_procedimento': procedimento,
+        'selected_period': period_days,
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
