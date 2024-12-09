@@ -105,7 +105,7 @@
             <div class="progress-section">
                 <div class="progress-card">
                     <div class="progress-bar">
-                        <div class="progress" style="height: {% if metrics.conformidade_protocolos %}{{ metrics.conformidade_protocolos }}{% else %}0{% endif %}%"></div>
+                        <div class="progress" style="height: {% if metrics.conformidade_protocolos %}{{ metrics.conformidade_protocolos|floatformat:0 }}%{% else %}100%{% endif %}"></div>
                     </div>
                     <div class="progress-label">{% if metrics.conformidade_protocolos %}{{ metrics.conformidade_protocolos|floatformat:0 }}%{% else %}--{% endif %}</div>
                     <div class="progress-title">Conformidade com os protocolos</div>
@@ -113,7 +113,7 @@
 
                 <div class="progress-card">
                     <div class="progress-bar">
-                        <div class="progress" style="height: {% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas }}{% else %}0{% endif %}%"></div>
+                        <div class="progress" style="height: {% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas|floatformat:0 }}%{% else %}100%{% endif %}"></div>
                     </div>
                     <div class="progress-label">{% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas|floatformat:0 }}%{% else %}--{% endif %}</div>
                     <div class="progress-title">Uso de técnicas assépticas</div>
