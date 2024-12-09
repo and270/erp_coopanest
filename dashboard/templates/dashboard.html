@@ -15,7 +15,19 @@
             <div class="period-filter">
                 <button class="filter-btn" id="periodFilterBtn">
                     <i class="fas fa-calendar"></i>
-                    Filtrar por período
+                    {% if selected_period %}
+                        {% if selected_period == 7 %}Últimos 7 dias
+                        {% elif selected_period == 14 %}Últimos 14 dias
+                        {% elif selected_period == 30 %}Últimos 30 dias
+                        {% elif selected_period == 90 %}Últimos 3 meses
+                        {% elif selected_period == 180 %}Últimos 6 meses
+                        {% elif selected_period == 365 %}Último ano
+                        {% elif selected_period == 540 %}Último 1 ano e meio
+                        {% elif selected_period == 730 %}Últimos 2 anos
+                        {% endif %}
+                    {% else %}
+                        Filtrar por período
+                    {% endif %}
                 </button>
                 <div id="periodFilter" class="period-dropdown" style="display: none;">
                     <div class="period-option" data-value="7" {% if selected_period == '7' %}data-selected{% endif %}>Últimos 7 dias</div>

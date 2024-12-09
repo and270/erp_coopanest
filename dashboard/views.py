@@ -31,15 +31,16 @@ def dashboard_view(request):
         )
 
     # Get period filter
-    period_days = request.GET.get('period', '30')  # Default to 30 days
-    try:
-        period_days = int(period_days)
-        start_date = timezone.now() - timedelta(days=period_days)
-        queryset = queryset.filter(
-            procedimento__data_horario__gte=start_date
-        )
-    except ValueError:
-        pass  # Invalid period parameter, ignore filter
+    period_days = request.GET.get('period')  # Remove default value
+    if period_days:
+        try:
+            period_days = int(period_days)
+            start_date = timezone.now() - timedelta(days=period_days)
+            queryset = queryset.filter(
+                procedimento__data_horario__gte=start_date
+            )
+        except ValueError:
+            pass  # Invalid period parameter, ignore filter
 
     total_count = queryset.count()
     avg_delay = queryset.aggregate(
