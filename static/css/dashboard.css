@@ -252,3 +252,38 @@
         width: 100%;
     }
 }
+
+/* Special styling for eventos adversos card */
+.metric-card.eventos-adversos {
+    display: grid;
+    grid-template-areas:
+        "title filter"
+        "value label";
+    align-items: center;
+    gap: 8px;
+}
+
+.metric-card.eventos-adversos h3 {
+    grid-area: title;
+    margin: 0;
+    font-size: 14px;
+}
+
+.metric-card.eventos-adversos .procedure-filter {
+    grid-area: filter;
+    position: static;
+}
+
+.metric-card.eventos-adversos .metric-value {
+    grid-area: value;
+    margin: 0;
+}
+
+.metric-card.eventos-adversos .metric-label {
+    grid-area: label;
+    color: #757575;
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 400;
+    text-align: left;
+}

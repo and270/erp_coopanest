@@ -36,9 +36,8 @@
 
         <!-- Column 1 -->
         <div class="metrics-column-1">
-            <div class="metric-card">
-                <h3>Taxa de eventos adversos graves</h3>
-                <div class="metric-value">{% if metrics.eventos_adversos %}{{ metrics.eventos_adversos|floatformat:0 }}%{% else %}--{% endif %}</div>
+            <div class="metric-card eventos-adversos">
+                <h3>Procedimento</h3>
                 <div class="procedure-filter">
                     <select id="procedimentoFilter">
                         <option value="">Tipo de Procedimento</option>
@@ -49,6 +48,8 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="metric-value">{% if metrics.eventos_adversos %}{{ metrics.eventos_adversos|floatformat:0 }}%{% else %}--{% endif %}</div>
+                <div class="metric-label">Taxa de eventos adversos graves</div>
             </div>
 
             <div class="metric-card">
