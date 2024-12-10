@@ -111,12 +111,12 @@
         <div class="metrics-column-3">
             <div class="metric-card">
                 <h3>PONV Imediato RPA</h3>
-                <div class="metric-value">{% if metrics.ponv %}{{ metrics.ponv|floatformat:0 }}%{% else %}--{% endif %}</div>
+                <div class="metric-value">{% if metrics.ponv %}{{ metrics.ponv|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
 
             <div class="metric-card">
                 <h3>Dor pós-operatória imediata RPA</h3>
-                <div class="metric-value">{% if metrics.dor_pos_operatoria %}{{ metrics.dor_pos_operatoria|floatformat:0 }}%{% else %}--{% endif %}</div>
+                <div class="metric-value">{% if metrics.dor_pos_operatoria %}{{ metrics.dor_pos_operatoria|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
         </div>
 
@@ -124,7 +124,7 @@
         <div class="metrics-column-4">
             <div class="metric-card">
                 <h3>Eventos adversos evitáveis</h3>
-                <div class="metric-value">25%</div>
+                <div class="metric-value">{% if metrics.evento_adverso_evitavel %}{{ metrics.evento_adverso_evitavel|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
 
             <div class="metric-card">

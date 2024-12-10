@@ -60,6 +60,7 @@ def dashboard_view(request):
         'encaminhamentos_uti': queryset.filter(encaminhamento_uti=True).count() / total_count * 100 if total_count > 0 else None,
         'ponv': queryset.filter(ponv=True).count() / total_count * 100 if total_count > 0 else None,
         'dor_pos_operatoria': queryset.filter(dor_pos_operatoria=True).count() / total_count * 100 if total_count > 0 else None,
+        'evento_adverso_evitavel': queryset.filter(evento_adverso_evitavel=True).count() / total_count * 100 if total_count > 0 else None,
         'adesao_checklist': queryset.filter(adesao_checklist=True).count() / total_count * 100 if total_count > 0 else None,
         'conformidade_protocolos': queryset.filter(conformidade_diretrizes=True).count() / total_count * 100 if total_count > 0 else None,
         'tecnicas_assepticas': queryset.filter(uso_tecnicas_assepticas=True).count() / total_count * 100 if total_count > 0 else None,
