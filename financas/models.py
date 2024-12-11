@@ -17,6 +17,12 @@ class ProcedimentoFinancas(models.Model):
         ('boleto', 'Boleto'),
     ]
 
+    STATUS_PAGAMENTO_CHOICES = [
+        ('pago', 'Pago'),
+        ('pendente', 'Em Andamento'),
+        ('glosa', 'Glosa'),
+    ]
+
     procedimento = models.OneToOneField(Procedimento, on_delete=models.CASCADE, related_name='financas')
     tipo_cobranca = models.CharField(
         max_length=20,
@@ -39,7 +45,21 @@ class ProcedimentoFinancas(models.Model):
         null=True,
         blank=True
     )
+    status_pagamento = models.CharField(
+        max_length=20,
+        choices=STATUS_PAGAMENTO_CHOICES,
+        default='pendente',
+        verbose_name='Status do Pagamento'
+    )
+    data_pagamento = models.DateField(
+        verbose_name='Data do pagamento',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = "Financeiro do Procedimento"
         verbose_name_plural = "Financeiro dos Procedimentos"
+
+    def __str__(self):
+        return f"Finanças - {self.procedimento}"

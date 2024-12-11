@@ -1,11 +1,13 @@
 from django.shortcuts import render
-from django.db.models import Avg, Count, Case, When, F, Q
+from django.db.models import Avg, Count, Case, When, F, Q, Sum
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
 from agenda.models import ProcedimentoDetalhes, Procedimento
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.db.models.functions import TruncMonth
 
 @login_required
 def dashboard_view(request):
@@ -83,3 +85,157 @@ def dashboard_view(request):
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
     })
+
+@login_required
+def financas_dashboard_view(request):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+
+    user_group = request.user.group
+
+    # Period filter
+    period_days = request.GET.get('period')
+    queryset = ProcedimentoFinancas.objects.select_related('procedimento').filter(
+        procedimento__group=user_group
+    )
+
+    if period_days:
+        try:
+            period_days = int(period_days)
+            start_date = timezone.now() - timedelta(days=period_days)
+            queryset = queryset.filter(
+                procedimento__data_horario__gte=start_date
+            )
+        except ValueError:
+            pass
+
+    # Default period: last 6 months if no filter
+    if not period_days:
+        start_date = timezone.now() - timedelta(days=180) # 6 months default
+        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+
+    total_count = queryset.count()
+
+    # Anestesias: Count how many procedures had anesthesiologists in the last 6 months
+    anestesias_count = queryset.filter(
+        procedimento__anestesistas_responsaveis__isnull=False
+    ).distinct().count()
+
+    # Valores Totais por Status
+    totals_by_status = queryset.values('status_pagamento').annotate(
+        total=Sum('valor_cobranca')
+    )
+
+    total_valor = sum(item['total'] for item in totals_by_status if item['total'] is not None) if totals_by_status else 0
+
+    def get_status_value(status):
+        for item in totals_by_status:
+            if item['status_pagamento'] == status and item['total']:
+                return item['total']
+        return 0
+
+    valor_pago = get_status_value('pago')
+    valor_pendente = get_status_value('pendente')
+    valor_glosa = get_status_value('glosa')
+
+    # Compute percentages
+    def percentage(part, whole):
+        if whole > 0:
+            return (part / whole) * 100
+        return 0
+
+    pago_pct = percentage(valor_pago, total_valor)
+    pendente_pct = percentage(valor_pendente, total_valor)
+    glosa_pct = percentage(valor_glosa, total_valor)
+
+    # Tempo Médio de Recebimento (for paid procedures only)
+    paid_procedures = queryset.filter(status_pagamento='pago', data_pagamento__isnull=False, procedimento__data_horario__isnull=False)
+    avg_recebimento = None
+    if paid_procedures.exists():
+        avg_diff = paid_procedures.annotate(
+            diff=F('data_pagamento') - F('procedimento__data_horario')
+        ).aggregate(Avg('diff'))['diff__avg']
+        if avg_diff:
+            # avg_diff is a timedelta
+            # Convert to months approximation or just days
+            # Let's say we present it in months:
+            avg_days = avg_diff.days
+            avg_months = avg_days // 30  # rough approximation
+            avg_recebimento = f"{avg_months} meses" if avg_months > 0 else f"{avg_days} dias"
+
+    # Ticket Médio (average valor_cobranca)
+    avg_ticket = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor']
+
+    # Get monthly data for charts
+    monthly_data = queryset.annotate(
+        month=TruncMonth('procedimento__data_horario')
+    ).values('month', 'tipo_cobranca').annotate(
+        total=Sum('valor_cobranca')
+    ).order_by('month')
+
+    # We'll collect data per month in a dict keyed by month
+    month_map = {}
+    for item in monthly_data:
+        m = item['month']
+        if m not in month_map:
+            month_map[m] = {
+                'cooperativa': 0,
+                'hospital': 0,
+                'particular': 0
+            }
+        month_map[m][item['tipo_cobranca']] = item['total'] or 0
+
+    # Sort by month and prepare data for charts
+    sorted_months = sorted(month_map.keys())
+    month_labels = [m.strftime("%B") for m in sorted_months]
+    coopanest_values = [month_map[m]['cooperativa'] for m in sorted_months]
+    hospital_values = [month_map[m]['hospital'] for m in sorted_months]
+    direta_values = [month_map[m]['particular'] for m in sorted_months]
+
+    # Calculate monthly tickets
+    monthly_tickets = []
+    for m in sorted_months:
+        month_total = month_map[m]['cooperativa'] + month_map[m]['hospital'] + month_map[m]['particular']
+        month_count = queryset.filter(
+            procedimento__data_horario__month=m.month,
+            procedimento__data_horario__year=m.year
+        ).count()
+        monthly_tickets.append(round(month_total / month_count if month_count > 0 else 0, 2))
+
+    # Calculate percentages for the pie chart
+    total_coopanest = sum(coopanest_values)
+    total_hospital = sum(hospital_values)
+    total_direta = sum(direta_values)
+    total_all = total_coopanest + total_hospital + total_direta
+
+    coopanest_pct = (total_coopanest / total_all * 100) if total_all > 0 else 0
+    hospital_pct = (total_hospital / total_all * 100) if total_all > 0 else 0
+    direta_pct = (total_direta / total_all * 100) if total_all > 0 else 0
+
+    # Return to template
+    context = {
+        'anestesias_count': anestesias_count,
+        'valor_pago': valor_pago,
+        'valor_pendente': valor_pendente,
+        'valor_glosa': valor_glosa,
+        'pago_pct': pago_pct,
+        'pendente_pct': pendente_pct,
+        'glosa_pct': glosa_pct,
+        'avg_recebimento': avg_recebimento,
+        'avg_ticket': avg_ticket,
+        'months': month_labels,
+        'coopanest_values': coopanest_values,
+        'hospital_values': hospital_values,
+        'direta_values': direta_values,
+        'selected_period': period_days,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+        'monthly_tickets': monthly_tickets,
+        'coopanest_pct': coopanest_pct,
+        'hospital_pct': hospital_pct,
+        'direta_pct': direta_pct,
+    }
+
+    return render(request, 'dashboard_financas.html', context)

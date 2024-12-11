@@ -1,0 +1,229 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Dashboard Finanças{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container financas-dashboard">
+    <div class="dashboard-header">
+        <h1>Dashboard de Finanças</h1>
+        <div class="dashboard-tabs">
+            <a href="{% url 'dashboard' %}" class="tab">Qualidade</a>
+            <a href="{% url 'financas_dashboard_view' %}" class="tab active">Finanças</a>
+        </div>
+        <div class="dashboard-actions">
+            <div class="period-filter">
+                <button class="filter-btn" id="periodFilterBtn">
+                    <i class="fas fa-calendar"></i>
+                    {% if selected_period %}
+                        {% if selected_period == 180 %}Últimos 6 meses{% endif %}
+                    {% else %}
+                        Filtrar por período
+                    {% endif %}
+                </button>
+                <div id="periodFilter" class="period-dropdown" style="display: none;">
+                    <div class="period-option" data-value="30" {% if selected_period == '30' %}data-selected{% endif %}>Últimos 30 dias</div>
+                    <div class="period-option" data-value="90" {% if selected_period == '90' %}data-selected{% endif %}>Últimos 3 meses</div>
+                    <div class="period-option" data-value="180" {% if selected_period == '180' %}data-selected{% endif %}>Últimos 6 meses</div>
+                    <div class="period-option" data-value="365" {% if selected_period == '365' %}data-selected{% endif %}>Último ano</div>
+                </div>
+            </div>
+            <button class="export-btn" id="exportBtn">
+                <i class="fas fa-download"></i>
+                Exportar
+            </button>
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <!-- First Row -->
+        <div class="metrics-column-1">
+            <div class="metric-card">
+                <h3>Total de Anestesias</h3>
+                <div class="metric-value">{{ anestesias_count }}</div>
+                <div class="metric-label">realizadas nos últimos 6 meses</div>
+            </div>
+        </div>
+
+        <div class="metrics-column-2">
+            <div class="metric-card">
+                <h3>Valores Totais</h3>
+                <div class="status-bar">
+                    <div>
+                        <span>Pago</span>
+                        <div class="bar">
+                            <div class="filled" style="width:{{pago_pct|floatformat:0}}%"></div>
+                        </div>
+                        <span>R$ {{valor_pago|floatformat:2}} ({{pago_pct|floatformat:0}}%)</span>
+                    </div>
+                    <div>
+                        <span>Em Andamento</span>
+                        <div class="bar">
+                            <div class="filled" style="width:{{pendente_pct|floatformat:0}}%; background:#FFAB00;"></div>
+                        </div>
+                        <span>R$ {{valor_pendente|floatformat:2}} ({{pendente_pct|floatformat:0}}%)</span>
+                    </div>
+                    <div>
+                        <span>Glosa</span>
+                        <div class="bar">
+                            <div class="filled" style="width:{{glosa_pct|floatformat:0}}%; background:#E53935;"></div>
+                        </div>
+                        <span>R$ {{valor_glosa|floatformat:2}} ({{glosa_pct|floatformat:0}}%)</span>
+                    </div>
+                </div>
+                <div class="tempo-medio">
+                    <span>Tempo Médio de Recebimento: </span><strong>{{ avg_recebimento }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Second Row -->
+        <div class="metrics-column-3">
+            <div class="metric-card">
+                <h3>Ticket Médio</h3>
+                <div>
+                    <canvas id="ticketMedioChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-column-4">
+            <div class="metric-card">
+                <h3>Valores Recebidos</h3>
+                <div>
+                    <canvas id="valoresRecebidosChart"></canvas>
+                </div>
+                <div class="legends">
+                    <div><span style="background:#1E88E5;"></span>Coopanest {{ coopanest_pct|floatformat:0 }}%</div>
+                    <div><span style="background:#43A047;"></span>Direta {{ direta_pct|floatformat:0 }}%</div>
+                    <div><span style="background:#8E24AA;"></span>Hospital {{ hospital_pct|floatformat:0 }}%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Ticket Médio Chart
+const ticketMedioCtx = document.getElementById('ticketMedioChart').getContext('2d');
+const ticketMedioChart = new Chart(ticketMedioCtx, {
+    type: 'line',
+    data: {
+        labels: {{ months|safe }},
+        datasets: [{
+            label: 'Ticket Médio',
+            data: {{ monthly_tickets|safe }},
+            borderColor: '#1A73E8',
+            fill: false,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'R$ ' + value;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Valores Recebidos Chart
+const valoresRecebidosCtx = document.getElementById('valoresRecebidosChart').getContext('2d');
+const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ months|safe }},
+        datasets: [
+            {
+                label: 'Coopanest',
+                data: {{ coopanest_values|safe }},
+                backgroundColor: '#1E88E5'
+            },
+            {
+                label: 'Direta',
+                data: {{ direta_values|safe }},
+                backgroundColor: '#43A047'
+            },
+            {
+                label: 'Hospital',
+                data: {{ hospital_values|safe }},
+                backgroundColor: '#8E24AA'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: {
+                stacked: true
+            },
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'R$ ' + value;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Period filter functionality
+const periodFilterBtn = document.getElementById('periodFilterBtn');
+const periodFilter = document.getElementById('periodFilter');
+
+periodFilterBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    periodFilter.style.display = periodFilter.style.display === 'none' ? 'block' : 'none';
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.period-filter')) {
+        periodFilter.style.display = 'none';
+    }
+});
+
+document.querySelectorAll('.period-option').forEach(option => {
+    option.addEventListener('click', function() {
+        const value = this.dataset.value;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period', value);
+        window.location.href = currentUrl.toString();
+    });
+});
+
+// Export functionality
+document.getElementById('exportBtn').addEventListener('click', function() {
+    const element = document.querySelector('.dashboard-container');
+    const opt = {
+        margin: 1,
+        filename: 'dashboard-financas.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+});
+</script>
+{% endblock %}
