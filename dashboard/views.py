@@ -140,8 +140,8 @@ def financas_dashboard_view(request):
 
     # Compute percentages
     def percentage(part, whole):
-        if whole > 0:
-            return (part / whole) * 100
+        if whole and whole > 0:
+            return (float(part) / float(whole)) * 100
         return 0
 
     pago_pct = percentage(valor_pago, total_valor)

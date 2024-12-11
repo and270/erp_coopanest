@@ -345,48 +345,55 @@
 
 /* Financial dashboard specific styles */
 .financas-dashboard .metrics-grid {
-    grid-template-columns: 1fr 2fr;
-    grid-template-rows: auto auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    align-items: start;
 }
 
 .financas-dashboard .metric-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 24px;
     height: auto;
+    min-height: 0;
 }
 
 .financas-dashboard .status-bar {
-    margin: 16px 0;
-}
-
-.financas-dashboard .status-bar > div {
+    flex: 1;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.financas-dashboard .status-bar span {
-    font-size: 14px;
-    color: #666;
-    min-width: 100px;
-}
-
-.financas-dashboard .status-bar span:last-child {
-    min-width: 150px;
-    text-align: right;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px 0;
 }
 
 .financas-dashboard .bar {
-    flex: 1;
-    height: 8px;
-    background: #F3F3F3;
-    border-radius: 4px;
+    width: 100%;
+    height: 26px;
+    background: #EBEBEB;
+    border-radius: 5px;
     overflow: hidden;
+    margin: 4px 0;
 }
 
 .financas-dashboard .bar .filled {
     height: 100%;
-    background: #1A73E8;
+    background: #1A73E8 !important;
+    border-radius: 5px;
     transition: width 0.3s ease;
+}
+
+.financas-dashboard .status-bar span {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.financas-dashboard .status-bar span:last-child {
+    margin-top: 4px;
+    text-align: left;
 }
 
 .financas-dashboard .tempo-medio {
@@ -419,4 +426,24 @@
 .financas-dashboard .metric-card canvas {
     width: 100% !important;
     height: 300px !important;
+}
+
+.financas-dashboard .metrics-column-1 {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.financas-dashboard .metric-card.anestesias {
+    flex: 0 0 auto;
+    height: auto;
+    padding: 16px 24px;
+    margin-bottom: 8px;
+}
+
+.financas-dashboard .metrics-column-1 .metric-card:not(.anestesias) {
+    flex: 1;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
 }
