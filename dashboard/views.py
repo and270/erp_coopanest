@@ -212,6 +212,18 @@ def financas_dashboard_view(request):
     hospital_pct = (total_hospital / total_all * 100) if total_all > 0 else 0
     direta_pct = (total_direta / total_all * 100) if total_all > 0 else 0
 
+    # Get procedure filter
+    procedimento = request.GET.get('procedimento')
+    if procedimento:
+        queryset = queryset.filter(
+            procedimento__procedimento_principal__name=procedimento
+        )
+
+    # Get procedure types for filter (only from the same group)
+    procedimentos = ProcedimentoDetalhes.objects.filter(
+        procedimento__group=user_group
+    ).order_by('name').distinct()
+
     # Return to template
     context = {
         'anestesias_count': anestesias_count,
@@ -236,6 +248,8 @@ def financas_dashboard_view(request):
         'coopanest_pct': coopanest_pct,
         'hospital_pct': hospital_pct,
         'direta_pct': direta_pct,
+        'procedimentos': procedimentos,
+        'selected_procedimento': procedimento,
     }
 
     return render(request, 'dashboard_financas.html', context)
