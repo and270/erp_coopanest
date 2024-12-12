@@ -63,3 +63,38 @@ class ProcedimentoFinancas(models.Model):
 
     def __str__(self):
         return f"Finanças - {self.procedimento}"
+
+class Despesas(models.Model):
+    STATUS_CHOICES = [
+        ('a_vencer', 'A Vencer'),
+        ('pago', 'Pago'),
+        ('atrasado', 'Pagamento Atrasado'),
+    ]
+
+    procedimento = models.OneToOneField(
+        Procedimento, 
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True,
+        related_name='despesa'
+    )
+    valor = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='Valor'
+    )
+    data = models.DateField(verbose_name='Data')
+    descricao = models.TextField(verbose_name='Descrição')
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='a_vencer',
+        verbose_name='Status'
+    )
+
+    class Meta:
+        verbose_name = "Despesa"
+        verbose_name_plural = "Despesas"
+
+    def __str__(self):
+        return f"Despesa - {self.descricao[:30]}"

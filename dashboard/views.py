@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db.models.functions import TruncMonth
+from registration.models import Anesthesiologist
 
 @login_required
 def dashboard_view(request):
@@ -206,12 +207,12 @@ def financas_dashboard_view(request):
     # Calculate monthly tickets
     monthly_tickets = []
     for m in sorted_months:
-        month_total = month_map[m]['cooperativa'] + month_map[m]['hospital'] + month_map[m]['particular']
+        month_total = float(month_map[m]['cooperativa'] + month_map[m]['hospital'] + month_map[m]['particular'])
         month_count = queryset.filter(
             procedimento__data_horario__month=m.month,
             procedimento__data_horario__year=m.year
         ).count()
-        monthly_tickets.append(round(month_total / month_count if month_count > 0 else 0, 2))
+        monthly_tickets.append(float(round(month_total / month_count if month_count > 0 else 0, 2)))
 
     # Calculate percentages for the pie chart
     total_coopanest = sum(coopanest_values)
@@ -227,6 +228,29 @@ def financas_dashboard_view(request):
     procedimentos = ProcedimentoDetalhes.objects.filter(
         procedimento__group=user_group
     ).order_by('name').distinct()
+
+    # Get anestesistas for filter (using the correct model)
+    anestesistas = Anesthesiologist.objects.filter(
+        group=user_group
+    ).order_by('name')
+
+    # Get selected anestesista
+    selected_anestesista = request.GET.get('anestesista')
+    if selected_anestesista:
+        queryset = queryset.filter(
+            procedimento__anestesistas_responsaveis__anesthesiologist__id=selected_anestesista
+        )
+
+    # Calculate monthly revenues
+    monthly_revenues = []
+    for m in sorted_months:
+        month_total = float(month_map[m]['cooperativa'] + month_map[m]['hospital'] + month_map[m]['particular'])
+        monthly_revenues.append(float(round(month_total, 2)))
+
+    # Convert Decimal values to float for JSON serialization
+    coopanest_values = [float(val) for val in coopanest_values]
+    hospital_values = [float(val) for val in hospital_values]
+    direta_values = [float(val) for val in direta_values]
 
     # Return to template
     context = {
@@ -254,6 +278,9 @@ def financas_dashboard_view(request):
         'direta_pct': direta_pct,
         'procedimentos': procedimentos,
         'selected_procedimento': procedimento,
+        'anestesistas': anestesistas,
+        'selected_anestesista': selected_anestesista,
+        'monthly_revenues': monthly_revenues,
     }
 
     return render(request, 'dashboard_financas.html', context)
