@@ -95,10 +95,21 @@ def financas_dashboard_view(request):
 
     # Period filter
     period_days = request.GET.get('period')
-    queryset = ProcedimentoFinancas.objects.select_related('procedimento').filter(
+    queryset = ProcedimentoFinancas.objects.select_related(
+        'procedimento',
+        'procedimento__procedimento_principal'
+    ).filter(
         procedimento__group=user_group
     )
 
+    # Get procedure filter and apply it
+    procedimento = request.GET.get('procedimento')
+    if procedimento:
+        queryset = queryset.filter(
+            procedimento__procedimento_principal__name=procedimento
+        )
+
+    # Apply period filter
     if period_days:
         try:
             period_days = int(period_days)
@@ -111,7 +122,7 @@ def financas_dashboard_view(request):
 
     # Default period: last 6 months if no filter
     if not period_days:
-        start_date = timezone.now() - timedelta(days=180) # 6 months default
+        start_date = timezone.now() - timedelta(days=180)
         queryset = queryset.filter(procedimento__data_horario__gte=start_date)
 
     total_count = queryset.count()
@@ -211,13 +222,6 @@ def financas_dashboard_view(request):
     coopanest_pct = (total_coopanest / total_all * 100) if total_all > 0 else 0
     hospital_pct = (total_hospital / total_all * 100) if total_all > 0 else 0
     direta_pct = (total_direta / total_all * 100) if total_all > 0 else 0
-
-    # Get procedure filter
-    procedimento = request.GET.get('procedimento')
-    if procedimento:
-        queryset = queryset.filter(
-            procedimento__procedimento_principal__name=procedimento
-        )
 
     # Get procedure types for filter (only from the same group)
     procedimentos = ProcedimentoDetalhes.objects.filter(

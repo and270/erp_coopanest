@@ -38,12 +38,20 @@
     justify-content: space-between;
 }
 
+.metric-card .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
 .metric-card h3 {
     font-family: Inter;
     font-size: 16px;
     font-weight: 600;
     color: #0D0D0D;
-    margin-bottom: 8px;
+    margin: 0;
+    flex: 1;
 }
 
 .metric-value {
@@ -109,9 +117,8 @@
 }
 
 .procedure-filter {
-    position: absolute;
-    top: 14px;
-    right: 24px;
+    position: static;
+    margin: 0;
 }
 
 .procedure-filter select {
@@ -127,6 +134,7 @@
     line-height: 12.71px;
     color: #3D3D3D;
     text-align: left;
+    vertical-align: middle;
 }
 
 .filter-container {

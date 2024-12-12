@@ -54,16 +54,18 @@
     <div class="metrics-grid">
         <div class="metrics-column-1">
             <div class="metric-card anestesias">
-                <h3>Total de Anestesias</h3>
-                <div class="procedure-filter">
-                    <select id="procedimentoFilter">
-                        <option value="">Tipo de Procedimento</option>
-                        {% for proc in procedimentos %}
-                            <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
-                                {{ proc.name|truncatechars:25 }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                <div class="header-row">
+                    <h3>Total de Anestesias</h3>
+                    <div class="procedure-filter">
+                        <select id="procedimentoFilter">
+                            <option value="">Tipo de Procedimento</option>
+                            {% for proc in procedimentos %}
+                                <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
+                                    {{ proc.name|truncatechars:25 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <div class="metric-value">{{ anestesias_count }}</div>
                 <div class="metric-label">
