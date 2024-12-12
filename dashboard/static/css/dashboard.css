@@ -1,0 +1,14 @@
+.filter-select {
+    background-color: white;
+    color: #333;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-width: 200px;
+}
+
+.filter-select option {
+    background-color: white;
+    color: #333;
+    padding: 8px;
+}

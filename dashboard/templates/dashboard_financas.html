@@ -136,8 +136,9 @@
                         <select id="anestesistaFilter" class="filter-select">
                             <option value="">Por Anestesista</option>
                             {% for anestesista in anestesistas %}
-                                <option value="{{ anestesista.id }}" {% if selected_anestesista == anestesista.id %}selected{% endif %}>
-                                    {{ anestesista.nome }}
+                                <option value="{{ anestesista.id }}" 
+                                        {% if selected_anestesista == anestesista.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ anestesista.name }}
                                 </option>
                             {% endfor %}
                         </select>

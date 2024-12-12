@@ -103,6 +103,13 @@ def financas_dashboard_view(request):
         procedimento__group=user_group
     )
 
+    # Get selected anestesista - Move this up before any calculations
+    selected_anestesista = request.GET.get('anestesista')
+    if selected_anestesista:
+        queryset = queryset.filter(
+            procedimento__anestesistas_responsaveis=selected_anestesista
+        )
+
     # Get procedure filter and apply it
     procedimento = request.GET.get('procedimento')
     if procedimento:
@@ -125,6 +132,12 @@ def financas_dashboard_view(request):
     if not period_days:
         start_date = timezone.now() - timedelta(days=180)
         queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+
+    # Add some debug prints to verify the filtering
+    print(f"Selected anestesista: {selected_anestesista}")
+    print(f"Total procedures after filtering: {queryset.count()}")
+    if selected_anestesista:
+        print(f"Procedures for selected anestesista: {queryset.values_list('procedimento__id', flat=True)}")
 
     total_count = queryset.count()
 
@@ -233,13 +246,6 @@ def financas_dashboard_view(request):
     anestesistas = Anesthesiologist.objects.filter(
         group=user_group
     ).order_by('name')
-
-    # Get selected anestesista
-    selected_anestesista = request.GET.get('anestesista')
-    if selected_anestesista:
-        queryset = queryset.filter(
-            procedimento__anestesistas_responsaveis__anesthesiologist__id=selected_anestesista
-        )
 
     # Calculate monthly revenues
     monthly_revenues = []
