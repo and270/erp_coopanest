@@ -97,6 +97,9 @@ def financas_dashboard_view(request):
 
     # Period filter
     period_days = request.GET.get('period')
+    if not period_days:
+        period_days = 180  # Default to 6 months if no period is selected
+
     queryset = ProcedimentoFinancas.objects.select_related(
         'procedimento',
         'procedimento__procedimento_principal'
@@ -119,20 +122,19 @@ def financas_dashboard_view(request):
         )
 
     # Apply period filter
-    if period_days:
-        try:
-            period_days = int(period_days)
-            start_date = timezone.now() - timedelta(days=period_days)
-            queryset = queryset.filter(
-                procedimento__data_horario__gte=start_date
-            )
-        except ValueError:
-            pass
-
-    # Default period: last 6 months if no filter
-    if not period_days:
-        start_date = timezone.now() - timedelta(days=180)
-        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+    try:
+        period_days = int(period_days)
+        start_date = timezone.now() - timedelta(days=period_days)
+        queryset = queryset.filter(
+            procedimento__data_horario__gte=start_date
+        )
+    except (ValueError, TypeError):
+        # If period_days is invalid, default to 180 days
+        period_days = 180
+        start_date = timezone.now() - timedelta(days=period_days)
+        queryset = queryset.filter(
+            procedimento__data_horario__gte=start_date
+        )
 
     # Add some debug prints to verify the filtering
     print(f"Selected anestesista: {selected_anestesista}")
