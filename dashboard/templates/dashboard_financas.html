@@ -217,7 +217,8 @@ const chartData = {
             borderColor: '#1A73E8',
             borderWidth: 2,
             fill: false,
-            tension: 0.4
+            tension: 0.4,
+            pointRadius: 0
         }]
     },
     receitas: {
@@ -228,7 +229,8 @@ const chartData = {
             borderColor: '#1A73E8',
             borderWidth: 2,
             fill: false,
-            tension: 0.4
+            tension: 0.4,
+            pointRadius: 0
         }]
     }
 };
@@ -242,7 +244,6 @@ const chartOptions = {
     },
     scales: {
         x: {
-            // Eixo X configurado para não rotacionar e seguir o estilo
             ticks: {
                 color: '#3D3D3D',
                 font: {
@@ -258,7 +259,6 @@ const chartOptions = {
             }
         },
         y: {
-            // Eixo Y sem R$, sem decimais e apenas números inteiros
             beginAtZero: true,
             ticks: {
                 color: '#3D3D3D',
@@ -268,7 +268,7 @@ const chartOptions = {
                     weight: '400'
                 },
                 callback: function(value) {
-                    return Math.round(value); // Apenas números inteiros
+                    return Math.round(value);
                 }
             },
             grid: {
@@ -283,14 +283,15 @@ const ticketMedioCtx = document.getElementById('ticketMedioChart').getContext('2
 const ticketMedioChart = new Chart(ticketMedioCtx, {
     type: 'line',
     data: {
-        labels: {{ months|safe }}, // Meses em português enviados do backend
+        labels: {{ months|safe }},
         datasets: [{
             label: 'Ticket Médio',
             data: {{ monthly_tickets|safe }},
             borderColor: '#1A73E8',
             borderWidth: 2,
             fill: false,
-            tension: 0.4
+            tension: 0.4,
+            pointRadius: 0
         }]
     },
     options: chartOptions
