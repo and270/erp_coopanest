@@ -12,3 +12,33 @@
     color: #333;
     padding: 8px;
 }
+
+.graph-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.period-indicator,
+.graph-filters {
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #3D3D3D;
+}
+
+hr {
+    border: 1px solid #E6E6E6;
+}
+
+.filter-select {
+    background-color: white;
+    color: #3D3D3D;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px;
+    border: 1px solid #E6E6E6;
+    border-radius: 4px;
+    width: 100%;
+}

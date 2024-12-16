@@ -265,7 +265,14 @@ def financas_dashboard_view(request):
                 month_map[m][item['tipo_cobranca']] = item['total'] or 0
 
         sorted_months = sorted(month_map.keys())
-        month_labels = [m.strftime("%B") for m in sorted_months]
+        # Dicionário de meses em português
+        meses_pt = {
+            'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
+            'April': 'Abril', 'May': 'Maio', 'June': 'Junho', 'July': 'Julho',
+            'August': 'Agosto', 'September': 'Setembro', 'October': 'Outubro',
+            'November': 'Novembro', 'December': 'Dezembro'
+        }
+        month_labels = [meses_pt[m.strftime("%B")] for m in sorted_months]
         coopanest_values = [month_map[m]['cooperativa'] for m in sorted_months]
         hospital_values = [month_map[m]['hospital'] for m in sorted_months]
         direta_values = [month_map[m]['particular'] for m in sorted_months]
