@@ -7,7 +7,7 @@ from agenda.models import ProcedimentoDetalhes, Procedimento
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils import timezone
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncDate
 from registration.models import Anesthesiologist
 from dateutil.relativedelta import relativedelta
 
@@ -192,72 +192,98 @@ def financas_dashboard_view(request):
     # Ticket Médio (average valor_cobranca)
     avg_ticket = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor']
 
-    # Get monthly data for charts
-    if period_days:
-        try:
-            period_days = int(period_days)
-        except ValueError:
-            period_days = 180  # Default to 6 months if invalid
+    # Get date range and determine if we're using daily or monthly view
+    date_range, view_type = get_date_range(period_days)
+
+    if view_type == 'daily':
+        # Daily view processing
+        date_map = {
+            d: {
+                'cooperativa': 0,
+                'hospital': 0,
+                'particular': 0
+            } for d in date_range
+        }
+
+        daily_data = queryset.annotate(
+            date=TruncDate('procedimento__data_horario')
+        ).values('date', 'tipo_cobranca').annotate(
+            total=Sum('valor_cobranca')
+        ).order_by('date')
+
+        for item in daily_data:
+            if item['date'] in date_map:
+                date_map[item['date']][item['tipo_cobranca']] = item['total'] or 0
+
+        sorted_dates = sorted(date_map.keys())
+        date_labels = [d.strftime("%d/%m") for d in sorted_dates]
+        coopanest_values = [date_map[d]['cooperativa'] for d in sorted_dates]
+        hospital_values = [date_map[d]['hospital'] for d in sorted_dates]
+        direta_values = [date_map[d]['particular'] for d in sorted_dates]
+
+        # Calculate daily tickets
+        daily_tickets = []
+        daily_revenues = []
+        for d in sorted_dates:
+            day_procedures = queryset.filter(
+                procedimento__data_horario__date=d
+            )
+            day_total = day_procedures.aggregate(
+                total=Sum('valor_cobranca')
+            )['total'] or 0
+            day_count = day_procedures.count()
+            daily_tickets.append(
+                float(round(day_total / day_count if day_count > 0 else 0, 2))
+            )
+            daily_revenues.append(float(round(day_total, 2)))
+
+        month_labels = date_labels
+        monthly_tickets = daily_tickets
+        monthly_revenues = daily_revenues
+
     else:
-        period_days = 180  # Default period
+        # Monthly view processing (keep existing monthly code)
+        month_map = {
+            m: {
+                'cooperativa': 0,
+                'hospital': 0,
+                'particular': 0
+            } for m in date_range
+        }
 
-    # Get all months in the range
-    all_months = get_month_range(period_days)
-
-    # Initialize the month_map with all months and zero values
-    month_map = {
-        m: {
-            'cooperativa': 0,
-            'hospital': 0,
-            'particular': 0
-        } for m in all_months
-    }
-
-    # Get monthly data from database
-    monthly_data = queryset.annotate(
-        month=TruncMonth('procedimento__data_horario')
-    ).values('month', 'tipo_cobranca').annotate(
-        total=Sum('valor_cobranca')
-    ).order_by('month')
-
-    # Fill in actual values where they exist
-    for item in monthly_data:
-        m = item['month'].replace(day=1)  # Normalize to first day of month
-        if m in month_map:
-            month_map[m][item['tipo_cobranca']] = item['total'] or 0
-
-    # Sort months and prepare data for charts
-    sorted_months = sorted(month_map.keys())
-    month_labels = [m.strftime("%B") for m in sorted_months]
-    coopanest_values = [month_map[m]['cooperativa'] for m in sorted_months]
-    hospital_values = [month_map[m]['hospital'] for m in sorted_months]
-    direta_values = [month_map[m]['particular'] for m in sorted_months]
-
-    # Calculate monthly tickets with zero handling
-    monthly_tickets = []
-    for m in sorted_months:
-        month_procedures = queryset.filter(
-            procedimento__data_horario__year=m.year,
-            procedimento__data_horario__month=m.month
-        )
-        month_total = month_procedures.aggregate(
+        monthly_data = queryset.annotate(
+            month=TruncMonth('procedimento__data_horario')
+        ).values('month', 'tipo_cobranca').annotate(
             total=Sum('valor_cobranca')
-        )['total'] or 0
-        month_count = month_procedures.count()
-        monthly_tickets.append(
-            float(round(month_total / month_count if month_count > 0 else 0, 2))
-        )
+        ).order_by('month')
 
-    # Calculate monthly revenues
-    monthly_revenues = []
-    for m in sorted_months:
-        month_total = queryset.filter(
-            procedimento__data_horario__year=m.year,
-            procedimento__data_horario__month=m.month
-        ).aggregate(
-            total=Sum('valor_cobranca')
-        )['total'] or 0
-        monthly_revenues.append(float(round(month_total, 2)))
+        for item in monthly_data:
+            m = item['month'].replace(day=1)
+            if m in month_map:
+                month_map[m][item['tipo_cobranca']] = item['total'] or 0
+
+        sorted_months = sorted(month_map.keys())
+        month_labels = [m.strftime("%B") for m in sorted_months]
+        coopanest_values = [month_map[m]['cooperativa'] for m in sorted_months]
+        hospital_values = [month_map[m]['hospital'] for m in sorted_months]
+        direta_values = [month_map[m]['particular'] for m in sorted_months]
+
+        # Calculate monthly tickets and revenues
+        monthly_tickets = []
+        monthly_revenues = []
+        for m in sorted_months:
+            month_procedures = queryset.filter(
+                procedimento__data_horario__year=m.year,
+                procedimento__data_horario__month=m.month
+            )
+            month_total = month_procedures.aggregate(
+                total=Sum('valor_cobranca')
+            )['total'] or 0
+            month_count = month_procedures.count()
+            monthly_tickets.append(
+                float(round(month_total / month_count if month_count > 0 else 0, 2))
+            )
+            monthly_revenues.append(float(round(month_total, 2)))
 
     # Add some debug prints
     print(f"monthly_tickets: {monthly_tickets}")
@@ -316,15 +342,21 @@ def financas_dashboard_view(request):
 
     return render(request, 'dashboard_financas.html', context)
 
-def get_month_range(period_days):
+def get_date_range(period_days):
     end_date = timezone.now()
     start_date = end_date - timedelta(days=period_days)
     
-    # Generate all months in the range
-    months = []
-    current_date = start_date.replace(day=1)
-    while current_date <= end_date:
-        months.append(current_date)
-        current_date += relativedelta(months=1)
-    
-    return months
+    if period_days <= 30:  # For 30 days or less, return daily range
+        dates = []
+        current_date = start_date
+        while current_date <= end_date:
+            dates.append(current_date.date())
+            current_date += timedelta(days=1)
+        return dates, 'daily'
+    else:  # For more than 30 days, return monthly range
+        months = []
+        current_date = start_date.replace(day=1)
+        while current_date <= end_date:
+            months.append(current_date)
+            current_date += relativedelta(months=1)
+        return months, 'monthly'
