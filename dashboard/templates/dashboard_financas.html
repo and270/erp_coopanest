@@ -1,5 +1,6 @@
 {% extends 'layout.html' %}
 {% load static %}
+{% load dashboard_filters %}
 
 {% block title %}Dashboard Finanças{% endblock %}
 
@@ -93,21 +94,21 @@
                         <div class="bar">
                             <div class="filled" style="width: {{pago_pct|floatformat:0}}%"></div>
                         </div>
-                        <span>R$ {{valor_pago|floatformat:2}} ({{pago_pct|floatformat:0}}%)</span>
+                        <span>R$ {{valor_pago|format_currency}} ({{pago_pct|floatformat:0}}%)</span>
                     </div>
                     <div>
                         <span>Em Andamento</span>
                         <div class="bar">
                             <div class="filled" style="width: {{pendente_pct|floatformat:0}}%"></div>
                         </div>
-                        <span>R$ {{valor_pendente|floatformat:2}} ({{pendente_pct|floatformat:0}}%)</span>
+                        <span>R$ {{valor_pendente|format_currency}} ({{pendente_pct|floatformat:0}}%)</span>
                     </div>
                     <div>
                         <span>Glosa</span>
                         <div class="bar">
                             <div class="filled" style="width: {{glosa_pct|floatformat:0}}%"></div>
                         </div>
-                        <span>R$ {{valor_glosa|floatformat:2}} ({{glosa_pct|floatformat:0}}%)</span>
+                        <span>R$ {{valor_glosa|format_currency}} ({{glosa_pct|floatformat:0}}%)</span>
                     </div>
                 </div>
                 <div class="tempo-medio">
@@ -133,7 +134,7 @@
                         <div class="section-row">
                             <div class="section-info">
                                 <div class="section-title">Por Período</div>
-                                <div class="section-value">R$ <span id="periodValue">{{ period_total|floatformat:2 }}</span></div>
+                                <div class="section-value">R$ <span id="periodValue">{{ period_total|format_currency }}</span></div>
                             </div>
                             <div class="period-text">Últimos {{ selected_period|default:"180" }} dias</div>
                         </div>
@@ -141,7 +142,7 @@
                         <div class="section-row">
                             <div class="section-info">
                                 <div class="section-title">Por Anestesista</div>
-                                <div class="section-value">R$ <span id="anestesistaValue">{{ anestesista_total|floatformat:2 }}</span></div>
+                                <div class="section-value">R$ <span id="anestesistaValue">{{ anestesista_total|format_currency }}</span></div>
                             </div>
                             <select id="anestesistaFilter" class="filter-select">
                                 <option value="">Por Anestesista</option>
