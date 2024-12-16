@@ -121,28 +121,38 @@
                 <div class="graph-header">
                     <h3>Gráfico por Período</h3>
                     <select id="graphTypeSelector" class="graph-type-selector">
-                        <option value="ticket">Ticket Médio</option>
-                        <option value="receitas">Receitas</option>
+                        <option value="ticket" {% if selected_graph_type == 'ticket' %}selected{% endif %}>Ticket Médio</option>
+                        <option value="receitas" {% if selected_graph_type == 'receitas' %}selected{% endif %}>Receitas</option>
                     </select>
                 </div>
                 <div class="graph-content">
                     <canvas id="ticketMedioChart"></canvas>
                 </div>
                 <div class="graph-footer">
-                    <div class="period-indicator">
-                        Últimos {{ selected_period|default:"180" }} dias
-                    </div>
-                    <hr style="border: 1px solid #E6E6E6; margin: 10px 0;">
-                    <div class="graph-filters">
-                        <select id="anestesistaFilter" class="filter-select">
-                            <option value="">Por Anestesista</option>
-                            {% for anestesista in anestesistas %}
-                                <option value="{{ anestesista.id }}" 
-                                        {% if selected_anestesista == anestesista.id|stringformat:"i" %}selected{% endif %}>
-                                    {{ anestesista.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <div class="footer-section">
+                        <div class="section-row">
+                            <div class="section-info">
+                                <div class="section-title">Por Período</div>
+                                <div class="section-value">R$ <span id="periodValue">{{ period_total|floatformat:2 }}</span></div>
+                            </div>
+                            <div class="period-text">Últimos {{ selected_period|default:"180" }} dias</div>
+                        </div>
+                        <hr>
+                        <div class="section-row">
+                            <div class="section-info">
+                                <div class="section-title">Por Anestesista</div>
+                                <div class="section-value">R$ <span id="anestesistaValue">{{ anestesista_total|floatformat:2 }}</span></div>
+                            </div>
+                            <select id="anestesistaFilter" class="filter-select">
+                                <option value="">Por Anestesista</option>
+                                {% for anestesista in anestesistas %}
+                                    <option value="{{ anestesista.id }}" 
+                                            {% if selected_anestesista == anestesista.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ anestesista.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -308,8 +318,9 @@ const ticketMedioChart = new Chart(ticketMedioCtx, {
 
 // Graph type selector functionality
 document.getElementById('graphTypeSelector').addEventListener('change', function() {
-    ticketMedioChart.data = chartData[this.value];
-    ticketMedioChart.update();
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('graph_type', this.value);
+    window.location.href = currentUrl.toString();
 });
 
 // Anestesista filter functionality

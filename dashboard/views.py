@@ -314,6 +314,25 @@ def financas_dashboard_view(request):
         group=user_group
     ).order_by('name')
 
+    # Get selected graph type from request, default to 'ticket'
+    selected_graph_type = request.GET.get('graph_type', 'ticket')
+
+    # Calculate period total based on graph type
+    period_total = 0
+    if selected_graph_type == 'ticket':
+        period_total = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
+    else:
+        period_total = queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+
+    # Calculate anestesista total based on graph type and selected anestesista
+    anestesista_total = 0
+    if selected_anestesista:
+        anestesista_queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista)
+        if selected_graph_type == 'ticket':
+            anestesista_total = anestesista_queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
+        else:
+            anestesista_total = anestesista_queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+
     # Return to template
     context = {
         'anestesias_count': anestesias_count,
@@ -343,6 +362,9 @@ def financas_dashboard_view(request):
         'anestesistas': anestesistas,
         'selected_anestesista': selected_anestesista,
         'monthly_revenues': monthly_revenues,
+        'period_total': period_total,
+        'anestesista_total': anestesista_total,
+        'selected_graph_type': selected_graph_type,
     }
 
     return render(request, 'dashboard_financas.html', context)
