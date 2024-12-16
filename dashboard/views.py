@@ -294,10 +294,6 @@ def financas_dashboard_view(request):
             )
             monthly_revenues.append(float(round(month_total, 2)))
 
-    # Add some debug prints
-    print(f"monthly_tickets: {monthly_tickets}")
-    print(f"monthly_revenues: {monthly_revenues}")
-
     # Calculate percentages for the pie chart
     total_coopanest = sum(coopanest_values)
     total_hospital = sum(hospital_values)
