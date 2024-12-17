@@ -10,6 +10,9 @@ from django.utils import timezone
 from django.db.models.functions import TruncMonth, TruncDate
 from registration.models import Anesthesiologist
 from dateutil.relativedelta import relativedelta
+from django.http import HttpResponse
+import xlsxwriter
+from io import BytesIO
 
 @login_required
 def dashboard_view(request):
@@ -403,6 +406,128 @@ def financas_dashboard_view(request):
     }
 
     return render(request, 'dashboard_financas.html', context)
+
+@login_required
+def export_financas_excel(request):
+    """Handle Excel export for financial dashboard data"""
+    if not request.user.validado:
+        return HttpResponse('Unauthorized', status=401)
+
+    # Create output buffer
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet('Dashboard Financeiro')
+
+    # Add formats
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#0D6EFD',
+        'color': 'white',
+        'align': 'center',
+        'valign': 'vcenter'
+    })
+    currency_format = workbook.add_format({'num_format': 'R$ #,##0.00'})
+    percent_format = workbook.add_format({'num_format': '0.00%'})
+
+    # Get the same data as in the dashboard view
+    user_group = request.user.group
+    period_days = request.GET.get('period', 180)
+    selected_anestesista = request.GET.get('anestesista')
+    procedimento = request.GET.get('procedimento')
+
+    queryset = ProcedimentoFinancas.objects.select_related(
+        'procedimento',
+        'procedimento__procedimento_principal'
+    ).filter(procedimento__group=user_group)
+
+    # Apply filters
+    if selected_anestesista:
+        queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista)
+    if procedimento:
+        queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
+    
+    try:
+        period_days = int(period_days)
+        start_date = timezone.now() - timedelta(days=period_days)
+        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+    except (ValueError, TypeError):
+        period_days = 180
+        start_date = timezone.now() - timedelta(days=period_days)
+        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+
+    # Write headers
+    headers = [
+        'Data', 'Procedimento', 'Anestesista', 'Tipo de Cobrança',
+        'Valor', 'Status', 'Data de Pagamento'
+    ]
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, header_format)
+
+    # Write data
+    row = 1
+    for item in queryset:
+        worksheet.write(row, 0, item.procedimento.data_horario.strftime('%d/%m/%Y'))
+        worksheet.write(row, 1, item.procedimento.procedimento_principal.name if item.procedimento.procedimento_principal else '')
+        worksheet.write(row, 2, ', '.join([a.name for a in item.procedimento.anestesistas_responsaveis.all()]))
+        worksheet.write(row, 3, item.tipo_cobranca)
+        worksheet.write(row, 4, float(item.valor_cobranca or 0), currency_format)
+        worksheet.write(row, 5, item.status_pagamento)
+        worksheet.write(row, 6, item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '')
+        row += 1
+
+    # Add summary sheet
+    summary = workbook.add_worksheet('Resumo')
+    
+    # Write summary headers
+    summary_headers = ['Métrica', 'Valor']
+    for col, header in enumerate(summary_headers):
+        summary.write(0, col, header, header_format)
+
+    # Calculate summary data
+    total_count = queryset.count()
+    total_valor = queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+    valor_pago = queryset.filter(status_pagamento='pago').aggregate(total=Sum('valor_cobranca'))['total'] or 0
+    valor_pendente = queryset.filter(status_pagamento='pendente').aggregate(total=Sum('valor_cobranca'))['total'] or 0
+    valor_glosa = queryset.filter(status_pagamento='glosa').aggregate(total=Sum('valor_cobranca'))['total'] or 0
+
+    # Write summary data
+    summary_data = [
+        ('Total de Anestesias', total_count),
+        ('Valor Total', total_valor),
+        ('Valor Pago', valor_pago),
+        ('Valor Pendente', valor_pendente),
+        ('Valor em Glosa', valor_glosa),
+        ('% Pago', valor_pago/total_valor if total_valor else 0),
+        ('% Pendente', valor_pendente/total_valor if total_valor else 0),
+        ('% Glosa', valor_glosa/total_valor if total_valor else 0),
+    ]
+
+    for i, (label, value) in enumerate(summary_data, 1):
+        summary.write(i, 0, label)
+        if isinstance(value, (int, float)):
+            if 'Valor' in label:
+                summary.write(i, 1, value, currency_format)
+            elif '%' in label:
+                summary.write(i, 1, value, percent_format)
+            else:
+                summary.write(i, 1, value)
+
+    # Adjust column widths
+    for sheet in [worksheet, summary]:
+        for i, width in enumerate([15, 30, 30, 15, 15, 15, 15]):
+            sheet.set_column(i, i, width)
+
+    workbook.close()
+    
+    # Create the HttpResponse
+    output.seek(0)
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=dashboard_financas.xlsx'
+    
+    return response
 
 def get_date_range(period_days):
     end_date = timezone.now()

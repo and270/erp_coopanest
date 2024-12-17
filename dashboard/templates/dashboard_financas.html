@@ -493,16 +493,15 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
 
 // Export functionality
 document.getElementById('exportBtn').addEventListener('click', function() {
-    const element = document.querySelector('.dashboard-container');
-    const opt = {
-        margin: 1,
-        filename: 'dashboard-financas.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
-    };
-
-    html2pdf().set(opt).from(element).save();
+    // Get current URL parameters
+    const currentUrl = new URL(window.location.href);
+    const params = new URLSearchParams(currentUrl.search);
+    
+    // Create export URL with the same filters
+    const exportUrl = "{% url 'export_financas_excel' %}?" + params.toString();
+    
+    // Redirect to export URL
+    window.location.href = exportUrl;
 });
 
 document.addEventListener('DOMContentLoaded', function() {
