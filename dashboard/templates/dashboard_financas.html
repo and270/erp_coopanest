@@ -276,55 +276,63 @@ const chartData = {
 const chartOptions = {
     responsive: true,
     devicePixelRatio: 2,
+    maintainAspectRatio: false,
     plugins: {
         legend: {
-            display: false,
-            labels: {
-                font: {
-                    family: "'Inter', sans-serif",
-                    size: 11
+            display: false
+        },
+        tooltip: {
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                        label += new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        }).format(context.parsed.y);
+                    }
+                    return label;
                 }
             }
         }
     },
     scales: {
         x: {
+            grid: {
+                display: false
+            },
             ticks: {
                 color: '#3D3D3D',
                 font: {
                     family: "'Inter', sans-serif",
-                    size: 11,
-                    weight: '500'
-                },
-                maxRotation: 0,
-                minRotation: 0
-            },
-            grid: {
-                display: false,
-                drawBorder: false,
-                drawOnChartArea: false,
-                drawTicks: false
+                    size: 11
+                }
             }
         },
         y: {
             beginAtZero: true,
+            grid: {
+                color: '#E6E6E6'
+            },
             ticks: {
                 color: '#3D3D3D',
                 font: {
                     family: "'Inter', sans-serif",
-                    size: 11,
-                    weight: '500'
+                    size: 11
                 },
                 callback: function(value) {
-                    return Math.round(value);
-                },
-                padding: 15
-            },
-            grid: {
-                color: '#E6E6E6'
-            },
-            border: {
-                display: false
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(value);
+                }
             }
         }
     }
@@ -416,6 +424,16 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
                 beginAtZero: true,
                 grid: {
                     color: '#E6E6E6'
+                },
+                ticks: {
+                    callback: function(value) {
+                        return new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        }).format(value);
+                    }
                 }
             }
         },
@@ -433,7 +451,9 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
                         if (context.parsed.y !== null) {
                             label += new Intl.NumberFormat('pt-BR', {
                                 style: 'currency',
-                                currency: 'BRL'
+                                currency: 'BRL',
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0
                             }).format(context.parsed.y);
                         }
                         return label;

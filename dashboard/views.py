@@ -209,17 +209,11 @@ def financas_dashboard_view(request):
             total=Sum('valor_cobranca')
         ).order_by('date')
 
-        # Add debug logging
-        print("Daily Data:", daily_data)
-
         for item in daily_data:
             if item['date'] in date_map and item['tipo_cobranca']:
                 tipo = item['tipo_cobranca']
                 if tipo in ['cooperativa', 'hospital', 'particular']:
                     date_map[item['date']][tipo] = float(item['total'] or 0)
-
-        # Add debug logging
-        print("Date map after processing:", date_map)
 
         sorted_dates = sorted(date_map.keys())
         date_labels = [d.strftime("%d/%m") for d in sorted_dates]
@@ -242,13 +236,6 @@ def financas_dashboard_view(request):
                 float(round(day_total / day_count if day_count > 0 else 0, 2))
             )
             daily_revenues.append(float(round(day_total, 2)))
-
-        # Add debug logging
-        print("Final daily values:")
-        print("Labels:", date_labels)
-        print("Coopanest:", coopanest_values)
-        print("Hospital:", hospital_values)
-        print("Direta:", direta_values)
 
         month_labels = date_labels
         monthly_tickets = daily_tickets
