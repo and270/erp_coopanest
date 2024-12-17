@@ -384,17 +384,20 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
             {
                 label: 'Coopanest',
                 data: {{ coopanest_values|safe }},
-                backgroundColor: '#90E0EF'
+                backgroundColor: '#90E0EF',
+                stack: 'stack1'
             },
             {
                 label: 'Direta',
                 data: {{ direta_values|safe }},
-                backgroundColor: '#09ABCB'
+                backgroundColor: '#09ABCB',
+                stack: 'stack1'
             },
             {
                 label: 'Hospital',
                 data: {{ hospital_values|safe }},
-                backgroundColor: '#023E8A'
+                backgroundColor: '#023E8A',
+                stack: 'stack1'
             }
         ]
     },
@@ -419,6 +422,23 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
         plugins: {
             legend: {
                 display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        if (context.parsed.y !== null) {
+                            label += new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                            }).format(context.parsed.y);
+                        }
+                        return label;
+                    }
+                }
             }
         }
     }

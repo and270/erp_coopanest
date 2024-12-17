@@ -238,26 +238,41 @@ def financas_dashboard_view(request):
 
     else:
         # Monthly view processing (keep existing monthly code)
-        month_map = {
-            m: {
+        month_map = {}
+        for m in date_range:
+            month_map[m.strftime("%Y-%m")] = {
                 'cooperativa': 0,
                 'hospital': 0,
                 'particular': 0
-            } for m in date_range
-        }
+            }
 
         monthly_data = queryset.annotate(
             month=TruncMonth('procedimento__data_horario')
+        ).filter(
+            valor_cobranca__isnull=False,  # Add this to exclude null values
+            status_pagamento__in=['pago', 'pendente']  # Only include relevant statuses
         ).values('month', 'tipo_cobranca').annotate(
             total=Sum('valor_cobranca')
         ).order_by('month')
 
-        for item in monthly_data:
-            m = item['month'].replace(day=1)
-            if m in month_map:
-                month_map[m][item['tipo_cobranca']] = item['total'] or 0
+        # Add debug logging to check the values
+        print("Monthly Data:", monthly_data)
 
-        sorted_months = sorted(month_map.keys())
+        for item in monthly_data:
+            if item['month'] and item['tipo_cobranca']:
+                month_key = item['month'].strftime("%Y-%m")
+                if month_key in month_map:
+                    if item['tipo_cobranca'] == 'cooperativa':
+                        month_map[month_key]['cooperativa'] = float(item['total'] or 0)
+                    elif item['tipo_cobranca'] == 'hospital':
+                        month_map[month_key]['hospital'] = float(item['total'] or 0)
+                    elif item['tipo_cobranca'] == 'particular':
+                        month_map[month_key]['particular'] = float(item['total'] or 0)
+
+        # Add debug logging
+        print("Month map after processing:", month_map)
+
+        sorted_months = sorted(date_range)
         # Dicionário de meses em português
         meses_pt = {
             'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
@@ -266,9 +281,16 @@ def financas_dashboard_view(request):
             'November': 'Novembro', 'December': 'Dezembro'
         }
         month_labels = [meses_pt[m.strftime("%B")] for m in sorted_months]
-        coopanest_values = [month_map[m]['cooperativa'] for m in sorted_months]
-        hospital_values = [month_map[m]['hospital'] for m in sorted_months]
-        direta_values = [month_map[m]['particular'] for m in sorted_months]
+        coopanest_values = [month_map[m.strftime("%Y-%m")]['cooperativa'] for m in sorted_months]
+        hospital_values = [month_map[m.strftime("%Y-%m")]['hospital'] for m in sorted_months]
+        direta_values = [month_map[m.strftime("%Y-%m")]['particular'] for m in sorted_months]
+
+        # Add more debug logging
+        print("Final values:")
+        print("Labels:", month_labels)
+        print("Coopanest:", coopanest_values)
+        print("Hospital:", hospital_values)
+        print("Direta:", direta_values)
 
         # Calculate monthly tickets and revenues
         monthly_tickets = []
