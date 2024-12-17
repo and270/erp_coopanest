@@ -11,10 +11,14 @@
 {% block content %}
 <div class="dashboard-container financas-dashboard">
     <div class="dashboard-header">
-        <h1>Dashboard de Finanças</h1>
-        <div class="dashboard-tabs">
-            <a href="{% url 'dashboard' %}" class="tab">Qualidade</a>
-            <a href="{% url 'financas_dashboard_view' %}" class="tab active">Finanças</a>
+        <div class="left-section">
+            <h1>Dashboard de Finanças</h1>
+        </div>
+        <div class="agenda-scale">
+            <input type="radio" id="financas-view" name="view-toggle" checked>
+            <label for="financas-view"><b>Finanças</b></label>
+            <input type="radio" id="qualidade-view" name="view-toggle">
+            <label for="qualidade-view"><b>Qualidade</b></label>
         </div>
         <div class="dashboard-actions">
             <div class="period-filter">
@@ -402,6 +406,23 @@ document.getElementById('exportBtn').addEventListener('click', function() {
     };
 
     html2pdf().set(opt).from(element).save();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const financasRadio = document.getElementById('financas-view');
+    const qualidadeRadio = document.getElementById('qualidade-view');
+    
+    qualidadeRadio.addEventListener('change', function() {
+        if (qualidadeRadio.checked) {
+            window.location.href = "{% url 'dashboard' %}";
+        }
+    });
+
+    financasRadio.addEventListener('change', function() {
+        if (financasRadio.checked) {
+            window.location.href = "{% url 'financas_dashboard_view' %}";
+        }
+    });
 });
 </script>
 {% endblock %}

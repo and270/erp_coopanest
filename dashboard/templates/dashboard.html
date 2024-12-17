@@ -10,10 +10,14 @@
 {% block content %}
 <div class="dashboard-container">
     <div class="dashboard-header">
-        <h1>Dashboard de Qualidade</h1>
-        <div class="dashboard-tabs">
-            <a href="{% url 'dashboard' %}" class="tab {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Qualidade</a>
-            <a href="{% url 'financas_dashboard_view' %}" class="tab {% if request.resolver_match.url_name == 'financas_dashboard_view' %}active{% endif %}">Finanças</a>
+        <div class="left-section">
+            <h1>Dashboard de Qualidade</h1>
+        </div>
+        <div class="agenda-scale">
+            <input type="radio" id="financas-view" name="view-toggle" checked>
+            <label for="financas-view"><b>Finanças</b></label>
+            <input type="radio" id="qualidade-view" name="view-toggle">
+            <label for="qualidade-view"><b>Qualidade</b></label>
         </div>
         <div class="dashboard-actions">
             <div class="period-filter">
@@ -216,6 +220,29 @@ document.getElementById('exportBtn').addEventListener('click', function() {
     };
 
     html2pdf().set(opt).from(element).save();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const financasRadio = document.getElementById('financas-view');
+    const qualidadeRadio = document.getElementById('qualidade-view');
+    
+    // Set initial state based on current page
+    qualidadeRadio.checked = true;
+    financasRadio.checked = false;
+    
+    financasRadio.addEventListener('change', function() {
+        if (this.checked) {
+            console.log('Switching to financas dashboard');
+            window.location.href = "{% url 'financas_dashboard_view' %}";
+        }
+    });
+
+    qualidadeRadio.addEventListener('change', function() {
+        if (this.checked) {
+            console.log('Switching to qualidade dashboard');
+            window.location.href = "{% url 'dashboard' %}";
+        }
+    });
 });
 </script>
 {% endblock %}
