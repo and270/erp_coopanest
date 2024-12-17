@@ -28,7 +28,7 @@
     background: white;
     border-radius: 20px;
     border: 1px solid #E3E3E3;
-    padding: 24px;
+    padding: 16px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     position: relative;
     display: flex;
@@ -474,9 +474,9 @@
 }
 
 .graph-content {
-    border: none; /* Remove the border */
-    padding: 16px; /* Maintain the original padding */
-    margin-bottom: 16px; 
+    border: none;
+    padding: 8px 12px 8px 2px;
+    margin-bottom: 8px;
 }
 
 .graph-footer {
