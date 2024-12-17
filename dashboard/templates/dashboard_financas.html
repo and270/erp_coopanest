@@ -296,6 +296,8 @@ const chartOptions = {
     }
 };
 
+const selected_graph_type = '{{ selected_graph_type }}';
+
 // Renderiza o gráfico ajustado
 const ticketMedioCtx = document.getElementById('ticketMedioChart').getContext('2d');
 const ticketMedioChart = new Chart(ticketMedioCtx, {
@@ -303,8 +305,8 @@ const ticketMedioChart = new Chart(ticketMedioCtx, {
     data: {
         labels: {{ months|safe }},
         datasets: [{
-            label: 'Ticket Médio',
-            data: {{ monthly_tickets|safe }},
+            label: selected_graph_type === 'ticket' ? 'Ticket Médio' : 'Receitas',
+            data: selected_graph_type === 'ticket' ? {{ monthly_tickets|safe }} : {{ monthly_revenues|safe }},
             borderColor: '#1A73E8',
             borderWidth: 2,
             fill: false,

@@ -76,7 +76,6 @@ def dashboard_view(request):
         procedimento__group=user_group
     ).order_by('name').distinct()
 
-    print(f"duracao_media: {metrics['duracao_media']}")
     return render(request, 'dashboard.html', {
         'metrics': metrics,
         'procedimentos': procedimentos,
@@ -135,12 +134,6 @@ def financas_dashboard_view(request):
         queryset = queryset.filter(
             procedimento__data_horario__gte=start_date
         )
-
-    # Add some debug prints to verify the filtering
-    print(f"Selected anestesista: {selected_anestesista}")
-    print(f"Total procedures after filtering: {queryset.count()}")
-    if selected_anestesista:
-        print(f"Procedures for selected anestesista: {queryset.values_list('procedimento__id', flat=True)}")
 
     total_count = queryset.count()
 
@@ -317,11 +310,21 @@ def financas_dashboard_view(request):
     # Get selected graph type from request, default to 'ticket'
     selected_graph_type = request.GET.get('graph_type', 'ticket')
 
-    # Calculate period total based on graph type
-    period_total = 0
     if selected_graph_type == 'ticket':
         period_total = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
     else:
+        # Add detailed debugging for total calculation
+        procedures = queryset.values(
+            'id', 
+            'valor_cobranca', 
+            'tipo_cobranca',
+            'procedimento__data_horario'
+        ).order_by('procedimento__data_horario')
+        
+        total_sum = 0
+        for proc in procedures:
+            total_sum += proc['valor_cobranca'] or 0
+        
         period_total = queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
 
     # Calculate anestesista total based on graph type and selected anestesista
