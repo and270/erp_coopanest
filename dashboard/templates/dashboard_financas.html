@@ -177,21 +177,33 @@
                 <div class="percent-indicators">
                     <div class="percent-indicator">
                         <div class="circle-progress">
-                            <div class="filled" style="background:#90E0EF; transform: rotate({{ coopanest_pct|multiply:3.6 }}deg);"></div>
+                            <div class="circle">
+                                <div class="circle-mask"></div>
+                                <div class="circle-fill" style="background:#90E0EF; transform: rotate({{ coopanest_pct|multiply:3.6 }}deg);"></div>
+                                <div class="circle-inside"></div>
+                            </div>
                             <div class="value">{{ coopanest_pct|floatformat:0 }}%</div>
                         </div>
                         <span>Coopanest</span>
                     </div>
                     <div class="percent-indicator">
                         <div class="circle-progress">
-                            <div class="filled" style="background:#09ABCB; transform: rotate({{ direta_pct|multiply:3.6 }}deg);"></div>
+                            <div class="circle">
+                                <div class="circle-mask"></div>
+                                <div class="circle-fill" style="background:#09ABCB; transform: rotate({{ direta_pct|multiply:3.6 }}deg);"></div>
+                                <div class="circle-inside"></div>
+                            </div>
                             <div class="value">{{ direta_pct|floatformat:0 }}%</div>
                         </div>
                         <span>Direta</span>
                     </div>
                     <div class="percent-indicator">
                         <div class="circle-progress">
-                            <div class="filled" style="background:#023E8A; transform: rotate({{ hospital_pct|multiply:3.6 }}deg);"></div>
+                            <div class="circle">
+                                <div class="circle-mask"></div>
+                                <div class="circle-fill" style="background:#023E8A; transform: rotate({{ hospital_pct|multiply:3.6 }}deg);"></div>
+                                <div class="circle-inside"></div>
+                            </div>
                             <div class="value">{{ hospital_pct|floatformat:0 }}%</div>
                         </div>
                         <span>Hospital</span>
