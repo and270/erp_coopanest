@@ -14,3 +14,11 @@ def format_currency(value):
         return formatted
     except (ValueError, TypeError):
         return value
+    
+@register.filter
+def multiply(value, arg):
+    """Multiplies the value by the argument"""
+    try:
+        return float(value) * float(arg)
+    except (ValueError, TypeError):
+        return ''
