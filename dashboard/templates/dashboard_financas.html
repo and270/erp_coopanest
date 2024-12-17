@@ -327,11 +327,15 @@ document.getElementById('graphTypeSelector').addEventListener('change', function
 // Anestesista filter functionality
 document.getElementById('anestesistaFilter').addEventListener('change', function() {
     const selectedValue = this.value;
+    const currentUrl = new URL(window.location.href);
+    
     if (selectedValue) {
-        const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('anestesista', selectedValue);
-        window.location.href = currentUrl.toString();
+    } else {
+        currentUrl.searchParams.delete('anestesista');
     }
+    
+    window.location.href = currentUrl.toString();
 });
 
 // Valores Recebidos Chart

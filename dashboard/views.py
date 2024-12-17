@@ -332,6 +332,11 @@ def financas_dashboard_view(request):
             anestesista_total = anestesista_queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
         else:
             anestesista_total = anestesista_queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+    else:
+        # When no anesthetist is selected, divide the period total by number of anesthetists
+        num_anestesistas = anestesistas.count()
+        if num_anestesistas > 0:
+            anestesista_total = period_total / num_anestesistas
 
     # Return to template
     context = {
