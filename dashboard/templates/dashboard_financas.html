@@ -179,11 +179,13 @@
                         <div class="circle-progress">
                             <svg width="48" height="48" viewBox="0 0 48 48">
                                 <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if coopanest_pct > 0 %}
                                 <circle cx="24" cy="24" r="20" fill="none" 
                                         stroke="#90E0EF" 
                                         stroke-width="4"
-                                        stroke-dasharray="{{ coopanest_pct|default:0|multiply:1.256 }} 126"
+                                        stroke-dasharray="{{ coopanest_pct|multiply:1.256 }} 126"
                                         transform="rotate(-90 24 24)"/>
+                                {% endif %}
                             </svg>
                             <div class="value">{{ coopanest_pct|floatformat:0 }}%</div>
                         </div>
@@ -193,11 +195,13 @@
                         <div class="circle-progress">
                             <svg width="48" height="48" viewBox="0 0 48 48">
                                 <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if direta_pct > 0 %}
                                 <circle cx="24" cy="24" r="20" fill="none" 
                                         stroke="#09ABCB" 
                                         stroke-width="4"
-                                        stroke-dasharray="{{ direta_pct|default:0|multiply:1.256 }} 126"
+                                        stroke-dasharray="{{ direta_pct|multiply:1.256 }} 126"
                                         transform="rotate(-90 24 24)"/>
+                                {% endif %}
                             </svg>
                             <div class="value">{{ direta_pct|floatformat:0 }}%</div>
                         </div>
@@ -207,11 +211,13 @@
                         <div class="circle-progress">
                             <svg width="48" height="48" viewBox="0 0 48 48">
                                 <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if hospital_pct > 0 %}
                                 <circle cx="24" cy="24" r="20" fill="none" 
                                         stroke="#023E8A" 
                                         stroke-width="4"
-                                        stroke-dasharray="{{ hospital_pct|default:0|multiply:1.256 }} 126"
+                                        stroke-dasharray="{{ hospital_pct|multiply:1.256 }} 126"
                                         transform="rotate(-90 24 24)"/>
+                                {% endif %}
                             </svg>
                             <div class="value">{{ hospital_pct|floatformat:0 }}%</div>
                         </div>
