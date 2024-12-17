@@ -177,33 +177,42 @@
                 <div class="percent-indicators">
                     <div class="percent-indicator">
                         <div class="circle-progress">
-                            <div class="circle">
-                                <div class="circle-mask"></div>
-                                <div class="circle-fill" style="background:#90E0EF; transform: rotate({{ coopanest_pct|multiply:3.6 }}deg);"></div>
-                                <div class="circle-inside"></div>
-                            </div>
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#90E0EF" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ coopanest_pct|default:0|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                            </svg>
                             <div class="value">{{ coopanest_pct|floatformat:0 }}%</div>
                         </div>
                         <span>Coopanest</span>
                     </div>
                     <div class="percent-indicator">
                         <div class="circle-progress">
-                            <div class="circle">
-                                <div class="circle-mask"></div>
-                                <div class="circle-fill" style="background:#09ABCB; transform: rotate({{ direta_pct|multiply:3.6 }}deg);"></div>
-                                <div class="circle-inside"></div>
-                            </div>
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#09ABCB" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ direta_pct|default:0|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                            </svg>
                             <div class="value">{{ direta_pct|floatformat:0 }}%</div>
                         </div>
                         <span>Direta</span>
                     </div>
                     <div class="percent-indicator">
                         <div class="circle-progress">
-                            <div class="circle">
-                                <div class="circle-mask"></div>
-                                <div class="circle-fill" style="background:#023E8A; transform: rotate({{ hospital_pct|multiply:3.6 }}deg);"></div>
-                                <div class="circle-inside"></div>
-                            </div>
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#023E8A" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ hospital_pct|default:0|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                            </svg>
                             <div class="value">{{ hospital_pct|floatformat:0 }}%</div>
                         </div>
                         <span>Hospital</span>
@@ -505,6 +514,36 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = "{% url 'financas_dashboard_view' %}";
         }
     });
+
+    // Function to set the circle fill
+    function setCircleFill(elementId, percentage, color) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        // Convert percentage to degrees (0-360)
+        const degrees = (percentage / 100) * 360;
+        
+        // Set the color
+        element.style.borderColor = `${color} ${color} transparent transparent`;
+        
+        // Calculate clip path based on percentage
+        if (percentage > 0) {
+            if (percentage <= 25) {
+                element.style.clipPath = `polygon(50% 50%, 50% 0%, ${50 + (50 * Math.tan(degrees * Math.PI / 180))}% 0%)`;
+            } else if (percentage <= 50) {
+                element.style.clipPath = `polygon(50% 50%, 50% 0%, 100% 0%, 100% ${50 - (50 * Math.tan((90 - degrees) * Math.PI / 180))}%)`;
+            } else if (percentage <= 75) {
+                element.style.clipPath = `polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, ${100 - (50 * Math.tan((degrees - 180) * Math.PI / 180))}% 100%)`;
+            } else {
+                element.style.clipPath = `polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${50 + (50 * Math.tan((270 - degrees) * Math.PI / 180))}%)`;
+            }
+        }
+    }
+
+    // Set the fills for each circle
+    setCircleFill('coopanest-fill', {{ coopanest_pct|default:0 }}, '#90E0EF');
+    setCircleFill('direta-fill', {{ direta_pct|default:0 }}, '#09ABCB');
+    setCircleFill('hospital-fill', {{ hospital_pct|default:0 }}, '#023E8A');
 });
 </script>
 {% endblock %}
