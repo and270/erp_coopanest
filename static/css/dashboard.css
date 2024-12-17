@@ -285,6 +285,11 @@
         width: 100%;
         right: auto;
     }
+
+    .agenda-scale {
+        align-self: center;  /* Centers the element horizontally */
+        margin: 8px 0;      /* Adds some vertical spacing */
+    }
 }
 
 .period-filter {
