@@ -141,9 +141,7 @@ def financas_dashboard_view(request):
     total_count = queryset.count()
 
     # Anestesias: Count how many procedures had anesthesiologists in the last 6 months
-    anestesias_count = queryset.filter(
-        procedimento__anestesistas_responsaveis__isnull=False
-    ).distinct().count()
+    anestesias_count = queryset.values('procedimento').distinct().count()
 
     # Valores Totais por Status
     totals_by_status = queryset.values('status_pagamento').annotate(
