@@ -120,12 +120,28 @@
         <!-- Column 3 -->
         <div class="metrics-column-3">
             <div class="metric-card">
-                <h3>PONV Imediato RPA</h3>
+                <div class="header-row">
+                    <h3>PONV</h3>
+                    <div class="view-filter">
+                        <select class="view-selector" data-param="ponv_view">
+                            <option value="final" {% if metrics.ponv_view == 'final' %}selected{% endif %}>Final do Procedimento</option>
+                            <option value="rpa" {% if metrics.ponv_view == 'rpa' %}selected{% endif %}>RPA</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="metric-value">{% if metrics.ponv %}{{ metrics.ponv|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
 
             <div class="metric-card">
-                <h3>Dor pós-operatória imediata RPA</h3>
+                <div class="header-row">
+                    <h3>Dor pós-operatória</h3>
+                    <div class="view-filter">
+                        <select class="view-selector" data-param="dor_view">
+                            <option value="final" {% if metrics.dor_view == 'final' %}selected{% endif %}>Final do Procedimento</option>
+                            <option value="rpa" {% if metrics.dor_view == 'rpa' %}selected{% endif %}>RPA</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="metric-value">{% if metrics.dor_pos_operatoria %}{{ metrics.dor_pos_operatoria|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
         </div>
@@ -133,7 +149,15 @@
         <!-- Column 4 -->
         <div class="metrics-column-4">
             <div class="metric-card">
-                <h3>Eventos adversos evitáveis</h3>
+                <div class="header-row">
+                    <h3>Eventos adversos evitáveis</h3>
+                    <div class="view-filter">
+                        <select class="view-selector" data-param="evento_view">
+                            <option value="final" {% if metrics.evento_view == 'final' %}selected{% endif %}>Final do Procedimento</option>
+                            <option value="rpa" {% if metrics.evento_view == 'rpa' %}selected{% endif %}>RPA</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="metric-value">{% if metrics.evento_adverso_evitavel %}{{ metrics.evento_adverso_evitavel|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
 
@@ -242,6 +266,16 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Switching to qualidade dashboard');
             window.location.href = "{% url 'dashboard' %}";
         }
+    });
+});
+
+document.querySelectorAll('.view-selector').forEach(selector => {
+    selector.addEventListener('change', function() {
+        const param = this.dataset.param;
+        const value = this.value;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set(param, value);
+        window.location.href = currentUrl.toString();
     });
 });
 </script>

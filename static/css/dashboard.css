@@ -634,3 +634,19 @@ hr {
 circle {
     transition: stroke-dasharray 0.3s ease;
 }
+
+.view-filter select {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background-color: white;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}

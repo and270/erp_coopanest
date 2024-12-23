@@ -13,6 +13,7 @@ from dateutil.relativedelta import relativedelta
 from django.http import HttpResponse
 import xlsxwriter
 from io import BytesIO
+from qualidade.models import AvaliacaoRPA
 
 @login_required
 def dashboard_view(request):
@@ -21,8 +22,18 @@ def dashboard_view(request):
 
     user_group = request.user.group
     
+    # Get period filter - Add this at the beginning
+    period_days = request.GET.get('period')
+    if not period_days:
+        period_days = 180  # Default to 6 months if no period is selected
+    
     procedimento = request.GET.get('procedimento')
     
+    # Get view preferences from request
+    dor_view = request.GET.get('dor_view', 'final')  # 'final' or 'rpa'
+    ponv_view = request.GET.get('ponv_view', 'final')  # 'final' or 'rpa'
+    evento_view = request.GET.get('evento_view', 'final')  # 'final' or 'rpa'
+
     # Base queryset with proper joins and group filter
     queryset = ProcedimentoQualidade.objects.select_related(
         'procedimento',
@@ -32,24 +43,49 @@ def dashboard_view(request):
         procedimento__group=user_group
     )
     
-    if procedimento:
-        queryset = queryset.filter(
-            procedimento__procedimento_principal__name=procedimento
-        )
+    # Additional queryset for AvaliacaoRPA
+    rpa_queryset = AvaliacaoRPA.objects.select_related(
+        'procedimento',
+        'procedimento__procedimento_principal'
+    ).filter(
+        procedimento__status='finished',
+        procedimento__group=user_group
+    )
 
-    # Get period filter
-    period_days = request.GET.get('period')  # Remove default value
-    if period_days:
-        try:
-            period_days = int(period_days)
-            start_date = timezone.now() - timedelta(days=period_days)
-            queryset = queryset.filter(
-                procedimento__data_horario__gte=start_date
-            )
-        except ValueError:
-            pass  # Invalid period parameter, ignore filter
+    # Apply filters to both querysets
+    if procedimento:
+        queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
+        rpa_queryset = rpa_queryset.filter(procedimento__procedimento_principal__name=procedimento)
+
+    # Apply period filter
+    try:
+        period_days = int(period_days)
+        start_date = timezone.now() - timedelta(days=period_days)
+        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+        rpa_queryset = rpa_queryset.filter(procedimento__data_horario__gte=start_date)
+    except (ValueError, TypeError):
+        # If period_days is invalid, default to 180 days
+        period_days = 180
+        start_date = timezone.now() - timedelta(days=period_days)
+        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+        rpa_queryset = rpa_queryset.filter(procedimento__data_horario__gte=start_date)
 
     total_count = queryset.count()
+    rpa_total_count = rpa_queryset.count()
+
+    # Calculate metrics based on selected views
+    dor_count = (rpa_queryset.filter(dor_pos_operatoria=True).count() if dor_view == 'rpa' 
+                 else queryset.filter(dor_pos_operatoria=True).count())
+    dor_total = rpa_total_count if dor_view == 'rpa' else total_count
+
+    ponv_count = (rpa_queryset.filter(ponv=True).count() if ponv_view == 'rpa' 
+                  else queryset.filter(ponv=True).count())
+    ponv_total = rpa_total_count if ponv_view == 'rpa' else total_count
+
+    evento_count = (rpa_queryset.filter(evento_adverso=True).count() if evento_view == 'rpa' 
+                   else queryset.filter(evento_adverso_evitavel=True).count())
+    evento_total = rpa_total_count if evento_view == 'rpa' else total_count
+
     avg_delay = queryset.aggregate(
         avg_delay=Avg(F('data_horario_inicio_efetivo') - F('procedimento__data_horario'))
     )['avg_delay']
@@ -65,13 +101,16 @@ def dashboard_view(request):
         )['avg_duration']).split('.')[0].rsplit(':', 1)[0] if total_count > 0 else None,
         'reacoes_alergicas': queryset.filter(reacao_alergica_grave=True).count() / total_count * 100 if total_count > 0 else None,
         'encaminhamentos_uti': queryset.filter(encaminhamento_uti=True).count() / total_count * 100 if total_count > 0 else None,
-        'ponv': queryset.filter(ponv=True).count() / total_count * 100 if total_count > 0 else None,
-        'dor_pos_operatoria': queryset.filter(dor_pos_operatoria=True).count() / total_count * 100 if total_count > 0 else None,
-        'evento_adverso_evitavel': queryset.filter(evento_adverso_evitavel=True).count() / total_count * 100 if total_count > 0 else None,
+        'ponv': (ponv_count / ponv_total * 100) if ponv_total > 0 else None,
+        'dor_pos_operatoria': (dor_count / dor_total * 100) if dor_total > 0 else None,
+        'evento_adverso_evitavel': (evento_count / evento_total * 100) if evento_total > 0 else None,
         'adesao_checklist': queryset.filter(adesao_checklist=True).count() / total_count * 100 if total_count > 0 else None,
         'conformidade_protocolos': queryset.filter(conformidade_diretrizes=True).count() / total_count * 100 if total_count > 0 else None,
         'tecnicas_assepticas': queryset.filter(uso_tecnicas_assepticas=True).count() / total_count * 100 if total_count > 0 else None,
         'csat_score': queryset.aggregate(Avg('csat_score'))['csat_score__avg'],
+        'ponv_view': ponv_view,
+        'evento_view': evento_view,
+        'dor_view': dor_view,
     }
 
     # Get procedure types for filter (only from the same group)
