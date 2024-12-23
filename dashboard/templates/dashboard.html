@@ -80,7 +80,7 @@
                     <h3>Procedimento</h3>
                     <div class="procedure-filter">
                         <select id="procedimentoFilter">
-                            <option value="">Tipo de Procedimento</option>
+                            <option value="">Todos</option>
                             {% for proc in procedimentos %}
                                 <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
                                     {{ proc.name|truncatechars:25 }}
