@@ -375,7 +375,39 @@ const chartOptions = {
             grid: { display: false },
             ticks: {
                 color: '#3D3D3D',
-                font: { family: "'Inter', sans-serif", size: 11 }
+                font: { family: "'Inter', sans-serif", size: 11 },
+                maxRotation: 0,  // Force horizontal labels
+                minRotation: 0,  // Force horizontal labels
+                callback: function(value, index, values) {
+                    const label = this.getLabelForValue(value);
+                    const totalLabels = values.length;
+                    
+                    // For months spanning more than a year
+                    if (totalLabels > 12 && label.includes('/')) {
+                        // Assuming label format is "Month/Year"
+                        const [month, year] = label.split('/');
+                        
+                        // Show only January with year, and every 3rd month without year
+                        if (month === 'Janeiro') {
+                            return year;
+                        } else if (index % 3 === 0) {
+                            return month;
+                        }
+                        return '';
+                    }
+                    
+                    // For periods with more than 15 items, show every third label
+                    else if (totalLabels > 15) {
+                        return index % 3 === 0 ? label : '';
+                    }
+                    // For periods with more than 7 items, show every other label
+                    else if (totalLabels > 7) {
+                        return index % 2 === 0 ? label : '';
+                    }
+                    
+                    // For 7 or fewer items, show all labels
+                    return label;
+                }
             }
         },
         y: {
@@ -437,6 +469,28 @@ document.getElementById('anestesistaFilter').addEventListener('change', function
 
 // Valores Recebidos stacked bar chart
 const valoresRecebidosCtx = document.getElementById('valoresRecebidosChart').getContext('2d');
+const valoresRecebidosOptions = {
+    ...chartOptions,
+    scales: {
+        x: chartOptions.scales.x,
+        y: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { color: '#E6E6E6' },
+            ticks: {
+                callback: function(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(value);
+                }
+            }
+        }
+    }
+};
+
 const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
     type: 'bar',
     data: {
@@ -462,51 +516,7 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
             }
         ]
     },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            x: {
-                stacked: true,
-                grid: { display: false }
-            },
-            y: {
-                stacked: true,
-                beginAtZero: true,
-                grid: { color: '#E6E6E6' },
-                ticks: {
-                    callback: function(value) {
-                        return new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0
-                        }).format(value);
-                    }
-                }
-            }
-        },
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        let label = context.dataset.label || '';
-                        if (label) label += ': ';
-                        if (context.parsed.y !== null) {
-                            label += new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                            }).format(context.parsed.y);
-                        }
-                        return label;
-                    }
-                }
-            }
-        }
-    }
+    options: valoresRecebidosOptions
 });
 
 // Export button
