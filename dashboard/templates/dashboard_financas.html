@@ -25,7 +25,9 @@
                 <button class="filter-btn" id="periodFilterBtn">
                     <i class="fas fa-calendar"></i>
                     {% if selected_period %}
-                        {% if selected_period == 7 %}Últimos 7 dias
+                        {% if selected_period == 'custom' %}
+                            Personalizado
+                        {% elif selected_period == 7 %}Últimos 7 dias
                         {% elif selected_period == 14 %}Últimos 14 dias
                         {% elif selected_period == 30 %}Últimos 30 dias
                         {% elif selected_period == 90 %}Últimos 3 meses
@@ -47,6 +49,18 @@
                     <div class="period-option" data-value="365" {% if selected_period == '365' %}data-selected{% endif %}>Último ano</div>
                     <div class="period-option" data-value="540" {% if selected_period == '540' %}data-selected{% endif %}>Último 1 ano e meio</div>
                     <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
+
+                    <!-- New custom range option -->
+                    <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
+
+                    <!-- Hidden container for custom range -->
+                    <div id="customRangeContainer" class="custom-range" style="display: none; margin-top: 10px;">
+                        <label for="customStart">Início:</label>
+                        <input type="date" id="customStart" value="{{ custom_start_date|default_if_none:'' }}" />
+                        <label for="customEnd">Fim:</label>
+                        <input type="date" id="customEnd" value="{{ custom_end_date|default_if_none:'' }}" />
+                        <button type="button" id="applyCustomRangeBtn">Aplicar</button>
+                    </div>
                 </div>
             </div>
             <button class="export-btn" id="exportBtn">
@@ -75,7 +89,9 @@
                 <div class="metric-value">{{ anestesias_count }}</div>
                 <div class="metric-label">
                     {% if selected_period %}
-                        {% if selected_period == 7 %}realizadas nos últimos 7 dias
+                        {% if selected_period == 'custom' %}
+                            (Período Personalizado)
+                        {% elif selected_period == 7 %}realizadas nos últimos 7 dias
                         {% elif selected_period == 14 %}realizadas nos últimos 14 dias
                         {% elif selected_period == 30 %}realizadas nos últimos 30 dias
                         {% elif selected_period == 90 %}realizadas nos últimos 3 meses
@@ -140,7 +156,13 @@
                                 <div class="section-title">Por Período</div>
                                 <div class="section-value">R$ <span id="periodValue">{{ period_total|format_currency }}</span></div>
                             </div>
-                            <div class="period-text">Últimos {{ selected_period|default:"180" }} dias</div>
+                            <div class="period-text">
+                                {% if selected_period == 'custom' %}
+                                    Personalizado
+                                {% else %}
+                                    Últimos {{ selected_period|default:"180" }} dias
+                                {% endif %}
+                            </div>
                         </div>
                         <hr>
                         <div class="section-row">
@@ -234,21 +256,19 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
-// Procedure filter functionality
+// Procedure filter
 document.getElementById('procedimentoFilter').addEventListener('change', function() {
     const selectedValue = this.value;
-    console.log('Selected value:', selectedValue);
-    
+    const currentUrl = new URL(window.location.href);
     if (selectedValue) {
-        const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('procedimento', selectedValue);
-        window.location.href = currentUrl.toString();
     } else {
-        window.location.href = window.location.pathname;
+        currentUrl.searchParams.delete('procedimento');
     }
+    window.location.href = currentUrl.toString();
 });
 
-// Period filter functionality
+// Period Filter
 const periodFilterBtn = document.getElementById('periodFilterBtn');
 const periodFilter = document.getElementById('periodFilter');
 
@@ -263,16 +283,42 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// SINGLE unified listener for .period-option
 document.querySelectorAll('.period-option').forEach(option => {
     option.addEventListener('click', function() {
         const value = this.dataset.value;
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('period', value);
-        window.location.href = currentUrl.toString();
+        // If "custom" was selected, show the date pickers:
+        if (value === 'custom') {
+            document.getElementById('customRangeContainer').style.display = 'block';
+        } else {
+            // Hide custom container if previously displayed
+            document.getElementById('customRangeContainer').style.display = 'none';
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('period', value);
+            currentUrl.searchParams.delete('start_date');
+            currentUrl.searchParams.delete('end_date');
+            window.location.href = currentUrl.toString();
+        }
     });
 });
 
+// "Aplicar" button for custom range
+document.getElementById('applyCustomRangeBtn').addEventListener('click', function() {
+    const startInput = document.getElementById('customStart');
+    const endInput = document.getElementById('customEnd');
+    if (startInput.value && endInput.value) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period', 'custom');
+        currentUrl.searchParams.set('start_date', startInput.value);
+        currentUrl.searchParams.set('end_date', endInput.value);
+        window.location.href = currentUrl.toString();
+    } else {
+        alert('Por favor, selecione ambas as datas.');
+    }
+});
+
 // Chart configuration
+const selected_graph_type = '{{ selected_graph_type }}';
 const chartData = {
     ticket: {
         labels: {{ months|safe }},
@@ -305,16 +351,12 @@ const chartOptions = {
     devicePixelRatio: 2,
     maintainAspectRatio: false,
     plugins: {
-        legend: {
-            display: false
-        },
+        legend: { display: false },
         tooltip: {
             callbacks: {
                 label: function(context) {
                     let label = context.dataset.label || '';
-                    if (label) {
-                        label += ': ';
-                    }
+                    if (label) label += ': ';
                     if (context.parsed.y !== null) {
                         label += new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
@@ -330,28 +372,18 @@ const chartOptions = {
     },
     scales: {
         x: {
-            grid: {
-                display: false
-            },
+            grid: { display: false },
             ticks: {
                 color: '#3D3D3D',
-                font: {
-                    family: "'Inter', sans-serif",
-                    size: 11
-                }
+                font: { family: "'Inter', sans-serif", size: 11 }
             }
         },
         y: {
             beginAtZero: true,
-            grid: {
-                color: '#E6E6E6'
-            },
+            grid: { color: '#E6E6E6' },
             ticks: {
                 color: '#3D3D3D',
-                font: {
-                    family: "'Inter', sans-serif",
-                    size: 11
-                },
+                font: { family: "'Inter', sans-serif", size: 11 },
                 callback: function(value) {
                     return new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
@@ -365,9 +397,7 @@ const chartOptions = {
     }
 };
 
-const selected_graph_type = '{{ selected_graph_type }}';
-
-// Renderiza o gráfico ajustado
+// Render line chart
 const ticketMedioCtx = document.getElementById('ticketMedioChart').getContext('2d');
 const ticketMedioChart = new Chart(ticketMedioCtx, {
     type: 'line',
@@ -386,30 +416,26 @@ const ticketMedioChart = new Chart(ticketMedioCtx, {
     options: chartOptions
 });
 
-
-
-// Graph type selector functionality
+// Graph type selector
 document.getElementById('graphTypeSelector').addEventListener('change', function() {
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set('graph_type', this.value);
     window.location.href = currentUrl.toString();
 });
 
-// Anestesista filter functionality
+// Anestesista filter
 document.getElementById('anestesistaFilter').addEventListener('change', function() {
     const selectedValue = this.value;
     const currentUrl = new URL(window.location.href);
-    
     if (selectedValue) {
         currentUrl.searchParams.set('anestesista', selectedValue);
     } else {
         currentUrl.searchParams.delete('anestesista');
     }
-    
     window.location.href = currentUrl.toString();
 });
 
-// Valores Recebidos Chart
+// Valores Recebidos stacked bar chart
 const valoresRecebidosCtx = document.getElementById('valoresRecebidosChart').getContext('2d');
 const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
     type: 'bar',
@@ -442,16 +468,12 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
         scales: {
             x: {
                 stacked: true,
-                grid: {
-                    display: false
-                }
+                grid: { display: false }
             },
             y: {
                 stacked: true,
                 beginAtZero: true,
-                grid: {
-                    color: '#E6E6E6'
-                },
+                grid: { color: '#E6E6E6' },
                 ticks: {
                     callback: function(value) {
                         return new Intl.NumberFormat('pt-BR', {
@@ -465,16 +487,12 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
             }
         },
         plugins: {
-            legend: {
-                display: false
-            },
+            legend: { display: false },
             tooltip: {
                 callbacks: {
                     label: function(context) {
                         let label = context.dataset.label || '';
-                        if (label) {
-                            label += ': ';
-                        }
+                        if (label) label += ': ';
                         if (context.parsed.y !== null) {
                             label += new Intl.NumberFormat('pt-BR', {
                                 style: 'currency',
@@ -491,23 +509,19 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
     }
 });
 
-// Export functionality
+// Export button
 document.getElementById('exportBtn').addEventListener('click', function() {
-    // Get current URL parameters
     const currentUrl = new URL(window.location.href);
     const params = new URLSearchParams(currentUrl.search);
-    
-    // Create export URL with the same filters
     const exportUrl = "{% url 'export_financas_excel' %}?" + params.toString();
-    
-    // Redirect to export URL
     window.location.href = exportUrl;
 });
 
+// Switch between Finanças/Qualidade
 document.addEventListener('DOMContentLoaded', function() {
     const financasRadio = document.getElementById('financas-view');
     const qualidadeRadio = document.getElementById('qualidade-view');
-    
+
     qualidadeRadio.addEventListener('change', function() {
         if (qualidadeRadio.checked) {
             window.location.href = "{% url 'dashboard' %}";
@@ -519,36 +533,6 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = "{% url 'financas_dashboard_view' %}";
         }
     });
-
-    // Function to set the circle fill
-    function setCircleFill(elementId, percentage, color) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        
-        // Convert percentage to degrees (0-360)
-        const degrees = (percentage / 100) * 360;
-        
-        // Set the color
-        element.style.borderColor = `${color} ${color} transparent transparent`;
-        
-        // Calculate clip path based on percentage
-        if (percentage > 0) {
-            if (percentage <= 25) {
-                element.style.clipPath = `polygon(50% 50%, 50% 0%, ${50 + (50 * Math.tan(degrees * Math.PI / 180))}% 0%)`;
-            } else if (percentage <= 50) {
-                element.style.clipPath = `polygon(50% 50%, 50% 0%, 100% 0%, 100% ${50 - (50 * Math.tan((90 - degrees) * Math.PI / 180))}%)`;
-            } else if (percentage <= 75) {
-                element.style.clipPath = `polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, ${100 - (50 * Math.tan((degrees - 180) * Math.PI / 180))}% 100%)`;
-            } else {
-                element.style.clipPath = `polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${50 + (50 * Math.tan((270 - degrees) * Math.PI / 180))}%)`;
-            }
-        }
-    }
-
-    // Set the fills for each circle
-    setCircleFill('coopanest-fill', {{ coopanest_pct|default:0 }}, '#90E0EF');
-    setCircleFill('direta-fill', {{ direta_pct|default:0 }}, '#09ABCB');
-    setCircleFill('hospital-fill', {{ hospital_pct|default:0 }}, '#023E8A');
 });
 </script>
 {% endblock %}
