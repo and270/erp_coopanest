@@ -1,0 +1,723 @@
+.dashboard-container {
+    padding: 24px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.dashboard-header h1 {
+    font-family: Inter;
+    font-size: 24px;
+    font-weight: 500;
+    color: #0D0D0D;
+    margin: 0;
+}
+
+.dashboard-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 20px;
+    border: 1px solid #E3E3E3;
+    padding: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    height: auto;
+    justify-content: space-between;
+}
+
+.metric-card .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.metric-card h3 {
+    font-family: Inter;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0D0D0D;
+    margin: 0;
+    flex: 1;
+}
+
+.metric-value {
+    font-family: Inter;
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #01124A;
+    margin-bottom: 8px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+.progress-section {
+    display: flex;
+    gap: 24px;
+}
+
+.progress-card {
+    flex: 1;
+    text-align: center;
+}
+
+.progress-bar {
+    width: 100px;
+    height: 137px;
+    background: #D9D9D9;
+    border-radius: 20px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-height: 0;
+    background: #1A73E8;
+    border-radius: 20px;
+    transition: height 0.3s ease;
+}
+
+.progress-label {
+    font-family: Inter;
+    font-size: 16px;
+    color: #01124A;
+    margin-top: 8px;
+}
+
+.progress-title {
+    font-family: Inter;
+    font-size: 12px;
+    font-weight: 500;
+    color: #0D0D0D;
+    margin-top: 4px;
+}
+
+.procedure-filter {
+    position: static;
+    margin: 0;
+}
+
+.procedure-filter select {
+    background: #F3F3F3;
+    width: 141.75px;
+    height: 24px;
+    border-radius: 4.5px;
+    border: none;
+    padding: 0 8px;
+    font-family: Inter;
+    font-size: 10.5px;
+    font-weight: 400;
+    line-height: 12.71px;
+    color: #3D3D3D;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.filter-container {
+    display: none;
+}
+
+/* CSAT Card Styling */
+.csat {
+    grid-column: 4;  /* Position in last column */
+    grid-row: 1;     /* First row */
+    display: flex;
+    flex-direction: row;  /* Changed to row from column */
+    justify-content: space-between;  /* Space between text and emoji */
+    align-items: center;
+    padding: 16px 24px;  /* Adjusted padding */
+}
+
+.csat-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.csat-label {
+    font-family: Inter;
+    font-size: 16px;
+    font-weight: 500;
+    color: #0D0D0D;
+}
+
+.csat-value {
+    font-family: Inter;
+    font-size: 24px;
+    font-weight: 600;
+    color: #01124A;
+}
+
+.csat-emoji {
+    width: 40px;  /* Fixed width for the emoji container */
+}
+
+.csat-emoji img {
+    width: 100%;
+    height: auto;
+}
+
+/* Column organization with adjusted heights */
+.metrics-column-1 {
+    grid-column: 1;
+    grid-row: 2 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+.metrics-column-1 .metric-card {
+    flex: 1;  /* Each card takes equal space */
+    min-height: 0;  /* Allow cards to shrink */
+    height: calc((100% - 48px) / 3);  /* Divide available space by 3, accounting for gaps */
+}
+
+.metrics-column-2, .metrics-column-3 {
+    grid-column: auto;
+    grid-row: 2 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+.metrics-column-2 .metric-card,
+.metrics-column-3 .metric-card {
+    flex: 1;
+    min-height: 0;
+    height: calc((100% - 24px) / 2);  /* Divide available space by 2, accounting for gap */
+}
+
+.metrics-column-4 {
+    grid-column: 4;
+    grid-row: 2 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+.metrics-column-4 .metric-card {
+    flex: 1;
+    min-height: 0;
+    height: calc((100% - 48px) / 3);  /* Divide available space by 3, accounting for gaps */
+}
+
+.period-filter {
+    position: relative;
+}
+
+.filter-btn,
+.export-btn {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    font-family: Inter;
+    font-size: 16px;
+    font-weight: 400;
+    height: 35px;
+    justify-content: center;
+    line-height: 35px;
+    position: relative;
+}
+
+.filter-btn {
+    background: #F3F3F3;
+    width: 186px;
+    padding: 0;
+    border-radius: 6px;
+    color: #3D3D3D;
+}
+
+.export-btn {
+    background: #1A73E8;
+    width: 99px;
+    padding: 0;
+    border-radius: 5px;
+    color: #FFFFFF;
+}
+
+.filter-btn:hover {
+    background: #E8E8E8;
+}
+
+.export-btn:hover {
+    background: #1557B0;
+}
+
+.period-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #E3E3E3;
+    border-radius: 4px;
+    padding: 4px 0;
+    min-width: 200px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.period-option {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: Inter;
+    font-size: 14px;
+    color: #0D0D0D;
+}
+
+.period-option:hover {
+    background: #F5F5F5;
+}
+
+.period-option[data-selected] {
+    background: #F0F7FF;
+    color: #1A73E8;
+}
+
+/* Adjust icon positioning */
+.filter-btn i,
+.export-btn i {
+    position: absolute;
+    left: 15px;
+}
+
+/* Adjust text positioning */
+.filter-btn span,
+.export-btn span {
+    margin: 0 auto;
+}
+
+/* Financial dashboard specific styles */
+.financas-dashboard .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+.financas-dashboard .metric-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 24px;
+    height: auto;
+    min-height: 0;
+    padding: 24px;  /* Consistent padding */
+}
+
+.financas-dashboard .status-bar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+.financas-dashboard .bar {
+    width: 100%;
+    height: 26px;
+    background: #EBEBEB;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 4px 0;
+}
+
+.financas-dashboard .bar .filled {
+    height: 100%;
+    background: #1A73E8 !important;
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+.financas-dashboard .status-bar span {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.financas-dashboard .status-bar span:last-child {
+    margin-top: 4px;
+    text-align: left;
+}
+
+.financas-dashboard .tempo-medio {
+    margin-top: 16px;
+    font-size: 14px;
+    color: #666;
+}
+
+.financas-dashboard .legends {
+    display: flex;
+    justify-content: flex-start;
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.financas-dashboard .legends > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: Inter;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.financas-dashboard .legends span {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;  /* Changed from 2px to make it circular */
+    display: inline-block;
+}
+
+.financas-dashboard .metric-card canvas {
+    width: 100% !important;
+    height: 300px !important;
+}
+
+.financas-dashboard .metrics-column-1 {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.financas-dashboard .metric-card.anestesias {
+    flex: 0 0 auto;
+    height: auto;
+    padding: 16px 24px;
+    margin-bottom: 8px;
+}
+
+.financas-dashboard .metrics-column-1 .metric-card:not(.anestesias) {
+    flex: 1;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.graph-type-selector {
+    background: #F3F3F3;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: Inter;
+    font-size: 14px;
+    color: #3D3D3D;
+}
+
+.graph-content {
+    border: none;
+    padding: 8px 12px 8px 2px;
+    margin-bottom: 8px;
+}
+
+.graph-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.period-indicator {
+    font-family: Inter;
+    font-size: 14px;
+    color: #666;
+}
+
+.filter-select {
+    background: #F3F3F3;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-family: Inter;
+    font-size: 14px;
+    color: #3D3D3D;
+    min-width: 150px;
+}
+
+#ticketMedioChart {
+    width: 100% !important;
+    height: 300px !important;
+}
+
+.graph-footer {
+    padding: 16px;
+}
+
+.footer-section {
+    width: 100%;
+}
+
+.section-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.section-title {
+    color: #3D3D3D;
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    margin-bottom: 4px;
+}
+
+.section-value {
+    color: #3D3D3D;
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.period-text {
+    color: #757575;
+    font-family: Inter;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #E6E6E6;
+    margin: 16px 0;
+}
+
+.filter-select {
+    background: #F3F3F3;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-family: Inter;
+    font-size: 14px;
+    color: #3D3D3D;
+    min-width: 150px;
+}
+
+/* New percentage indicators styles */
+.percent-indicators {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+}
+
+.percent-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.circle-progress {
+    position: relative;
+    width: 48px;
+    height: 48px;
+}
+
+.value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: Inter;
+    font-size: 12px;
+    font-weight: 500;
+    color: #3D3D3D;
+}
+
+.percent-indicator span {
+    font-family: Inter;
+    font-size: 12px;
+    color: #3D3D3D;
+}
+
+/* Make the SVG circles smooth */
+circle {
+    transition: stroke-dasharray 0.3s ease;
+}
+
+.view-filter select {
+    background: #F3F3F3;
+    width: 130.75px;
+    height: 24px;
+    border-radius: 4.5px;
+    border: none;
+    padding: 0 8px;
+    font-family: Inter;
+    font-size: 10.5px;
+    font-weight: 400;
+    line-height: 12.71px;
+    color: #3D3D3D;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.view-filter select:hover {
+    background: #E8E8E8;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* Custom Range Container Styling */
+.custom-range {
+    display: flex;
+    flex-direction: column; /* stack label + input vertically */
+    align-items: center;    /* center them horizontally */
+    justify-content: center;
+    padding: 16px;
+    border-top: 1px solid #E3E3E3;
+    margin-top: 8px;
+    /* text-align: left; if you want the label text to be left-aligned 
+       but they will still be centered as a block within the container */
+  }
+  
+  .custom-range label {
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    color: #3D3D3D;
+    margin-bottom: 4px;
+    /* Center the label text or keep it left — your call: */
+    text-align: left; 
+    width: 100%; /* or a fixed width if you prefer */
+  }
+  
+  .custom-range input[type="date"] {
+    display: block; 
+    /* Remove the calc(100% - 32px) and the left/right margins */
+    width: 200px; /* or whatever fixed width you want */
+    margin-bottom: 12px;
+    border: 1px solid #E3E3E3;
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    color: #0D0D0D;
+    background: #F3F3F3;
+    text-align: left; 
+  }
+  
+  .custom-range button {
+    /* Also center the button */
+    display: block;
+    width: 200px; /* or your preferred width */
+    margin: 0 auto; 
+    padding: 8px;
+    background: #1A73E8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .custom-range button:hover {
+    background: #1557B0;
+  }
+
+
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;  /* Single column layout */
+        gap: 16px;  /* Slightly reduced gap for mobile */
+    }
+    
+    /* Reset all column spans and heights */
+    .csat,
+    .metrics-column-1,
+    .metrics-column-2,
+    .metrics-column-3,
+    .metrics-column-4 {
+        grid-column: 1;
+        grid-row: auto;
+        height: auto;
+    }
+
+    /* Reset card heights for mobile */
+    .metrics-column-1 .metric-card,
+    .metrics-column-2 .metric-card,
+    .metrics-column-3 .metric-card,
+    .metrics-column-4 .metric-card {
+        height: auto;
+        min-height: auto;
+    }
+
+    /* Adjust progress section for mobile */
+    .progress-section {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .progress-card {
+        width: 100%;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .dashboard-actions {
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .filter-btn,
+    .export-btn {
+        width: 100%;
+    }
+
+    .period-dropdown {
+        width: 100%;
+        right: auto;
+    }
+
+    .agenda-scale {
+        align-self: center;  /* Centers the element horizontally */
+        margin: 8px 0;      /* Adds some vertical spacing */
+    }
+}
+

@@ -47,7 +47,7 @@
                 <li><a href="{% url 'agenda' %}" {% if request.resolver_match.url_name == 'agenda' %}class="active"{% endif %}>Agenda</a></li>
                 <li><a href="#" {% if request.resolver_match.url_name == 'financas' %}class="active"{% endif %}>Finanças</a></li>
                 <li><a href="{% url 'qualidade' %}" {% if request.resolver_match.url_name == 'qualidade' %}class="active"{% endif %}>Qualidade</a></li>
-                <li><a href="#" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
+                <li><a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
                 {% if user.is_authenticated %}
                     <li>
                         <a href="{% url 'profile' %}" class="user-account-link">

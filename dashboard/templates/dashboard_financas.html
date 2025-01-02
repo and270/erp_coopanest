@@ -1,0 +1,548 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load dashboard_filters %}
+
+{% block title %}Dashboard Finanças{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container financas-dashboard">
+    <div class="dashboard-header">
+        <div class="left-section">
+            <h1>Dashboard de Finanças</h1>
+        </div>
+        <div class="agenda-scale">
+            <input type="radio" id="financas-view" name="view-toggle" checked>
+            <label for="financas-view"><b>Finanças</b></label>
+            <input type="radio" id="qualidade-view" name="view-toggle">
+            <label for="qualidade-view"><b>Qualidade</b></label>
+        </div>
+        <div class="dashboard-actions">
+            <div class="period-filter">
+                <button class="filter-btn" id="periodFilterBtn">
+                    <i class="fas fa-calendar"></i>
+                    {% if selected_period %}
+                        {% if selected_period == 'custom' %}
+                            Personalizado
+                        {% elif selected_period == 7 %}Últimos 7 dias
+                        {% elif selected_period == 14 %}Últimos 14 dias
+                        {% elif selected_period == 30 %}Últimos 30 dias
+                        {% elif selected_period == 90 %}Últimos 3 meses
+                        {% elif selected_period == 180 %}Últimos 6 meses
+                        {% elif selected_period == 365 %}Último ano
+                        {% elif selected_period == 540 %}Último 1 ano e meio
+                        {% elif selected_period == 730 %}Últimos 2 anos
+                        {% endif %}
+                    {% else %}
+                        Filtrar por período
+                    {% endif %}
+                </button>
+                <div id="periodFilter" class="period-dropdown" style="display: none;">
+                    <div class="period-option" data-value="7" {% if selected_period == '7' %}data-selected{% endif %}>Últimos 7 dias</div>
+                    <div class="period-option" data-value="14" {% if selected_period == '14' %}data-selected{% endif %}>Últimos 14 dias</div>
+                    <div class="period-option" data-value="30" {% if selected_period == '30' %}data-selected{% endif %}>Últimos 30 dias</div>
+                    <div class="period-option" data-value="90" {% if selected_period == '90' %}data-selected{% endif %}>Últimos 3 meses</div>
+                    <div class="period-option" data-value="180" {% if selected_period == '180' %}data-selected{% endif %}>Últimos 6 meses</div>
+                    <div class="period-option" data-value="365" {% if selected_period == '365' %}data-selected{% endif %}>Último ano</div>
+                    <div class="period-option" data-value="540" {% if selected_period == '540' %}data-selected{% endif %}>Último 1 ano e meio</div>
+                    <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
+
+                    <!-- New custom range option -->
+                    <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
+
+                    <!-- Hidden container for custom range -->
+                    <div id="customRangeContainer" class="custom-range" style="display: none; margin-top: 10px;">
+                        <label for="customStart">Início:</label>
+                        <input type="date" id="customStart" value="{{ custom_start_date|default_if_none:'' }}" />
+                        <label for="customEnd">Fim:</label>
+                        <input type="date" id="customEnd" value="{{ custom_end_date|default_if_none:'' }}" />
+                        <button type="button" id="applyCustomRangeBtn">Aplicar</button>
+                    </div>
+                </div>
+            </div>
+            <button class="export-btn" id="exportBtn">
+                <i class="fas fa-download"></i>
+                Exportar
+            </button>
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metrics-column-1">
+            <div class="metric-card anestesias">
+                <div class="header-row">
+                    <h3>Total de Anestesias</h3>
+                    <div class="procedure-filter">
+                        <select id="procedimentoFilter">
+                            <option value="">Todos</option>
+                            {% for proc in procedimentos %}
+                                <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
+                                    {{ proc.name|truncatechars:25 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="metric-value">{{ anestesias_count }}</div>
+                <div class="metric-label">
+                    {% if selected_period %}
+                        {% if selected_period == 'custom' %}
+                            (Período Personalizado)
+                        {% elif selected_period == 7 %}realizadas nos últimos 7 dias
+                        {% elif selected_period == 14 %}realizadas nos últimos 14 dias
+                        {% elif selected_period == 30 %}realizadas nos últimos 30 dias
+                        {% elif selected_period == 90 %}realizadas nos últimos 3 meses
+                        {% elif selected_period == 180 %}realizadas nos últimos 6 meses
+                        {% elif selected_period == 365 %}realizadas no último ano
+                        {% elif selected_period == 540 %}realizadas no último 1 ano e meio
+                        {% elif selected_period == 730 %}realizadas nos últimos 2 anos
+                        {% endif %}
+                    {% else %}
+                        realizadas em todo o período
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Valores Totais</h3>
+                <div class="status-bar">
+                    <div>
+                        <span>Pago</span>
+                        <div class="bar">
+                            <div class="filled" style="width: {{pago_pct|floatformat:0}}%"></div>
+                        </div>
+                        <span>R$ {{valor_pago|format_currency}} ({{pago_pct|floatformat:0}}%)</span>
+                    </div>
+                    <div>
+                        <span>Em Andamento</span>
+                        <div class="bar">
+                            <div class="filled" style="width: {{pendente_pct|floatformat:0}}%"></div>
+                        </div>
+                        <span>R$ {{valor_pendente|format_currency}} ({{pendente_pct|floatformat:0}}%)</span>
+                    </div>
+                    <div>
+                        <span>Glosa</span>
+                        <div class="bar">
+                            <div class="filled" style="width: {{glosa_pct|floatformat:0}}%"></div>
+                        </div>
+                        <span>R$ {{valor_glosa|format_currency}} ({{glosa_pct|floatformat:0}}%)</span>
+                    </div>
+                </div>
+                <div class="tempo-medio">
+                    <span>Tempo Médio de Recebimento: </span><strong>{{ avg_recebimento }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-column-2">
+            <div class="metric-card">
+                <div class="graph-header">
+                    <h3>Gráfico por Período</h3>
+                    <select id="graphTypeSelector" class="graph-type-selector">
+                        <option value="ticket" {% if selected_graph_type == 'ticket' %}selected{% endif %}>Ticket Médio</option>
+                        <option value="receitas" {% if selected_graph_type == 'receitas' %}selected{% endif %}>Receitas</option>
+                    </select>
+                </div>
+                <div class="graph-content">
+                    <canvas id="ticketMedioChart"></canvas>
+                </div>
+                <div class="graph-footer">
+                    <div class="footer-section">
+                        <div class="section-row">
+                            <div class="section-info">
+                                <div class="section-title">Por Período</div>
+                                <div class="section-value">R$ <span id="periodValue">{{ period_total|format_currency }}</span></div>
+                            </div>
+                            <div class="period-text">
+                                {% if selected_period == 'custom' %}
+                                    Personalizado
+                                {% else %}
+                                    Últimos {{ selected_period|default:"180" }} dias
+                                {% endif %}
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="section-row">
+                            <div class="section-info">
+                                <div class="section-title">Por Anestesista</div>
+                                <div class="section-value">R$ <span id="anestesistaValue">{{ anestesista_total|format_currency }}</span></div>
+                            </div>
+                            <select id="anestesistaFilter" class="filter-select">
+                                <option value="">Por Anestesista</option>
+                                {% for anestesista in anestesistas %}
+                                    <option value="{{ anestesista.id }}" 
+                                            {% if selected_anestesista == anestesista.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ anestesista.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-column-3">
+            <div class="metric-card">
+                <h3>Valores Recebidos</h3>
+                <div class="legends">
+                    <div><span style="background:#90E0EF;"></span>Coopanest</div>
+                    <div><span style="background:#09ABCB;"></span>Direta</div>
+                    <div><span style="background:#023E8A;"></span>Hospital</div>
+                </div>
+                <div>
+                    <canvas id="valoresRecebidosChart"></canvas>
+                </div>
+                <div class="percent-indicators">
+                    <div class="percent-indicator">
+                        <div class="circle-progress">
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if coopanest_pct > 0 %}
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#90E0EF" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ coopanest_pct|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                                {% endif %}
+                            </svg>
+                            <div class="value">{{ coopanest_pct|floatformat:0 }}%</div>
+                        </div>
+                        <span>Coopanest</span>
+                    </div>
+                    <div class="percent-indicator">
+                        <div class="circle-progress">
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if direta_pct > 0 %}
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#09ABCB" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ direta_pct|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                                {% endif %}
+                            </svg>
+                            <div class="value">{{ direta_pct|floatformat:0 }}%</div>
+                        </div>
+                        <span>Direta</span>
+                    </div>
+                    <div class="percent-indicator">
+                        <div class="circle-progress">
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if hospital_pct > 0 %}
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#023E8A" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ hospital_pct|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                                {% endif %}
+                            </svg>
+                            <div class="value">{{ hospital_pct|floatformat:0 }}%</div>
+                        </div>
+                        <span>Hospital</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+// Procedure filter
+document.getElementById('procedimentoFilter').addEventListener('change', function() {
+    const selectedValue = this.value;
+    const currentUrl = new URL(window.location.href);
+    if (selectedValue) {
+        currentUrl.searchParams.set('procedimento', selectedValue);
+    } else {
+        currentUrl.searchParams.delete('procedimento');
+    }
+    window.location.href = currentUrl.toString();
+});
+
+// Period Filter
+const periodFilterBtn = document.getElementById('periodFilterBtn');
+const periodFilter = document.getElementById('periodFilter');
+
+periodFilterBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    periodFilter.style.display = periodFilter.style.display === 'none' ? 'block' : 'none';
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.period-filter')) {
+        periodFilter.style.display = 'none';
+    }
+});
+
+// SINGLE unified listener for .period-option
+document.querySelectorAll('.period-option').forEach(option => {
+    option.addEventListener('click', function() {
+        const value = this.dataset.value;
+        // If "custom" was selected, show the date pickers:
+        if (value === 'custom') {
+            document.getElementById('customRangeContainer').style.display = 'block';
+        } else {
+            // Hide custom container if previously displayed
+            document.getElementById('customRangeContainer').style.display = 'none';
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('period', value);
+            currentUrl.searchParams.delete('start_date');
+            currentUrl.searchParams.delete('end_date');
+            window.location.href = currentUrl.toString();
+        }
+    });
+});
+
+// "Aplicar" button for custom range
+document.getElementById('applyCustomRangeBtn').addEventListener('click', function() {
+    const startInput = document.getElementById('customStart');
+    const endInput = document.getElementById('customEnd');
+    if (startInput.value && endInput.value) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period', 'custom');
+        currentUrl.searchParams.set('start_date', startInput.value);
+        currentUrl.searchParams.set('end_date', endInput.value);
+        window.location.href = currentUrl.toString();
+    } else {
+        alert('Por favor, selecione ambas as datas.');
+    }
+});
+
+// Chart configuration
+const selected_graph_type = '{{ selected_graph_type }}';
+const chartData = {
+    ticket: {
+        labels: {{ months|safe }},
+        datasets: [{
+            label: 'Ticket Médio',
+            data: {{ monthly_tickets|safe }},
+            borderColor: '#1A73E8',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            pointRadius: 0
+        }]
+    },
+    receitas: {
+        labels: {{ months|safe }},
+        datasets: [{
+            label: 'Receitas',
+            data: {{ monthly_revenues|safe }},
+            borderColor: '#1A73E8',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            pointRadius: 0
+        }]
+    }
+};
+
+const chartOptions = {
+    responsive: true,
+    devicePixelRatio: 2,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) label += ': ';
+                    if (context.parsed.y !== null) {
+                        label += new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        }).format(context.parsed.y);
+                    }
+                    return label;
+                }
+            }
+        }
+    },
+    scales: {
+        x: {
+            grid: { display: false },
+            ticks: {
+                color: '#3D3D3D',
+                font: { family: "'Inter', sans-serif", size: 11 },
+                maxRotation: 0,  // Force horizontal labels
+                minRotation: 0,  // Force horizontal labels
+                callback: function(value, index, values) {
+                    const label = this.getLabelForValue(value);
+                    const totalLabels = values.length;
+                    
+                    // For months spanning more than a year
+                    if (totalLabels > 12 && label.includes('/')) {
+                        // Assuming label format is "Month/Year"
+                        const [month, year] = label.split('/');
+                        
+                        // Show only January with year, and every 3rd month without year
+                        if (month === 'Janeiro') {
+                            return year;
+                        } else if (index % 3 === 0) {
+                            return month;
+                        }
+                        return '';
+                    }
+                    
+                    // For periods with more than 15 items, show every third label
+                    else if (totalLabels > 15) {
+                        return index % 3 === 0 ? label : '';
+                    }
+                    // For periods with more than 7 items, show every other label
+                    else if (totalLabels > 7) {
+                        return index % 2 === 0 ? label : '';
+                    }
+                    
+                    // For 7 or fewer items, show all labels
+                    return label;
+                }
+            }
+        },
+        y: {
+            beginAtZero: true,
+            grid: { color: '#E6E6E6' },
+            ticks: {
+                color: '#3D3D3D',
+                font: { family: "'Inter', sans-serif", size: 11 },
+                callback: function(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(value);
+                }
+            }
+        }
+    }
+};
+
+// Render line chart
+const ticketMedioCtx = document.getElementById('ticketMedioChart').getContext('2d');
+const ticketMedioChart = new Chart(ticketMedioCtx, {
+    type: 'line',
+    data: {
+        labels: {{ months|safe }},
+        datasets: [{
+            label: selected_graph_type === 'ticket' ? 'Ticket Médio' : 'Receitas',
+            data: selected_graph_type === 'ticket' ? {{ monthly_tickets|safe }} : {{ monthly_revenues|safe }},
+            borderColor: '#1A73E8',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            pointRadius: 0
+        }]
+    },
+    options: chartOptions
+});
+
+// Graph type selector
+document.getElementById('graphTypeSelector').addEventListener('change', function() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('graph_type', this.value);
+    window.location.href = currentUrl.toString();
+});
+
+// Anestesista filter
+document.getElementById('anestesistaFilter').addEventListener('change', function() {
+    const selectedValue = this.value;
+    const currentUrl = new URL(window.location.href);
+    if (selectedValue) {
+        currentUrl.searchParams.set('anestesista', selectedValue);
+    } else {
+        currentUrl.searchParams.delete('anestesista');
+    }
+    window.location.href = currentUrl.toString();
+});
+
+// Valores Recebidos stacked bar chart
+const valoresRecebidosCtx = document.getElementById('valoresRecebidosChart').getContext('2d');
+const valoresRecebidosOptions = {
+    ...chartOptions,
+    scales: {
+        x: chartOptions.scales.x,
+        y: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { color: '#E6E6E6' },
+            ticks: {
+                callback: function(value) {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(value);
+                }
+            }
+        }
+    }
+};
+
+const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ months|safe }},
+        datasets: [
+            {
+                label: 'Coopanest',
+                data: {{ coopanest_values|safe }},
+                backgroundColor: '#90E0EF',
+                stack: 'stack1'
+            },
+            {
+                label: 'Direta',
+                data: {{ direta_values|safe }},
+                backgroundColor: '#09ABCB',
+                stack: 'stack1'
+            },
+            {
+                label: 'Hospital',
+                data: {{ hospital_values|safe }},
+                backgroundColor: '#023E8A',
+                stack: 'stack1'
+            }
+        ]
+    },
+    options: valoresRecebidosOptions
+});
+
+// Export button
+document.getElementById('exportBtn').addEventListener('click', function() {
+    const currentUrl = new URL(window.location.href);
+    const params = new URLSearchParams(currentUrl.search);
+    const exportUrl = "{% url 'export_financas_excel' %}?" + params.toString();
+    window.location.href = exportUrl;
+});
+
+// Switch between Finanças/Qualidade
+document.addEventListener('DOMContentLoaded', function() {
+    const financasRadio = document.getElementById('financas-view');
+    const qualidadeRadio = document.getElementById('qualidade-view');
+
+    qualidadeRadio.addEventListener('change', function() {
+        if (qualidadeRadio.checked) {
+            window.location.href = "{% url 'dashboard' %}";
+        }
+    });
+
+    financasRadio.addEventListener('change', function() {
+        if (financasRadio.checked) {
+            window.location.href = "{% url 'financas_dashboard_view' %}";
+        }
+    });
+});
+</script>
+{% endblock %}

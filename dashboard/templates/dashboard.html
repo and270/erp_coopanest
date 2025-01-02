@@ -1,0 +1,322 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div class="left-section">
+            <h1>Dashboard de Qualidade</h1>
+        </div>
+        <div class="agenda-scale">
+            <input type="radio" id="financas-view" name="view-toggle" checked>
+            <label for="financas-view"><b>Finanças</b></label>
+            <input type="radio" id="qualidade-view" name="view-toggle">
+            <label for="qualidade-view"><b>Qualidade</b></label>
+        </div>
+        <div class="dashboard-actions">
+            <div class="period-filter">
+                <button class="filter-btn" id="periodFilterBtn">
+                    <i class="fas fa-calendar"></i>
+                    {% if selected_period %}
+                        {% if selected_period == 'custom' %}
+                            Personalizado
+                        {% elif selected_period == 7 %}Últimos 7 dias
+                        {% elif selected_period == 14 %}Últimos 14 dias
+                        {% elif selected_period == 30 %}Últimos 30 dias
+                        {% elif selected_period == 90 %}Últimos 3 meses
+                        {% elif selected_period == 180 %}Últimos 6 meses
+                        {% elif selected_period == 365 %}Último ano
+                        {% elif selected_period == 540 %}Último 1 ano e meio
+                        {% elif selected_period == 730 %}Últimos 2 anos
+                        {% endif %}
+                    {% else %}
+                        Filtrar por período
+                    {% endif %}
+                </button>
+                <div id="periodFilter" class="period-dropdown" style="display: none;">
+                    <div class="period-option" data-value="7" {% if selected_period == '7' %}data-selected{% endif %}>Últimos 7 dias</div>
+                    <div class="period-option" data-value="14" {% if selected_period == '14' %}data-selected{% endif %}>Últimos 14 dias</div>
+                    <div class="period-option" data-value="30" {% if selected_period == '30' %}data-selected{% endif %}>Últimos 30 dias</div>
+                    <div class="period-option" data-value="90" {% if selected_period == '90' %}data-selected{% endif %}>Últimos 3 meses</div>
+                    <div class="period-option" data-value="180" {% if selected_period == '180' %}data-selected{% endif %}>Últimos 6 meses</div>
+                    <div class="period-option" data-value="365" {% if selected_period == '365' %}data-selected{% endif %}>Último ano</div>
+                    <div class="period-option" data-value="540" {% if selected_period == '540' %}data-selected{% endif %}>Último 1 ano e meio</div>
+                    <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
+                    <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
+            
+                    <div id="customRangeContainer" class="custom-range" style="display: none; margin-top: 10px;">
+                        <label for="customStart">Início:</label>
+                        <input type="date" id="customStart" />
+                        <label for="customEnd">Fim:</label>
+                        <input type="date" id="customEnd" />
+                        <button type="button" id="applyCustomRangeBtn">Aplicar</button>
+                    </div>
+                </div>
+            </div>            
+            <button class="export-btn" id="exportBtn">
+                <i class="fas fa-download"></i>
+                Exportar
+            </button>
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <!-- CSAT Score -->
+        <div class="metric-card csat">
+            <div class="csat-text">
+                <div class="csat-label">CSAT</div>
+                <div class="csat-value">{% if metrics.csat_score %}{{ metrics.csat_score|floatformat:1 }}{% else %}--{% endif %}</div>
+            </div>
+            <div class="csat-emoji">
+                {% if metrics.csat_score >= 8 %}
+                    <img src="{% static 'csat_grade_faces/happy.png' %}" alt="Happy face">
+                {% elif metrics.csat_score >= 6 %}
+                    <img src="{% static 'csat_grade_faces/neutral.png' %}" alt="Neutral face">
+                {% else %}
+                    <img src="{% static 'csat_grade_faces/sad.png' %}" alt="Sad face">
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Column 1 -->
+        <div class="metrics-column-1">
+            <div class="metric-card eventos-adversos">
+                <div class="header-row">
+                    <h3>Procedimento</h3>
+                    <div class="procedure-filter">
+                        <select id="procedimentoFilter">
+                            <option value="">Todos</option>
+                            {% for proc in procedimentos %}
+                                <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
+                                    {{ proc.name|truncatechars:25 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="metric-value">{% if metrics.eventos_adversos %}{{ metrics.eventos_adversos|floatformat:0 }}%{% else %}0%{% endif %}</div>
+                <div class="metric-label">Taxa de eventos adversos graves</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Tempo de atraso médio para início da cirurgia</h3>
+                <div class="metric-value">{% if metrics.atraso_medio %}{{ metrics.atraso_medio }}{% else %}--:--{% endif %}</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Tempo médio de duração das cirurgias</h3>
+                <div class="metric-value">{% if metrics.duracao_media %}{{ metrics.duracao_media }}{% else %}--:--{% endif %}</div>
+            </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="metrics-column-2">
+            <div class="metric-card">
+                <h3>Taxa de Reações Alérgicas</h3>
+                <div class="metric-value">{% if metrics.reacoes_alergicas %}{{ metrics.reacoes_alergicas|floatformat:0 }}%{% else %}0%{% endif %}</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Encaminhamentos não programados ao CTI</h3>
+                <div class="metric-value">{% if metrics.encaminhamentos_uti %}{{ metrics.encaminhamentos_uti|floatformat:0 }}%{% else %}0%{% endif %}</div>
+            </div>
+        </div>
+
+        <!-- Column 3 -->
+        <div class="metrics-column-3">
+            <div class="metric-card">
+                <div class="header-row">
+                    <h3>PONV</h3>
+                    <div class="view-filter">
+                        <select class="view-selector" data-param="ponv_view">
+                            <option value="final" {% if metrics.ponv_view == 'final' %}selected{% endif %}>Final do Procedimento</option>
+                            <option value="rpa" {% if metrics.ponv_view == 'rpa' %}selected{% endif %}>RPA</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="metric-value">{% if metrics.ponv %}{{ metrics.ponv|floatformat:0 }}%{% else %}0%{% endif %}</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="header-row">
+                    <h3>Dor pós-operatória</h3>
+                    <div class="view-filter">
+                        <select class="view-selector" data-param="dor_view">
+                            <option value="final" {% if metrics.dor_view == 'final' %}selected{% endif %}>Final do Procedimento</option>
+                            <option value="rpa" {% if metrics.dor_view == 'rpa' %}selected{% endif %}>RPA</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="metric-value">{% if metrics.dor_pos_operatoria %}{{ metrics.dor_pos_operatoria|floatformat:0 }}%{% else %}0%{% endif %}</div>
+            </div>
+        </div>
+
+        <!-- Column 4 -->
+        <div class="metrics-column-4">
+            <div class="metric-card">
+                <div class="header-row">
+                    <h3>Eventos adversos evitáveis</h3>
+                    <div class="view-filter">
+                        <select class="view-selector" data-param="evento_view">
+                            <option value="final" {% if metrics.evento_view == 'final' %}selected{% endif %}>Final do Procedimento</option>
+                            <option value="rpa" {% if metrics.evento_view == 'rpa' %}selected{% endif %}>RPA</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="metric-value">{% if metrics.evento_adverso_evitavel %}{{ metrics.evento_adverso_evitavel|floatformat:0 }}%{% else %}0%{% endif %}</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Adesão ao checklist de segurança</h3>
+                <div class="metric-value">{% if metrics.adesao_checklist %}{{ metrics.adesao_checklist|floatformat:0 }}%{% else %}--{% endif %}</div>
+            </div>
+
+            <!-- Progress bars -->
+            <div class="progress-section">
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {% if metrics.conformidade_protocolos %}{{ metrics.conformidade_protocolos|floatformat:0 }}%{% else %}100%{% endif %}"></div>
+                    </div>
+                    <div class="progress-label">{% if metrics.conformidade_protocolos %}{{ metrics.conformidade_protocolos|floatformat:0 }}%{% else %}--{% endif %}</div>
+                    <div class="progress-title">Conformidade com os protocolos</div>
+                </div>
+
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas|floatformat:0 }}%{% else %}100%{% endif %}"></div>
+                    </div>
+                    <div class="progress-label">{% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas|floatformat:0 }}%{% else %}--{% endif %}</div>
+                    <div class="progress-title">Uso de técnicas assépticas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+document.getElementById('procedimentoFilter').addEventListener('change', function() {
+    const selectedValue = this.value;
+    console.log('Selected value:', selectedValue);
+    
+    if (selectedValue) {
+        const newUrl = '?procedimento=' + encodeURIComponent(selectedValue);
+        console.log('Redirecting to:', newUrl);
+        window.location.href = newUrl;
+    } else {
+        console.log('Resetting to base URL');
+        window.location.href = window.location.pathname;
+    }
+});
+
+// Log on page load to verify the element exists
+console.log('Filter element:', document.getElementById('procedimentoFilter'));
+
+document.getElementById('periodFilterBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = document.getElementById('periodFilter');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('periodFilter');
+    if (!e.target.closest('.period-filter')) {
+        dropdown.style.display = 'none';
+    }
+});
+
+document.getElementById('exportBtn').addEventListener('click', function() {
+    const element = document.querySelector('.dashboard-container');
+    const opt = {
+        margin: 1,
+        filename: 'dashboard-qualidade.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const financasRadio = document.getElementById('financas-view');
+    const qualidadeRadio = document.getElementById('qualidade-view');
+    
+    // Set initial state based on current page
+    qualidadeRadio.checked = true;
+    financasRadio.checked = false;
+    
+    financasRadio.addEventListener('change', function() {
+        if (this.checked) {
+            console.log('Switching to financas dashboard');
+            window.location.href = "{% url 'financas_dashboard_view' %}";
+        }
+    });
+
+    qualidadeRadio.addEventListener('change', function() {
+        if (this.checked) {
+            console.log('Switching to qualidade dashboard');
+            window.location.href = "{% url 'dashboard' %}";
+        }
+    });
+});
+
+document.querySelectorAll('.view-selector').forEach(selector => {
+    selector.addEventListener('change', function() {
+        const param = this.dataset.param;
+        const value = this.value;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set(param, value);
+        window.location.href = currentUrl.toString();
+    });
+});
+
+// Handle "Aplicar" button for the custom range
+document.getElementById('applyCustomRangeBtn').addEventListener('click', function() {
+    const startInput = document.getElementById('customStart');
+    const endInput = document.getElementById('customEnd');
+    
+    if (startInput.value && endInput.value) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period', 'custom');
+        currentUrl.searchParams.set('start_date', startInput.value);
+        currentUrl.searchParams.set('end_date', endInput.value);
+        window.location.href = currentUrl.toString();
+    } else {
+        alert('Por favor, selecione ambas as datas.');
+    }
+});
+
+document.querySelectorAll('.period-option').forEach(option => {
+  option.addEventListener('click', function() {
+    const value = this.dataset.value;
+    
+    // If "custom" was selected, just show the date inputs, no page reload yet
+    if (value === 'custom') {
+      document.getElementById('customRangeContainer').style.display = 'block';
+    } else {
+      // Hide custom range UI if previously shown
+      document.getElementById('customRangeContainer').style.display = 'none';
+
+      // Immediately apply the chosen period filter
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('period', value);
+      currentUrl.searchParams.delete('start_date');
+      currentUrl.searchParams.delete('end_date');
+      window.location.href = currentUrl.toString();
+    }
+  });
+});
+
+
+</script>
+{% endblock %}
