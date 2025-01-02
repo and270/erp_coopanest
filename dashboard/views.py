@@ -187,11 +187,15 @@ def financas_dashboard_view(request):
 
     user_group = request.user.group
 
-    # Similar approach for handling custom or numeric period
+    # Retrieve query params
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
+    selected_anestesista = request.GET.get('anestesista')
+    procedimento = request.GET.get('procedimento')
+    selected_graph_type = request.GET.get('graph_type', 'ticket')
 
+    # Base queryset
     queryset = (
         ProcedimentoFinancas.objects
         .select_related('procedimento', 'procedimento__procedimento_principal')
@@ -199,65 +203,92 @@ def financas_dashboard_view(request):
     )
 
     # Filter by anestesista if given
-    selected_anestesista = request.GET.get('anestesista')
     if selected_anestesista:
         queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista)
 
     # Filter by procedimento if given
-    procedimento = request.GET.get('procedimento')
     if procedimento:
         queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
 
     # -----------------------------------------------------------------------
-    # Handle period - either custom or numeric
+    # 1) Figure out chart_start_date and chart_end_date
     # -----------------------------------------------------------------------
-    delta_days = 0
+    now = timezone.now()
+    chart_start_date = None
+    chart_end_date = None
+    selected_period = None
+
+    # if user selected 'custom' and provided valid start/end dates
     if period == 'custom' and start_date_str and end_date_str:
         try:
             custom_start = datetime.strptime(start_date_str, '%Y-%m-%d')
             custom_end = datetime.strptime(end_date_str, '%Y-%m-%d')
+            # if reversed, swap
             if custom_start > custom_end:
                 custom_start, custom_end = custom_end, custom_start
+
+            chart_start_date = timezone.make_aware(custom_start)
+            chart_end_date = timezone.make_aware(custom_end)
+
+            # Filter the queryset for this custom range
             queryset = queryset.filter(
                 procedimento__data_horario__date__gte=custom_start.date(),
                 procedimento__data_horario__date__lte=custom_end.date()
             )
-            delta_days = (custom_end.date() - custom_start.date()).days
+
             selected_period = 'custom'
+
         except ValueError:
-            # fallback
+            # fallback to 180 days
             selected_period = 180
-            start_date = timezone.now() - timedelta(days=180)
-            queryset = queryset.filter(procedimento__data_horario__gte=start_date)
-            delta_days = 180
+            chart_end_date = now
+            chart_start_date = now - timedelta(days=180)
+            queryset = queryset.filter(procedimento__data_horario__gte=chart_start_date)
+
     else:
+        # Not custom or missing date(s). Possibly numeric.
         if not period:
             period = 180
         try:
             period_days = int(period)
             selected_period = period_days
-            start_date = timezone.now() - timedelta(days=period_days)
-            queryset = queryset.filter(procedimento__data_horario__gte=start_date)
-            delta_days = period_days
+            chart_end_date = now
+            chart_start_date = now - timedelta(days=period_days)
+            queryset = queryset.filter(procedimento__data_horario__gte=chart_start_date)
         except (ValueError, TypeError):
+            # fallback
             selected_period = 180
-            start_date = timezone.now() - timedelta(days=180)
-            queryset = queryset.filter(procedimento__data_horario__gte=start_date)
-            delta_days = 180
+            chart_end_date = now
+            chart_start_date = now - timedelta(days=180)
+            queryset = queryset.filter(procedimento__data_horario__gte=chart_start_date)
+
+    # If for some reason they are still None, default them
+    if not chart_start_date or not chart_end_date:
+        chart_end_date = now
+        chart_start_date = now - timedelta(days=180)
+        selected_period = 180
 
     # -----------------------------------------------------------------------
-    # Now that we have filtered by period, proceed with existing finances logic
+    # 2) Now we have a final chart_start_date and chart_end_date
+    #    Decide daily vs monthly, build the date_range
+    # -----------------------------------------------------------------------
+    date_range, view_type = get_date_range(chart_start_date, chart_end_date)
+
+    # -----------------------------------------------------------------------
+    # 3) Proceed with finance calculations
     # -----------------------------------------------------------------------
     total_count = queryset.count()
 
-    # Anestesias: how many distinct procedures
+    # Distinct procedures
     anestesias_count = queryset.values('procedimento').distinct().count()
 
-    # Sum by status_pagamento
+    # Summations by status_pagamento
     totals_by_status = queryset.values('status_pagamento').annotate(
         total=Sum('valor_cobranca')
     )
-    total_valor = sum(item['total'] for item in totals_by_status if item['total'] is not None) if totals_by_status else 0
+    total_valor = sum(
+        item['total'] for item in totals_by_status if item['total'] is not None
+    ) if totals_by_status else 0
 
     def get_status_value(status):
         for item in totals_by_status:
@@ -269,7 +300,7 @@ def financas_dashboard_view(request):
     valor_pendente = get_status_value('pendente')
     valor_glosa = get_status_value('glosa')
 
-    # Percent helper
+    # Helper for percentage
     def percentage(part, whole):
         if whole > 0:
             return (float(part) / float(whole)) * 100
@@ -298,18 +329,17 @@ def financas_dashboard_view(request):
             else:
                 avg_recebimento = f"{avg_days} dias"
 
-    # Ticket Médio (average valor_cobranca)
+    # Ticket Médio
     avg_ticket = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor']
 
-    # Decide daily vs monthly for charting
-    date_range, view_type = get_date_range(delta_days)
-
-    # Depending on daily or monthly, we gather data for charts
+    # -----------------------------------------------------------------------
+    # 4) Build chart data (daily or monthly)
+    # -----------------------------------------------------------------------
     if view_type == 'daily':
         # Prepare a daily map
         date_map = {
-            d: {'cooperativa': 0, 'hospital': 0, 'particular': 0}
-            for d in date_range
+            single_day.date(): {'cooperativa': 0, 'hospital': 0, 'particular': 0}
+            for single_day in date_range
         }
 
         daily_data = queryset.annotate(
@@ -328,24 +358,23 @@ def financas_dashboard_view(request):
                     date_map[item['date']][tipo] = float(item['total'] or 0)
 
         sorted_dates = sorted(date_map.keys())
-        date_labels = [d.strftime("%d/%m") for d in sorted_dates]
+        month_labels = [d.strftime("%d/%m") for d in sorted_dates]  # daily labels
+
         coopanest_values = [date_map[d]['cooperativa'] for d in sorted_dates]
         hospital_values = [date_map[d]['hospital'] for d in sorted_dates]
         direta_values = [date_map[d]['particular'] for d in sorted_dates]
 
-        # Calculate daily tickets
+        # Calculate daily tickets and revenues
         daily_tickets = []
         daily_revenues = []
         for d in sorted_dates:
             day_procedures = queryset.filter(procedimento__data_horario__date=d)
             day_total = day_procedures.aggregate(total=Sum('valor_cobranca'))['total'] or 0
             day_count = day_procedures.count()
-            daily_tickets.append(
-                float(round(day_total / day_count if day_count > 0 else 0, 2))
-            )
+            average_for_day = day_total / day_count if day_count > 0 else 0
+            daily_tickets.append(float(round(average_for_day, 2)))
             daily_revenues.append(float(round(day_total, 2)))
 
-        month_labels = date_labels
         monthly_tickets = daily_tickets
         monthly_revenues = daily_revenues
 
@@ -353,7 +382,8 @@ def financas_dashboard_view(request):
         # Monthly logic
         month_map = {}
         for m in date_range:
-            month_map[m.strftime("%Y-%m")] = {
+            key = m.strftime("%Y-%m")  # e.g. "2023-05"
+            month_map[key] = {
                 'cooperativa': 0,
                 'hospital': 0,
                 'particular': 0
@@ -370,15 +400,16 @@ def financas_dashboard_view(request):
 
         for item in monthly_data:
             if item['month'] and item['tipo_cobranca']:
-                month_key = item['month'].strftime("%Y-%m")
-                if month_key in month_map:
+                key = item['month'].strftime("%Y-%m")
+                if key in month_map:
                     if item['tipo_cobranca'] == 'cooperativa':
-                        month_map[month_key]['cooperativa'] = float(item['total'] or 0)
+                        month_map[key]['cooperativa'] = float(item['total'] or 0)
                     elif item['tipo_cobranca'] == 'hospital':
-                        month_map[month_key]['hospital'] = float(item['total'] or 0)
+                        month_map[key]['hospital'] = float(item['total'] or 0)
                     elif item['tipo_cobranca'] == 'particular':
-                        month_map[month_key]['particular'] = float(item['total'] or 0)
+                        month_map[key]['particular'] = float(item['total'] or 0)
 
+        # Sort by actual date
         sorted_months = sorted(date_range)
         meses_pt = {
             'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
@@ -387,6 +418,7 @@ def financas_dashboard_view(request):
             'November': 'Novembro', 'December': 'Dezembro'
         }
         month_labels = [meses_pt[m.strftime("%B")] for m in sorted_months]
+
         coopanest_values = [month_map[m.strftime("%Y-%m")]['cooperativa'] for m in sorted_months]
         hospital_values = [month_map[m.strftime("%Y-%m")]['hospital'] for m in sorted_months]
         direta_values = [month_map[m.strftime("%Y-%m")]['particular'] for m in sorted_months]
@@ -401,10 +433,14 @@ def financas_dashboard_view(request):
             )
             month_total = month_procedures.aggregate(total=Sum('valor_cobranca'))['total'] or 0
             month_count = month_procedures.count()
-            monthly_tickets.append(float(round(month_total / month_count if month_count > 0 else 0, 2)))
+            monthly_tickets.append(
+                float(round(month_total / month_count if month_count > 0 else 0, 2))
+            )
             monthly_revenues.append(float(round(month_total, 2)))
 
-    # For the pie chart
+    # -----------------------------------------------------------------------
+    # 5) Pie Chart Data
+    # -----------------------------------------------------------------------
     total_coopanest = sum(coopanest_values)
     total_hospital = sum(hospital_values)
     total_direta = sum(direta_values)
@@ -414,17 +450,21 @@ def financas_dashboard_view(request):
     hospital_pct = (total_hospital / total_all * 100) if total_all > 0 else 0
     direta_pct = (total_direta / total_all * 100) if total_all > 0 else 0
 
-    # Procedures for filter
-    procedimentos = ProcedimentoDetalhes.objects.filter(
-        procedimento__group=user_group
-    ).order_by('name').distinct()
-
-    # Anestesistas for filter
+    # -----------------------------------------------------------------------
+    # 6) Additional filters (procedimentos, anestesistas)
+    # -----------------------------------------------------------------------
+    procedimentos = (
+        ProcedimentoDetalhes.objects
+        .filter(procedimento__group=user_group)
+        .order_by('name').distinct()
+    )
     anestesistas = Anesthesiologist.objects.filter(
         group=user_group
     ).order_by('name')
 
-    selected_graph_type = request.GET.get('graph_type', 'ticket')
+    # -----------------------------------------------------------------------
+    # 7) Determine 'period_total' & 'anestesista_total'
+    # -----------------------------------------------------------------------
     if selected_graph_type == 'ticket':
         period_total = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
     else:
@@ -434,14 +474,21 @@ def financas_dashboard_view(request):
     if selected_anestesista:
         anestesista_queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista)
         if selected_graph_type == 'ticket':
-            anestesista_total = anestesista_queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
+            anestesista_total = anestesista_queryset.aggregate(
+                avg_valor=Avg('valor_cobranca')
+            )['avg_valor'] or 0
         else:
-            anestesista_total = anestesista_queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+            anestesista_total = anestesista_queryset.aggregate(
+                total=Sum('valor_cobranca')
+            )['total'] or 0
     else:
         num_anestesistas = anestesistas.count()
         if num_anestesistas > 0:
             anestesista_total = period_total / num_anestesistas
 
+    # -----------------------------------------------------------------------
+    # 8) Build context
+    # -----------------------------------------------------------------------
     context = {
         'anestesias_count': anestesias_count,
         'valor_pago': valor_pago,
@@ -452,26 +499,35 @@ def financas_dashboard_view(request):
         'glosa_pct': glosa_pct,
         'avg_recebimento': avg_recebimento,
         'avg_ticket': avg_ticket,
-        'months': month_labels,
+
+        'months': month_labels,  # daily or monthly labels
         'coopanest_values': coopanest_values,
         'hospital_values': hospital_values,
         'direta_values': direta_values,
+
         'selected_period': selected_period,  # could be int or 'custom'
         'custom_start_date': start_date_str,
         'custom_end_date': end_date_str,
+
+        # Roles
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
+
         'monthly_tickets': monthly_tickets,
+        'monthly_revenues': monthly_revenues,
+
         'coopanest_pct': coopanest_pct,
         'hospital_pct': hospital_pct,
         'direta_pct': direta_pct,
+
         'procedimentos': procedimentos,
         'selected_procedimento': procedimento,
+
         'anestesistas': anestesistas,
         'selected_anestesista': selected_anestesista,
-        'monthly_revenues': monthly_revenues,
+
         'period_total': period_total,
         'anestesista_total': anestesista_total,
         'selected_graph_type': selected_graph_type,
@@ -601,27 +657,31 @@ def export_financas_excel(request):
     
     return response
 
-def get_date_range(period_days):
+def get_date_range(start_date, end_date):
     """
-    Existing helper function that returns:
-      - a list of date objects (daily or monthly) based on 'period_days'
-      - a string: 'daily' or 'monthly'
+    Return a tuple: (list_of_dates, 'daily' or 'monthly'),
+    deciding based on how many days lie between start_date and end_date.
     """
-    end_date = timezone.now()
-    start_date = end_date - timedelta(days=period_days)
-    
-    if period_days <= 30:  # For 30 days or less, daily
-        dates = []
-        current_date = start_date
-        while current_date <= end_date:
-            dates.append(current_date.date())
-            current_date += timedelta(days=1)
-        return dates, 'daily'
+    # Zero out start_date time to midnight, end_date to 23:59:59 for consistency
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    diff_days = (end_date - start_date).days
+
+    if diff_days <= 30:
+        # Return a daily range
+        date_list = []
+        current = start_date
+        while current <= end_date:
+            date_list.append(current)
+            current += timedelta(days=1)
+        return date_list, 'daily'
     else:
-        # For more than 30 days, monthly
-        months = []
-        current_date = start_date.replace(day=1)
-        while current_date <= end_date:
-            months.append(current_date)
-            current_date += relativedelta(months=1)
-        return months, 'monthly'
+        # Return the first day of each month
+        months_list = []
+        # Move 'current' to the 1st day of start_date's month
+        current = start_date.replace(day=1)
+        while current <= end_date:
+            months_list.append(current)
+            current += relativedelta(months=1)
+        return months_list, 'monthly'
