@@ -10,4 +10,5 @@ urlpatterns = [
     path('', include('agenda.urls')),
     path('', include('qualidade.urls')),
     path('', include('dashboard.urls')),
+    path('', include('financas.urls')),
 ]

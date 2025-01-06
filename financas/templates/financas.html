@@ -1,0 +1,139 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Finanças{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/financas.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="financas-container">
+    <div class="financas-header">
+        <h1>Finanças</h1>
+        
+        <div class="view-toggle">
+            <a href="?view=receitas" class="toggle-btn {% if view_type == 'receitas' %}active{% endif %}">Receitas</a>
+            <a href="?view=despesas" class="toggle-btn {% if view_type == 'despesas' %}active{% endif %}">Despesas & Custos</a>
+        </div>
+        
+        <div class="header-actions">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Buscar guias" value="{{ search_query }}">
+            </div>
+            
+            <div class="status-filter">
+                <select>
+                    <option value="">Status</option>
+                    {% if view_type == 'receitas' %}
+                        <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
+                        <option value="pendente" {% if selected_status == 'pendente' %}selected{% endif %}>Em andamento</option>
+                        <option value="glosa" {% if selected_status == 'glosa' %}selected{% endif %}>Glosa</option>
+                    {% else %}
+                        <option value="a_vencer" {% if selected_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
+                        <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
+                        <option value="atrasado" {% if selected_status == 'atrasado' %}selected{% endif %}>Pagamento Atrasado</option>
+                    {% endif %}
+                </select>
+            </div>
+            
+            <div class="period-filter">
+                <button class="filter-btn">
+                    <i class="fas fa-calendar"></i>
+                    Filtrar por período
+                </button>
+            </div>
+            
+            <button class="export-btn">
+                <i class="fas fa-download"></i>
+                Exportar em PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="financas-table">
+        <table>
+            <thead>
+                <tr>
+                    {% if view_type == 'receitas' %}
+                        <th>Paciente</th>
+                        <th>CPF</th>
+                        <th>Data da Cirurgia</th>
+                        <th>Valor</th>
+                        <th>Fonte Pagadora</th>
+                        <th>CPSA</th>
+                        <th>Anestesista</th>
+                        <th>Situação</th>
+                        <th>Data do Pagamento</th>
+                        <th>Editar</th>
+                    {% else %}
+                        <th>Classificação</th>
+                        <th>Data</th>
+                        <th>Valor</th>
+                        <th>Pago</th>
+                        <th>Editar</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr>
+                        {% if view_type == 'receitas' %}
+                            <td>{{ item.procedimento.nome_paciente }}</td>
+                            <td>{{ item.procedimento.cpf_paciente }}</td>
+                            <td>{{ item.procedimento.data_horario|date:"d/m/Y" }}</td>
+                            <td>R$ {{ item.valor_cobranca|floatformat:2 }}</td>
+                            <td>{{ item.get_tipo_cobranca_display }}</td>
+                            <td>{{ item.procedimento.convenio }}</td>
+                            <td>{{ item.procedimento.anestesistas_responsaveis.first.name }}</td>
+                            <td>{{ item.get_status_pagamento_display }}</td>
+                            <td>{{ item.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
+                            <td><a href="#" class="edit-btn"><i class="fas fa-pen"></i></a></td>
+                        {% else %}
+                            <td>{{ item.descricao }}</td>
+                            <td>{{ item.data|date:"d/m/Y" }}</td>
+                            <td>R$ {{ item.valor|floatformat:2 }}</td>
+                            <td>{{ item.get_status_display }}</td>
+                            <td><a href="#" class="edit-btn"><i class="fas fa-pen"></i></a></td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <button class="add-btn">
+        <i class="fas fa-plus"></i>
+        Inserir despesa ou custo
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.querySelector('.search-box input');
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('search', this.value);
+            window.location.href = currentUrl.toString();
+        }
+    });
+
+    // Status filter
+    const statusSelect = document.querySelector('.status-filter select');
+    statusSelect.addEventListener('change', function() {
+        const currentUrl = new URL(window.location.href);
+        if (this.value) {
+            currentUrl.searchParams.set('status', this.value);
+        } else {
+            currentUrl.searchParams.delete('status');
+        }
+        window.location.href = currentUrl.toString();
+    });
+});
+</script>
+{% endblock %}
