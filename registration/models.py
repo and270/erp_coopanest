@@ -39,10 +39,23 @@ class CustomUser(AbstractUser):
     class Meta:
         verbose_name = "Usuário"
         verbose_name_plural = "Usuários"
+        constraints = [
+            models.UniqueConstraint(fields=['email'], name='unique_email')
+        ]
+
+    def clean(self):
+        if self.email:
+            existing_user = CustomUser.objects.filter(email=self.email).first()
+            if existing_user and existing_user.pk != self.pk:
+                raise ValidationError({
+                    'email': _('Este email já está em uso.')
+                })
+        super().clean()
 
     def save(self, *args, **kwargs):
+        self.clean()
         if not self.username:
-            self.username = self.email  # Set the username to the email if it's empty
+            self.username = self.email
         super().save(*args, **kwargs)
 
     def __str__(self):
