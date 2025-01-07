@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from .models import ProcedimentoFinancas, Despesas
 from django.db.models import Q
 
@@ -43,6 +44,10 @@ def financas_view(request):
         'view_type': view_type,
         'selected_status': status,
         'search_query': search_query,
+        'SECRETARIA_USER': SECRETARIA_USER,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
     }
     
     return render(request, 'financas.html', context)

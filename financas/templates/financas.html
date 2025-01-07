@@ -16,40 +16,40 @@
             <a href="?view=receitas" class="toggle-btn {% if view_type == 'receitas' %}active{% endif %}">Receitas</a>
             <a href="?view=despesas" class="toggle-btn {% if view_type == 'despesas' %}active{% endif %}">Despesas & Custos</a>
         </div>
+    </div>
+    
+    <div class="header-actions">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Buscar guias" value="{{ search_query }}">
+        </div>
         
-        <div class="header-actions">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Buscar guias" value="{{ search_query }}">
-            </div>
-            
-            <div class="status-filter">
-                <select>
-                    <option value="">Status</option>
-                    {% if view_type == 'receitas' %}
-                        <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                        <option value="pendente" {% if selected_status == 'pendente' %}selected{% endif %}>Em andamento</option>
-                        <option value="glosa" {% if selected_status == 'glosa' %}selected{% endif %}>Glosa</option>
-                    {% else %}
-                        <option value="a_vencer" {% if selected_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
-                        <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                        <option value="atrasado" {% if selected_status == 'atrasado' %}selected{% endif %}>Pagamento Atrasado</option>
-                    {% endif %}
-                </select>
-            </div>
-            
-            <div class="period-filter">
-                <button class="filter-btn">
-                    <i class="fas fa-calendar"></i>
-                    Filtrar por período
-                </button>
-            </div>
-            
-            <button class="export-btn">
-                <i class="fas fa-download"></i>
-                Exportar em PDF
+        <div class="status-filter">
+            <select>
+                <option value="">Status</option>
+                {% if view_type == 'receitas' %}
+                    <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
+                    <option value="pendente" {% if selected_status == 'pendente' %}selected{% endif %}>Em andamento</option>
+                    <option value="glosa" {% if selected_status == 'glosa' %}selected{% endif %}>Glosa</option>
+                {% else %}
+                    <option value="a_vencer" {% if selected_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
+                    <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
+                    <option value="atrasado" {% if selected_status == 'atrasado' %}selected{% endif %}>Pagamento Atrasado</option>
+                {% endif %}
+            </select>
+        </div>
+        
+        <div class="period-filter">
+            <button class="filter-btn">
+                <i class="fas fa-calendar"></i>
+                Filtrar por período
             </button>
         </div>
+        
+        <button class="export-btn">
+            <i class="fas fa-download"></i>
+            Exportar em PDF
+        </button>
     </div>
 
     <div class="financas-table">

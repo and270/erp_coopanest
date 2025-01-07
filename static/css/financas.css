@@ -1,13 +1,14 @@
 .financas-container {
-    padding: 24px;
-    margin: 0 auto;
+    padding: 24px 24px; /* ou 0 se quiser colar completamente */
+    margin: 0;       /* remove o auto-centro */
+    max-width: 100%;
 }
-
 .financas-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
+    width: 100%;
 }
 
 .financas-header h1 {
@@ -45,6 +46,8 @@
     display: flex;
     gap: 16px;
     align-items: center;
+    margin-bottom: 24px;
+    width: 100%;
 }
 
 .search-box {
@@ -107,10 +110,12 @@
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 24px;
+    width: 100%;
 }
 
 .financas-table table {
     width: 100%;
+    min-width: 100%;
     border-collapse: collapse;
 }
 
@@ -158,13 +163,15 @@
 
 @media (max-width: 768px) {
     .financas-header {
-        flex-direction: column;
+        flex-direction: row;
         gap: 16px;
+        margin-bottom: 16px;
     }
     
     .header-actions {
         flex-direction: column;
         width: 100%;
+        margin-bottom: 24px;
     }
     
     .search-box,
