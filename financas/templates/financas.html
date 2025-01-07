@@ -103,10 +103,12 @@
         </table>
     </div>
     
+    {% if view_type == 'despesas' %}
     <button class="add-btn">
         <i class="fas fa-plus"></i>
         Inserir despesa ou custo
     </button>
+    {% endif %}
 </div>
 {% endblock %}
 
