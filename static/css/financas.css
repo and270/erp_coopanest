@@ -58,7 +58,7 @@
 .search-box input {
     width: 100%;
     padding: 8px 16px 8px 40px;
-    border: 1px solid #E3E3E3;
+    border: 1px solid #CBD5E1;
     border-radius: 6px;
     font-family: Inter;
     font-size: 14px;
@@ -81,12 +81,12 @@
 .status-filter select {
     width: 100%;
     padding: 8px 16px;
-    border: none;
-    background: #F3F3F3;
+    border: 1px solid #CBD5E1;
+    background: #FFFFFF;
     border-radius: 6px;
     font-family: Inter;
     font-size: 14px;
-    color: #3D3D3D;
+    color: #8F97A4;
     box-sizing: border-box;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -103,7 +103,7 @@
     border: none;
     border-radius: 6px;
     font-family: Inter;
-    font-size: 14px;
+    font-size: 16px;
     cursor: pointer;
     height: 35px;
 }
