@@ -45,14 +45,14 @@
                 {% if selected_period %}
                     {% if selected_period == 'custom' %}
                         Personalizado
-                    {% elif selected_period == 7 %}Últimos 7 dias
-                    {% elif selected_period == 14 %}Últimos 14 dias
-                    {% elif selected_period == 30 %}Últimos 30 dias
-                    {% elif selected_period == 90 %}Últimos 3 meses
-                    {% elif selected_period == 180 %}Últimos 6 meses
-                    {% elif selected_period == 365 %}Último ano
-                    {% elif selected_period == 540 %}Último 1 ano e meio
-                    {% elif selected_period == 730 %}Últimos 2 anos
+                    {% elif selected_period == '7' %}Últimos 7 dias
+                    {% elif selected_period == '14' %}Últimos 14 dias
+                    {% elif selected_period == '30' %}Últimos 30 dias
+                    {% elif selected_period == '90' %}Últimos 3 meses
+                    {% elif selected_period == '180' %}Últimos 6 meses
+                    {% elif selected_period == '365' %}Último ano
+                    {% elif selected_period == '540' %}Último 1 ano e meio
+                    {% elif selected_period == '730' %}Últimos 2 anos
                     {% endif %}
                 {% else %}
                     Filtrar por período
@@ -69,7 +69,7 @@
                 <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
                 <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
 
-                <div id="customRangeContainer" class="custom-range" style="display: none; margin-top: 10px;">
+                <div id="customRangeContainer" class="custom-range" style="display: none;">
                     <label for="customStart">Início:</label>
                     <input type="date" id="customStart" value="{{ custom_start_date }}" />
                     <label for="customEnd">Fim:</label>
