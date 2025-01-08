@@ -623,25 +623,26 @@ circle {
   }
   
   .custom-range input[type="date"] {
-    display: block; 
-    /* Remove the calc(100% - 32px) and the left/right margins */
-    width: 200px; /* or whatever fixed width you want */
+    display: block;
+    width: 200px;
     margin-bottom: 12px;
+    padding: 8px;
+    height: 22px;
     border: 1px solid #E3E3E3;
     border-radius: 4px;
     font-family: Inter, sans-serif;
     font-size: 14px;
     color: #0D0D0D;
     background: #F3F3F3;
-    text-align: left; 
+    text-align: left;
   }
   
   .custom-range button {
-    /* Also center the button */
     display: block;
-    width: 200px; /* or your preferred width */
-    margin: 0 auto; 
+    width: 200px;
+    margin: 0 auto;
     padding: 8px;
+    height: 35px;
     background: #1A73E8;
     color: white;
     border: none;
