@@ -106,6 +106,82 @@
 }
 .period-filter {
     width: 15%;
+    position: relative;
+}
+
+.period-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #E3E3E3;
+    border-radius: 4px;
+    padding: 4px 0;
+    min-width: 200px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.period-option {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: Inter;
+    font-size: 14px;
+    color: #0D0D0D;
+}
+
+.period-option:hover {
+    background: #F5F5F5;
+}
+
+.period-option[data-selected] {
+    background: #F0F7FF;
+    color: #1A73E8;
+}
+
+.custom-range {
+    border-top: 1px solid #E3E3E3;
+    margin-top: 8px;
+    padding: 16px;
+}
+
+.custom-range label {
+    font-family: Inter;
+    font-size: 12px;
+    color: #3D3D3D;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.custom-range input[type="date"] {
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 8px;
+    border: 1px solid #E3E3E3;
+    border-radius: 4px;
+    font-family: Inter;
+    font-size: 14px;
+    color: #0D0D0D;
+    background: #F3F3F3;
+}
+
+.custom-range button {
+    width: 100%;
+    padding: 8px;
+    background: #1A73E8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.custom-range button:hover {
+    background: #1557B0;
 }
 
 .filter-btn {
@@ -200,5 +276,11 @@
     
     .financas-table {
         overflow-x: auto;
+    }
+    
+    .period-dropdown {
+        position: absolute;
+        width: 100%;
+        right: 0;
     }
 }

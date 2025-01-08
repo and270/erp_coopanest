@@ -40,10 +40,43 @@
         </div>
         
         <div class="period-filter">
-            <button class="filter-btn">
+            <button class="filter-btn" id="periodFilterBtn">
                 <i class="fas fa-calendar"></i>
-                Filtrar por período
+                {% if selected_period %}
+                    {% if selected_period == 'custom' %}
+                        Personalizado
+                    {% elif selected_period == 7 %}Últimos 7 dias
+                    {% elif selected_period == 14 %}Últimos 14 dias
+                    {% elif selected_period == 30 %}Últimos 30 dias
+                    {% elif selected_period == 90 %}Últimos 3 meses
+                    {% elif selected_period == 180 %}Últimos 6 meses
+                    {% elif selected_period == 365 %}Último ano
+                    {% elif selected_period == 540 %}Último 1 ano e meio
+                    {% elif selected_period == 730 %}Últimos 2 anos
+                    {% endif %}
+                {% else %}
+                    Filtrar por período
+                {% endif %}
             </button>
+            <div id="periodFilter" class="period-dropdown" style="display: none;">
+                <div class="period-option" data-value="7" {% if selected_period == '7' %}data-selected{% endif %}>Últimos 7 dias</div>
+                <div class="period-option" data-value="14" {% if selected_period == '14' %}data-selected{% endif %}>Últimos 14 dias</div>
+                <div class="period-option" data-value="30" {% if selected_period == '30' %}data-selected{% endif %}>Últimos 30 dias</div>
+                <div class="period-option" data-value="90" {% if selected_period == '90' %}data-selected{% endif %}>Últimos 3 meses</div>
+                <div class="period-option" data-value="180" {% if selected_period == '180' %}data-selected{% endif %}>Últimos 6 meses</div>
+                <div class="period-option" data-value="365" {% if selected_period == '365' %}data-selected{% endif %}>Último ano</div>
+                <div class="period-option" data-value="540" {% if selected_period == '540' %}data-selected{% endif %}>Último 1 ano e meio</div>
+                <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
+                <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
+
+                <div id="customRangeContainer" class="custom-range" style="display: none; margin-top: 10px;">
+                    <label for="customStart">Início:</label>
+                    <input type="date" id="customStart" value="{{ custom_start_date }}" />
+                    <label for="customEnd">Fim:</label>
+                    <input type="date" id="customEnd" value="{{ custom_end_date }}" />
+                    <button type="button" id="applyCustomRangeBtn">Aplicar</button>
+                </div>
+            </div>
         </div>
         
         <button class="export-btn">
@@ -136,6 +169,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         window.location.href = currentUrl.toString();
     });
+});
+
+// Period filter functionality
+document.getElementById('periodFilterBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = document.getElementById('periodFilter');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('periodFilter');
+    if (!e.target.closest('.period-filter')) {
+        dropdown.style.display = 'none';
+    }
+});
+
+// Handle period options
+document.querySelectorAll('.period-option').forEach(option => {
+    option.addEventListener('click', function() {
+        const value = this.dataset.value;
+        
+        // If "custom" was selected, show the date inputs
+        if (value === 'custom') {
+            document.getElementById('customRangeContainer').style.display = 'block';
+        } else {
+            // Hide custom range UI if previously shown
+            document.getElementById('customRangeContainer').style.display = 'none';
+
+            // Apply the chosen period filter
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('period', value);
+            currentUrl.searchParams.delete('start_date');
+            currentUrl.searchParams.delete('end_date');
+            window.location.href = currentUrl.toString();
+        }
+    });
+});
+
+// Handle custom range application
+document.getElementById('applyCustomRangeBtn').addEventListener('click', function() {
+    const startInput = document.getElementById('customStart');
+    const endInput = document.getElementById('customEnd');
+    
+    if (startInput.value && endInput.value) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period', 'custom');
+        currentUrl.searchParams.set('start_date', startInput.value);
+        currentUrl.searchParams.set('end_date', endInput.value);
+        window.location.href = currentUrl.toString();
+    } else {
+        alert('Por favor, selecione ambas as datas.');
+    }
 });
 </script>
 {% endblock %}
