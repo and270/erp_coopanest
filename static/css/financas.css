@@ -52,7 +52,7 @@
 
 .search-box {
     position: relative;
-    width: 55%;
+    width: 64%;
 }
 
 .search-box input {
@@ -63,6 +63,7 @@
     font-family: Inter;
     font-size: 14px;
     box-sizing: border-box;
+    height: 35px;
 }
 
 .search-box i {
@@ -74,7 +75,7 @@
 }
 
 .status-filter {
-    width: 15%;
+    width: 12%;
 }
 
 .status-filter select {
@@ -90,6 +91,7 @@
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+    height: 35px;
 }
 
 .filter-btn,
@@ -103,9 +105,10 @@
     font-family: Inter;
     font-size: 14px;
     cursor: pointer;
+    height: 35px;
 }
 .period-filter {
-    width: 15%;
+    width: 12%;
     position: relative;
 }
 
@@ -204,7 +207,7 @@
 .export-btn {
     background: #1A73E8;
     color: white;
-    width: 15%;
+    width: 12%;
     justify-content: center;
 }
 
