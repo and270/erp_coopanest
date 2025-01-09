@@ -5,6 +5,9 @@ from .models import ProcedimentoFinancas, Despesas
 from django.db.models import Q
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+import json
 
 @login_required
 def financas_view(request):
@@ -88,3 +91,50 @@ def financas_view(request):
     }
     
     return render(request, 'financas.html', context)
+
+@login_required
+def get_finance_item(request, type, id):
+    try:
+        if type == 'receitas':
+            item = ProcedimentoFinancas.objects.get(id=id)
+            data = {
+                'valor_cobranca': float(item.valor_cobranca),
+                'status_pagamento': item.status_pagamento,
+                'data_pagamento': item.data_pagamento.strftime('%Y-%m-%d') if item.data_pagamento else None
+            }
+        else:
+            item = Despesas.objects.get(id=id)
+            data = {
+                'descricao': item.descricao,
+                'valor': float(item.valor),
+                'status': item.status
+            }
+        return JsonResponse(data)
+    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
+        return JsonResponse({'error': 'Item não encontrado'}, status=404)
+
+@login_required
+@require_http_methods(["POST"])
+def update_finance_item(request):
+    try:
+        data = request.POST
+        
+        finance_type = data.get('finance_type')
+        finance_id = data.get('finance_id')
+        
+        
+        if finance_type == 'receitas':
+            item = ProcedimentoFinancas.objects.get(id=finance_id)
+            item.valor_cobranca = data.get('valor_cobranca')
+            item.status_pagamento = data.get('status_pagamento')
+            item.data_pagamento = data.get('data_pagamento') or None
+        else:
+            item = Despesas.objects.get(id=finance_id)
+            item.descricao = data.get('descricao')
+            item.valor = data.get('valor')
+            item.status = data.get('status')
+            
+        item.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

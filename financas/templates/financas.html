@@ -5,6 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/financas.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 {% endblock %}
 
 {% block content %}
@@ -111,7 +112,7 @@
             </thead>
             <tbody>
                 {% for item in items %}
-                    <tr>
+                    <tr data-id="{{ item.id }}">
                         {% if view_type == 'receitas' %}
                             <td>{{ item.procedimento.nome_paciente }}</td>
                             <td>{{ item.procedimento.cpf_paciente }}</td>
@@ -122,13 +123,21 @@
                             <td>{{ item.procedimento.anestesistas_responsaveis.first.name }}</td>
                             <td>{{ item.get_status_pagamento_display }}</td>
                             <td>{{ item.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
-                            <td><a href="#" class="edit-btn"><i class="fas fa-pen"></i></a></td>
+                            <td>
+                                <button type="button" class="edit-btn" title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </td>
                         {% else %}
                             <td>{{ item.descricao }}</td>
                             <td>{{ item.data|date:"d/m/Y" }}</td>
                             <td>R$ {{ item.valor|floatformat:2 }}</td>
                             <td>{{ item.get_status_display }}</td>
-                            <td><a href="#" class="edit-btn"><i class="fas fa-pen"></i></a></td>
+                            <td>
+                                <button type="button" class="edit-btn" title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </td>
                         {% endif %}
                     </tr>
                 {% endfor %}
@@ -143,85 +152,195 @@
     </button>
     {% endif %}
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<div id="edit-finance-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Editar <span id="modal-title-type"></span></h2>
+        
+        <form id="edit-finance-form">
+            {% csrf_token %}
+            <input type="hidden" id="finance_id" name="finance_id">
+            <input type="hidden" id="finance_type" name="finance_type">
+            
+            <!-- Receitas fields -->
+            <div id="receitas-fields">
+                <div class="form-group">
+                    <label for="valor_cobranca">Valor</label>
+                    <input type="number" step="0.01" id="valor_cobranca" name="valor_cobranca">
+                </div>
+                <div class="form-group">
+                    <label for="status_pagamento">Status do Pagamento</label>
+                    <select id="status_pagamento" name="status_pagamento">
+                        <option value="pago">Pago</option>
+                        <option value="pendente">Em andamento</option>
+                        <option value="glosa">Glosa</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="data_pagamento">Data do Pagamento</label>
+                    <input type="date" id="data_pagamento" name="data_pagamento">
+                </div>
+            </div>
+
+            <!-- Despesas fields -->
+            <div id="despesas-fields">
+                <div class="form-group">
+                    <label for="descricao">Descrição</label>
+                    <input type="text" id="descricao" name="descricao">
+                </div>
+                <div class="form-group">
+                    <label for="valor">Valor</label>
+                    <input type="number" step="0.01" id="valor" name="valor">
+                </div>
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="a_vencer">A Vencer</option>
+                        <option value="pago">Pago</option>
+                        <option value="atrasado">Pagamento Atrasado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Search functionality
-    const searchInput = document.querySelector('.search-box input');
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('search', this.value);
-            window.location.href = currentUrl.toString();
-        }
-    });
-
-    // Status filter
-    const statusSelect = document.querySelector('.status-filter select');
-    statusSelect.addEventListener('change', function() {
-        const currentUrl = new URL(window.location.href);
-        if (this.value) {
-            currentUrl.searchParams.set('status', this.value);
-        } else {
-            currentUrl.searchParams.delete('status');
-        }
-        window.location.href = currentUrl.toString();
-    });
-});
-
-// Period filter functionality
-document.getElementById('periodFilterBtn').addEventListener('click', function(e) {
-    e.stopPropagation();
-    const dropdown = document.getElementById('periodFilter');
-    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-});
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    const dropdown = document.getElementById('periodFilter');
-    if (!e.target.closest('.period-filter')) {
-        dropdown.style.display = 'none';
-    }
-});
-
-// Handle period options
-document.querySelectorAll('.period-option').forEach(option => {
-    option.addEventListener('click', function() {
-        const value = this.dataset.value;
-        
-        // If "custom" was selected, show the date inputs
-        if (value === 'custom') {
-            document.getElementById('customRangeContainer').style.display = 'block';
-        } else {
-            // Hide custom range UI if previously shown
-            document.getElementById('customRangeContainer').style.display = 'none';
-
-            // Apply the chosen period filter
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('period', value);
-            currentUrl.searchParams.delete('start_date');
-            currentUrl.searchParams.delete('end_date');
-            window.location.href = currentUrl.toString();
-        }
-    });
-});
-
-// Handle custom range application
-document.getElementById('applyCustomRangeBtn').addEventListener('click', function() {
-    const startInput = document.getElementById('customStart');
-    const endInput = document.getElementById('customEnd');
+    const modal = document.getElementById('edit-finance-modal');
+    const closeBtn = modal.querySelector('.close');
+    const form = document.getElementById('edit-finance-form');
     
-    if (startInput.value && endInput.value) {
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('period', 'custom');
-        currentUrl.searchParams.set('start_date', startInput.value);
-        currentUrl.searchParams.set('end_date', endInput.value);
-        window.location.href = currentUrl.toString();
-    } else {
-        alert('Por favor, selecione ambas as datas.');
+    // Close modal when clicking X or outside
+    closeBtn.onclick = function() {
+        modal.style.display = "none";
     }
+    
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    // Handle edit button clicks
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const row = this.closest('tr');
+            const viewType = '{{ view_type }}';
+            const financeId = row.dataset.id;
+            
+            // Show appropriate fields and set required attributes
+            if (viewType === 'receitas') {
+                document.getElementById('receitas-fields').style.display = 'block';
+                document.getElementById('despesas-fields').style.display = 'none';
+                // Set required for receitas fields
+                document.getElementById('valor_cobranca').required = true;
+                document.getElementById('status_pagamento').required = true;
+                // Remove required from despesas fields
+                document.getElementById('descricao').required = false;
+                document.getElementById('valor').required = false;
+                document.getElementById('status').required = false;
+            } else {
+                document.getElementById('receitas-fields').style.display = 'none';
+                document.getElementById('despesas-fields').style.display = 'block';
+                // Set required for despesas fields
+                document.getElementById('descricao').required = true;
+                document.getElementById('valor').required = true;
+                document.getElementById('status').required = true;
+                // Remove required from receitas fields
+                document.getElementById('valor_cobranca').required = false;
+                document.getElementById('status_pagamento').required = false;
+                document.getElementById('data_pagamento').required = false;
+            }
+            
+            document.getElementById('modal-title-type').textContent = viewType === 'receitas' ? 'Receita' : 'Despesa';
+            
+            // Fetch item data
+            fetch(`/financas/get-item/${viewType}/${financeId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Received data:', data); // Debug log
+                    document.getElementById('finance_id').value = financeId;
+                    document.getElementById('finance_type').value = viewType;
+                    
+                    if (viewType === 'receitas') {
+                        document.getElementById('valor_cobranca').value = data.valor_cobranca;
+                        document.getElementById('status_pagamento').value = data.status_pagamento;
+                        document.getElementById('data_pagamento').value = data.data_pagamento || '';
+                        toggleDataPagamento(); // Call this to show/hide date field
+                    } else {
+                        document.getElementById('descricao').value = data.descricao;
+                        document.getElementById('valor').value = data.valor;
+                        document.getElementById('status').value = data.status;
+                    }
+                    
+                    modal.style.display = "block";
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    alert('Erro ao carregar os dados');
+                });
+        });
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        console.log('Form submitted');
+        
+        const formData = new FormData(this);
+        // Log the form data
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
+        
+        fetch('/financas/update-item/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Erro ao atualizar: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Error updating:', error);
+            alert('Erro ao atualizar os dados');
+        });
+    });
+
+    // Add status change handler for receitas
+    const statusSelect = document.getElementById('status_pagamento');
+    const dataPagamentoGroup = document.getElementById('data_pagamento').closest('.form-group');
+    
+    function toggleDataPagamento() {
+        const status = statusSelect.value;
+        if (status === 'pago' || status === 'glosa') {
+            dataPagamentoGroup.style.display = 'block';
+            document.getElementById('data_pagamento').required = true;
+        } else {
+            dataPagamentoGroup.style.display = 'none';
+            document.getElementById('data_pagamento').required = false;
+        }
+    }
+
+    statusSelect.addEventListener('change', toggleDataPagamento);
 });
 </script>
 {% endblock %}
