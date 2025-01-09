@@ -166,7 +166,7 @@
             <div id="receitas-fields">
                 <div class="form-group">
                     <label for="valor_cobranca">Valor</label>
-                    <input type="number" step="0.01" id="valor_cobranca" name="valor_cobranca">
+                    <input type="text" class="money-input" id="valor_cobranca" name="valor_cobranca">
                 </div>
                 <div class="form-group">
                     <label for="status_pagamento">Status do Pagamento</label>
@@ -208,6 +208,8 @@
         </form>
     </div>
 </div>
+
+<script src="https://unpkg.com/imask"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -264,15 +266,20 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/financas/get-item/${viewType}/${financeId}/`)
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Received data:', data); // Debug log
+                    console.log('Received data:', data);
                     document.getElementById('finance_id').value = financeId;
                     document.getElementById('finance_type').value = viewType;
                     
                     if (viewType === 'receitas') {
-                        document.getElementById('valor_cobranca').value = data.valor_cobranca;
+                        const valorInput = document.getElementById('valor_cobranca');
+                        // Format the initial value
+                        valorInput.value = `R$ ${data.valor_cobranca.toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}`;
                         document.getElementById('status_pagamento').value = data.status_pagamento;
                         document.getElementById('data_pagamento').value = data.data_pagamento || '';
-                        toggleDataPagamento(); // Call this to show/hide date field
+                        toggleDataPagamento();
                     } else {
                         document.getElementById('descricao').value = data.descricao;
                         document.getElementById('valor').value = data.valor;
@@ -291,13 +298,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle form submission
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        console.log('Form submitted');
         
         const formData = new FormData(this);
-        // Log the form data
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
+        const moneyInput = formData.get('valor_cobranca');
+        
+        // Convert from "R$ 1.234,56" to "1234.56"
+        if (moneyInput) {
+            const numericValue = moneyInput.replace('R$ ', '')
+                                         .replace(/\./g, '')
+                                         .replace(',', '.');
+            formData.set('valor_cobranca', numericValue);
         }
+        
+        console.log('Form submitted');
         
         fetch('/financas/update-item/', {
             method: 'POST',
@@ -340,6 +353,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     statusSelect.addEventListener('change', toggleDataPagamento);
+
+    // Initialize money mask for all money inputs
+    document.querySelectorAll('.money-input').forEach(element => {
+        IMask(element, {
+            mask: 'R$ num',
+            blocks: {
+                num: {
+                    mask: Number,
+                    thousandsSeparator: '.',
+                    radix: ',',
+                    scale: 2,
+                    padFractionalZeros: true,
+                    normalizeZeros: true,
+                    mapToRadix: ['.']
+                }
+            }
+        });
+    });
 });
 </script>
 {% endblock %}
