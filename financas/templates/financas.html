@@ -28,16 +28,16 @@
         </div>
         
         <div class="status-filter">
-            <select>
-                <option value="">Status</option>
+            <select onchange="window.location.href = this.value">
+                <option value="?view={{ view_type }}">Status</option>
                 {% if view_type == 'receitas' %}
-                    <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                    <option value="pendente" {% if selected_status == 'pendente' %}selected{% endif %}>Em andamento</option>
-                    <option value="glosa" {% if selected_status == 'glosa' %}selected{% endif %}>Glosa</option>
+                    <option value="?view={{ view_type }}&status=pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
+                    <option value="?view={{ view_type }}&status=pendente" {% if selected_status == 'pendente' %}selected{% endif %}>Em andamento</option>
+                    <option value="?view={{ view_type }}&status=glosa" {% if selected_status == 'glosa' %}selected{% endif %}>Glosa</option>
                 {% else %}
-                    <option value="a_vencer" {% if selected_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
-                    <option value="pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                    <option value="atrasado" {% if selected_status == 'atrasado' %}selected{% endif %}>Pagamento Atrasado</option>
+                    <option value="?view={{ view_type }}&status=a_vencer" {% if selected_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
+                    <option value="?view={{ view_type }}&status=pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
+                    <option value="?view={{ view_type }}&status=atrasado" {% if selected_status == 'atrasado' %}selected{% endif %}>Pagamento Atrasado</option>
                 {% endif %}
             </select>
         </div>
@@ -118,9 +118,9 @@
                             <td>{{ item.procedimento.nome_paciente }}</td>
                             <td>{{ item.procedimento.cpf_paciente }}</td>
                             <td>{{ item.procedimento.data_horario|date:"d/m/Y" }}</td>
-                            <td>R$ {{ item.valor_cobranca|floatformat:2|intcomma|replace:',.' }}</td>
-                            <td>{{ item.get_tipo_cobranca_display }}</td>
-                            <td>{{ item.procedimento.convenio }}</td>
+                            <td>{% if item.valor_cobranca %}R$ {{ item.valor_cobranca|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{{ item.get_tipo_cobranca_display|default:"" }}</td>
+                            <td>{{ item.procedimento.convenio|default:"Ainda não informado" }}</td>
                             <td>{{ item.procedimento.anestesistas_responsaveis.first.name }}</td>
                             <td>{{ item.get_status_pagamento_display }}</td>
                             <td>{{ item.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
@@ -132,7 +132,7 @@
                         {% else %}
                             <td>{{ item.descricao }}</td>
                             <td>{{ item.data|date:"d/m/Y" }}</td>
-                            <td>R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}</td>
+                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{{ item.get_status_display }}</td>
                             <td>
                                 <button type="button" class="edit-btn" title="Editar">
