@@ -265,6 +265,8 @@
 
 .edit-btn i {
     font-size: 16px;
+    -webkit-text-stroke: 1px #1A73E8;
+    -webkit-text-fill-color: white;
 }
 
 .add-btn {
@@ -406,6 +408,4 @@
     background-repeat: no-repeat;
     background-position: right 10px center;
     padding-right: 30px;
-    margin: 0;
-    line-height: 1;
 }
