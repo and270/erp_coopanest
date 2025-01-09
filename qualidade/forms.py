@@ -100,7 +100,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         max_digits=15,
         decimal_places=2,
         required=False,
-        widget=forms.NumberInput(attrs={
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
             'data-dependent-on': 'tipo_cobranca',
             'id': 'id_valor_cobranca'

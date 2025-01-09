@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED
 from .models import ProcedimentoFinancas, Despesas
 from django.db.models import Q
 from datetime import datetime, timedelta
@@ -27,7 +27,8 @@ def financas_view(request):
     # Base queryset
     if view_type == 'receitas':
         queryset = ProcedimentoFinancas.objects.filter(
-            procedimento__group=user_group
+            procedimento__group=user_group,
+            procedimento__status=STATUS_FINISHED
         ).select_related('procedimento')
     else:
         queryset = Despesas.objects.filter(

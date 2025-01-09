@@ -403,8 +403,39 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/imask"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize money mask for valor_cobranca
+    const valorCobrancaInput = document.getElementById('id_valor_cobranca');
+    if (valorCobrancaInput) {
+        const maskOptions = {
+            mask: 'R$ num',
+            blocks: {
+                num: {
+                    mask: Number,
+                    scale: 2,
+                    thousandsSeparator: '.',
+                    padFractionalZeros: true,
+                    radix: ',',
+                    mapToRadix: ['.'],
+                    max: 999999.99
+                }
+            }
+        };
+        
+        const mask = IMask(valorCobrancaInput, maskOptions);
+
+        // Add form submit handler to convert the masked value back to a number
+        const form = document.getElementById('finalizarProcedimentoForm');
+        form.addEventListener('submit', function(e) {
+            // Get the raw value without mask
+            const rawValue = mask.unmaskedValue;
+            // Update the input value with the raw number
+            valorCobrancaInput.value = rawValue;
+        });
+    }
+
     const form = document.getElementById('finalizarProcedimentoForm');
 
     const escalaInputs = form.querySelectorAll('input[name="escala"]');
