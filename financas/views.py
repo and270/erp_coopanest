@@ -24,7 +24,7 @@ def financas_view(request):
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
     
-    # Base queryset
+    # Base queryset with group filtering
     if view_type == 'receitas':
         queryset = ProcedimentoFinancas.objects.filter(
             procedimento__group=user_group,
@@ -32,7 +32,7 @@ def financas_view(request):
         ).select_related('procedimento')
     else:
         queryset = Despesas.objects.filter(
-            procedimento__group=user_group
+            group=user_group  # Filter despesas by group
         ).select_related('procedimento')
     
     # Apply period filter
@@ -96,9 +96,14 @@ def financas_view(request):
 
 @login_required
 def get_finance_item(request, type, id):
+    user_group = request.user.group
+    
     try:
         if type == 'receitas':
-            item = ProcedimentoFinancas.objects.get(id=id)
+            item = ProcedimentoFinancas.objects.get(
+                id=id,
+                procedimento__group=user_group  # Ensure user has access
+            )
             data = {
                 'valor_cobranca': float(item.valor_cobranca) if item.valor_cobranca else 0,
                 'status_pagamento': item.status_pagamento,
@@ -107,7 +112,10 @@ def get_finance_item(request, type, id):
                 'cpsa': item.cpsa
             }
         else:
-            item = Despesas.objects.get(id=id)
+            item = Despesas.objects.get(
+                id=id,
+                group=user_group  # Ensure user has access
+            )
             data = {
                 'descricao': item.descricao,
                 'valor': float(item.valor),
@@ -120,28 +128,68 @@ def get_finance_item(request, type, id):
 @login_required
 @require_http_methods(["POST"])
 def update_finance_item(request):
+    user_group = request.user.group
+    
     try:
         data = request.POST
         finance_type = data.get('finance_type')
         finance_id = data.get('finance_id')
         
         if finance_type == 'receitas':
-            item = ProcedimentoFinancas.objects.get(id=finance_id)
+            item = ProcedimentoFinancas.objects.get(
+                id=finance_id,
+                procedimento__group=user_group  # Ensure user has access
+            )
             item.valor_cobranca = data.get('valor_cobranca')
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
             item.cpsa = data.get('cpsa')
-            # Update CPF in the related Procedimento
             if item.procedimento:
                 item.procedimento.cpf_paciente = data.get('cpf')
                 item.procedimento.save()
         else:
-            item = Despesas.objects.get(id=finance_id)
+            item = Despesas.objects.get(
+                id=finance_id,
+                group=user_group  # Ensure user has access
+            )
             item.descricao = data.get('descricao')
             item.valor = data.get('valor')
             item.status = data.get('status')
             
         item.save()
         return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@require_http_methods(["POST"])
+def create_finance_item(request):
+    try:
+        data = request.POST
+        finance_type = data.get('finance_type')
+        
+        if finance_type == 'despesas':
+            # Parse the date from the form
+            data_str = data.get('data')
+            try:
+                data_despesa = datetime.strptime(data_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Data inválida'
+                })
+            
+            item = Despesas(
+                group=request.user.group,
+                descricao=data.get('descricao'),
+                valor=data.get('valor'),
+                status=data.get('status'),
+                data=data_despesa  # Use the date from the form
+            )
+            item.save()
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Tipo não suportado'})
+            
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

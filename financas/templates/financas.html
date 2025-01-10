@@ -103,7 +103,7 @@
                         <th>Data do Pagamento</th>
                         <th>Editar</th>
                     {% else %}
-                        <th>Classificação</th>
+                        <th>Descrição</th>
                         <th>Data</th>
                         <th>Valor</th>
                         <th>Pago</th>
@@ -133,7 +133,7 @@
                             <td>{{ item.descricao }}</td>
                             <td>{{ item.data|date:"d/m/Y" }}</td>
                             <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{{ item.get_status_display }}</td>
+                            <td>{% if item.pago %}Pago{% else %}Não Pago{% endif %}</td>
                             <td>
                                 <button type="button" class="edit-btn" title="Editar">
                                     <i class="fas fa-pen"></i>
@@ -147,7 +147,7 @@
     </div>
     
     {% if view_type == 'despesas' %}
-    <button class="add-btn">
+    <button class="add-btn" onclick="openAddDespesaModal()">
         <i class="fas fa-plus"></i>
         Inserir despesa ou custo
     </button>
@@ -157,12 +157,13 @@
 <div id="edit-finance-modal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2>Editar <span id="modal-title-type"></span></h2>
+        <h2><span id="modal-action-type">Editar</span> <span id="modal-title-type"></span></h2>
         
         <form id="edit-finance-form">
             {% csrf_token %}
             <input type="hidden" id="finance_id" name="finance_id">
             <input type="hidden" id="finance_type" name="finance_type">
+            <input type="hidden" id="is_new" name="is_new" value="false">
             
             <!-- Receitas fields -->
             <div id="receitas-fields">
@@ -196,19 +197,21 @@
             <div id="despesas-fields">
                 <div class="form-group">
                     <label for="descricao">Descrição</label>
-                    <input type="text" id="descricao" name="descricao">
+                    <input type="text" id="descricao" name="descricao" required>
                 </div>
                 <div class="form-group">
                     <label for="valor">Valor</label>
-                    <input type="text" class="money-input" id="valor" name="valor">
+                    <input type="text" class="money-input" id="valor" name="valor" required>
                 </div>
                 <div class="form-group">
-                    <label for="status">Status</label>
-                    <select id="status" name="status">
-                        <option value="a_vencer">A Vencer</option>
-                        <option value="pago">Pago</option>
-                        <option value="atrasado">Pagamento Atrasado</option>
-                    </select>
+                    <label for="data">Data</label>
+                    <input type="date" id="data" name="data" required>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="pago" name="pago">
+                        Pago
+                    </label>
                 </div>
             </div>
 
@@ -329,30 +332,28 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.set(moneyField, numericValue);
         }
         
-        console.log('Form submitted');
+        // Determine if this is a new item or an update
+        const isNew = formData.get('is_new') === 'true';
+        const url = isNew ? '/financas/create-item/' : '/financas/update-item/';
         
-        fetch('/financas/update-item/', {
+        fetch(url, {
             method: 'POST',
             body: formData,
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}'
             }
         })
-        .then(response => {
-            console.log('Response status:', response.status);
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log('Response data:', data);
             if (data.success) {
                 window.location.reload();
             } else {
-                alert('Erro ao atualizar: ' + (data.error || 'Erro desconhecido'));
+                alert('Erro ao ' + (isNew ? 'criar' : 'atualizar') + ': ' + (data.error || 'Erro desconhecido'));
             }
         })
         .catch(error => {
-            console.error('Error updating:', error);
-            alert('Erro ao atualizar os dados');
+            console.error('Error:', error);
+            alert('Erro ao ' + (isNew ? 'criar' : 'atualizar') + ' os dados');
         });
     });
 
@@ -458,6 +459,32 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = currentUrl.toString();
         }, 500); // Wait 500ms after user stops typing before searching
     });
+
+    function openAddDespesaModal() {
+        // Reset form
+        form.reset();
+        
+        // Set up modal for new despesa
+        document.getElementById('modal-action-type').textContent = 'Adicionar';
+        document.getElementById('modal-title-type').textContent = 'Despesa';
+        document.getElementById('finance_type').value = 'despesas';
+        document.getElementById('is_new').value = 'true';
+        
+        // Show appropriate fields
+        document.getElementById('receitas-fields').style.display = 'none';
+        document.getElementById('despesas-fields').style.display = 'block';
+        
+        // Set required fields for despesas
+        document.getElementById('descricao').required = true;
+        document.getElementById('valor').required = true;
+        document.getElementById('data').required = true;
+        
+        // Show modal
+        modal.style.display = "block";
+    }
+    
+    // Make the function available globally
+    window.openAddDespesaModal = openAddDespesaModal;
 });
 </script>
 {% endblock %}
