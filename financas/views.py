@@ -43,10 +43,16 @@ def financas_view(request):
             if start_date > end_date:
                 start_date, end_date = end_date, start_date
             
-            queryset = queryset.filter(
-                procedimento__data_horario__date__gte=start_date.date(),
-                procedimento__data_horario__date__lte=end_date.date()
-            )
+            if view_type == 'receitas':
+                queryset = queryset.filter(
+                    procedimento__data_horario__date__gte=start_date.date(),
+                    procedimento__data_horario__date__lte=end_date.date()
+                )
+            else:
+                queryset = queryset.filter(
+                    data__gte=start_date.date(),
+                    data__lte=end_date.date()
+                )
             selected_period = 'custom'
         except ValueError:
             selected_period = None
@@ -54,7 +60,10 @@ def financas_view(request):
         try:
             days = int(period)
             start_date = timezone.now() - timedelta(days=days)
-            queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+            if view_type == 'receitas':
+                queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+            else:
+                queryset = queryset.filter(data__gte=start_date.date())
             selected_period = period
         except ValueError:
             selected_period = None
@@ -102,7 +111,7 @@ def get_finance_item(request, type, id):
         if type == 'receitas':
             item = ProcedimentoFinancas.objects.get(
                 id=id,
-                procedimento__group=user_group  # Ensure user has access
+                procedimento__group=user_group
             )
             data = {
                 'valor_cobranca': float(item.valor_cobranca) if item.valor_cobranca else 0,
@@ -114,12 +123,13 @@ def get_finance_item(request, type, id):
         else:
             item = Despesas.objects.get(
                 id=id,
-                group=user_group  # Ensure user has access
+                group=user_group
             )
             data = {
                 'descricao': item.descricao,
-                'valor': float(item.valor),
-                'status': item.status
+                'valor': float(item.valor) if item.valor else 0,
+                'data': item.data.strftime('%Y-%m-%d') if item.data else None,
+                'pago': item.pago
             }
         return JsonResponse(data)
     except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
