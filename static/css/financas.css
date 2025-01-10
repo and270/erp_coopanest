@@ -52,7 +52,7 @@
 
 .search-box {
     position: relative;
-    width: 64%;
+    width: 55%;
 }
 
 .search-box input {
@@ -75,7 +75,7 @@
 }
 
 .status-filter {
-    width: 12%;
+    width: 15%;
 }
 
 .status-filter select {
@@ -108,7 +108,7 @@
     height: 35px;
 }
 .period-filter {
-    width: 12%;
+    width: 15%;
     position: relative;
 }
 
@@ -207,7 +207,7 @@
 .export-btn {
     background: #1A73E8;
     color: white;
-    width: 12%;
+    width: 15%;
     justify-content: center;
 }
 
