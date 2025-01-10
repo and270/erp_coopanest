@@ -99,9 +99,11 @@ def get_finance_item(request, type, id):
         if type == 'receitas':
             item = ProcedimentoFinancas.objects.get(id=id)
             data = {
-                'valor_cobranca': float(item.valor_cobranca),
+                'valor_cobranca': float(item.valor_cobranca) if item.valor_cobranca else 0,
                 'status_pagamento': item.status_pagamento,
-                'data_pagamento': item.data_pagamento.strftime('%Y-%m-%d') if item.data_pagamento else None
+                'data_pagamento': item.data_pagamento.strftime('%Y-%m-%d') if item.data_pagamento else None,
+                'cpf': item.procedimento.cpf_paciente,
+                'cpsa': item.cpsa
             }
         else:
             item = Despesas.objects.get(id=id)
@@ -119,16 +121,19 @@ def get_finance_item(request, type, id):
 def update_finance_item(request):
     try:
         data = request.POST
-        
         finance_type = data.get('finance_type')
         finance_id = data.get('finance_id')
-        
         
         if finance_type == 'receitas':
             item = ProcedimentoFinancas.objects.get(id=finance_id)
             item.valor_cobranca = data.get('valor_cobranca')
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
+            item.cpsa = data.get('cpsa')
+            # Update CPF in the related Procedimento
+            if item.procedimento:
+                item.procedimento.cpf_paciente = data.get('cpf')
+                item.procedimento.save()
         else:
             item = Despesas.objects.get(id=finance_id)
             item.descricao = data.get('descricao')
