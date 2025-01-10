@@ -245,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             const row = this.closest('tr');
             const viewType = '{{ view_type }}';
             const financeId = row.dataset.id;
@@ -253,20 +254,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (viewType === 'receitas') {
                 document.getElementById('receitas-fields').style.display = 'block';
                 document.getElementById('despesas-fields').style.display = 'none';
-                // Set required for receitas fields
-                document.getElementById('valor_cobranca').required = true;
-                document.getElementById('status_pagamento').required = true;
-                // Remove required from despesas fields
-                document.getElementById('descricao').required = false;
-                document.getElementById('valor').required = false;
-                document.getElementById('status').required = false;
+                
+                // Remove required attribute from despesas fields
+                const despesasFields = document.getElementById('despesas-fields').querySelectorAll('[required]');
+                despesasFields.forEach(field => field.removeAttribute('required'));
+                
+                // Set required for relevant receitas fields
+                document.getElementById('valor_cobranca').setAttribute('required', '');
+                document.getElementById('status_pagamento').setAttribute('required', '');
             } else {
                 document.getElementById('receitas-fields').style.display = 'none';
                 document.getElementById('despesas-fields').style.display = 'block';
                 // Set required for despesas fields
                 document.getElementById('descricao').required = true;
                 document.getElementById('valor').required = true;
-                document.getElementById('status').required = true;
                 // Remove required from receitas fields
                 document.getElementById('valor_cobranca').required = false;
                 document.getElementById('status_pagamento').required = false;
@@ -277,7 +278,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Fetch item data
             fetch(`/financas/get-item/${viewType}/${financeId}/`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log('Received data:', data);
                     document.getElementById('finance_id').value = financeId;
@@ -285,11 +291,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     if (viewType === 'receitas') {
                         const valorInput = document.getElementById('valor_cobranca');
-                        // Format the initial value
-                        valorInput.value = `R$ ${data.valor_cobranca.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}`;
+                        valorInput.value = data.valor_cobranca ? 
+                            `R$ ${parseFloat(data.valor_cobranca).toLocaleString('pt-BR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            })}` : 'R$ 0,00';
                         document.getElementById('status_pagamento').value = data.status_pagamento;
                         document.getElementById('data_pagamento').value = data.data_pagamento || '';
                         document.getElementById('cpf').value = data.cpf || '';
@@ -298,12 +304,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         document.getElementById('descricao').value = data.descricao;
                         const valorInput = document.getElementById('valor');
-                        // Format the initial value
-                        valorInput.value = `R$ ${data.valor.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}`;
-                        document.getElementById('status').value = data.status;
+                        valorInput.value = data.valor ? 
+                            `R$ ${parseFloat(data.valor).toLocaleString('pt-BR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            })}` : 'R$ 0,00';
                     }
                     
                     modal.style.display = "block";
@@ -321,19 +326,58 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const formData = new FormData(this);
         const viewType = formData.get('finance_type');
-        const moneyField = viewType === 'receitas' ? 'valor_cobranca' : 'valor';
-        const moneyInput = formData.get(moneyField);
+        const isNew = formData.get('is_new') === 'true';
         
-        // Convert from "R$ 1.234,56" to "1234.56"
-        if (moneyInput) {
-            const numericValue = moneyInput.replace('R$ ', '')
-                                         .replace(/\./g, '')
-                                         .replace(',', '.');
-            formData.set(moneyField, numericValue);
+        // Remove required attribute from hidden fields
+        if (viewType === 'receitas') {
+            const despesasFields = document.getElementById('despesas-fields').querySelectorAll('[required]');
+            despesasFields.forEach(field => field.removeAttribute('required'));
+        } else {
+            const receitasFields = document.getElementById('receitas-fields').querySelectorAll('[required]');
+            receitasFields.forEach(field => field.removeAttribute('required'));
+        }
+        
+        // Validate required fields based on view type
+        if (viewType === 'receitas') {
+            if (!formData.get('valor_cobranca') || !formData.get('status_pagamento')) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            // If status is 'pago' or 'glosa', data_pagamento is required
+            if ((formData.get('status_pagamento') === 'pago' || formData.get('status_pagamento') === 'glosa') 
+                && !formData.get('data_pagamento')) {
+                alert('Data de pagamento é obrigatória para status Pago ou Glosa');
+                return;
+            }
+        } else {
+            // Validate despesas fields
+            if (!formData.get('descricao') || !formData.get('valor') || !formData.get('data')) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+        }
+        
+        // Convert money values from "R$ 1.234,56" to "1234.56"
+        if (viewType === 'receitas') {
+            const valorCobranca = formData.get('valor_cobranca');
+            if (valorCobranca) {
+                const numericValue = valorCobranca.replace('R$ ', '')
+                                                .replace(/\./g, '')
+                                                .replace(',', '.');
+                formData.set('valor_cobranca', numericValue);
+            }
+        } else {
+            const valor = formData.get('valor');
+            if (valor) {
+                const numericValue = valor.replace('R$ ', '')
+                                        .replace(/\./g, '')
+                                        .replace(',', '.');
+                formData.set('valor', numericValue);
+            }
         }
         
         // Determine if this is a new item or an update
-        const isNew = formData.get('is_new') === 'true';
         const url = isNew ? '/financas/create-item/' : '/financas/update-item/';
         
         fetch(url, {
@@ -474,10 +518,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('receitas-fields').style.display = 'none';
         document.getElementById('despesas-fields').style.display = 'block';
         
-        // Set required fields for despesas
-        document.getElementById('descricao').required = true;
-        document.getElementById('valor').required = true;
-        document.getElementById('data').required = true;
+        // Set today's date as default for the data field
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('data').value = today;
         
         // Show modal
         modal.style.display = "block";

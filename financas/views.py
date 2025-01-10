@@ -154,7 +154,8 @@ def update_finance_item(request):
             )
             item.descricao = data.get('descricao')
             item.valor = data.get('valor')
-            item.status = data.get('status')
+            item.pago = data.get('pago') == 'on'  # Convert checkbox value to boolean
+            item.data = data.get('data')
             
         item.save()
         return JsonResponse({'success': True})
@@ -183,8 +184,8 @@ def create_finance_item(request):
                 group=request.user.group,
                 descricao=data.get('descricao'),
                 valor=data.get('valor'),
-                status=data.get('status'),
-                data=data_despesa  # Use the date from the form
+                pago=data.get('pago') == 'on',  # Convert checkbox value to boolean
+                data=data_despesa
             )
             item.save()
             return JsonResponse({'success': True})
