@@ -66,7 +66,8 @@ def financas_view(request):
         if view_type == 'receitas':
             queryset = queryset.filter(
                 Q(procedimento__nome_paciente__icontains=search_query) |
-                Q(procedimento__cpf_paciente__icontains=search_query)
+                Q(procedimento__cpf_paciente__icontains=search_query) |
+                Q(cpsa__icontains=search_query)
             )
         else:
             queryset = queryset.filter(descricao__icontains=search_query)

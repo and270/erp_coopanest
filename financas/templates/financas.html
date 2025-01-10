@@ -24,7 +24,7 @@
     <div class="header-actions">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" placeholder="Buscar guias" value="{{ search_query }}">
+            <input type="text" id="searchInput" placeholder="Buscar guias" value="{{ search_query }}" autocomplete="off">
         </div>
         
         <div class="status-filter">
@@ -437,6 +437,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Add dynamic search functionality
+    const searchInput = document.getElementById('searchInput');
+    let searchTimeout;
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        
+        searchTimeout = setTimeout(() => {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('search', this.value);
+            
+            // Preserve other parameters
+            const view = currentUrl.searchParams.get('view') || 'receitas';
+            const period = currentUrl.searchParams.get('period');
+            const status = currentUrl.searchParams.get('status');
+            
+            // Update URL and reload page
+            window.location.href = currentUrl.toString();
+        }, 500); // Wait 500ms after user stops typing before searching
+    });
 });
 </script>
 {% endblock %}
