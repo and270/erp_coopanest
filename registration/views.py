@@ -8,6 +8,7 @@ from django.http import HttpResponseForbidden
 from django.http import FileResponse
 from django.conf import settings
 import os
+from django.db import IntegrityError
 
 def home_view(request):
     context = {
@@ -23,10 +24,13 @@ def login_register_view(request):
         if 'register' in request.POST:
             register_form = CustomUserCreationForm(request.POST)
             login_form = CustomUserLoginForm()
-            if register_form.is_valid():
-                user = register_form.save()
-                login(request, user)
-                return redirect('home')  # Redirect to a homepage or dashboard
+            try:
+                if register_form.is_valid():
+                    user = register_form.save()
+                    login(request, user)
+                    return redirect('home')
+            except IntegrityError:
+                register_form.add_error('email', 'Este email já está cadastrado.')
         elif 'login' in request.POST:
             login_form = CustomUserLoginForm(request, data=request.POST)
             register_form = CustomUserCreationForm()

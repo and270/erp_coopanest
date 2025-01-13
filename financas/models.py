@@ -56,6 +56,12 @@ class ProcedimentoFinancas(models.Model):
         null=True,
         blank=True
     )
+    cpsa = models.CharField(
+        max_length=255,
+        verbose_name='CPSA',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = "Financeiro do Procedimento"
@@ -65,12 +71,13 @@ class ProcedimentoFinancas(models.Model):
         return f"Finanças - {self.procedimento}"
 
 class Despesas(models.Model):
-    STATUS_CHOICES = [
-        ('a_vencer', 'A Vencer'),
-        ('pago', 'Pago'),
-        ('atrasado', 'Pagamento Atrasado'),
-    ]
-
+    group = models.ForeignKey(
+        'registration.Groups',  # Using string to avoid circular import
+        on_delete=models.SET_NULL,
+        verbose_name='Grupo',
+        null=True,
+        blank=True
+    )
     procedimento = models.OneToOneField(
         Procedimento, 
         on_delete=models.SET_NULL,
@@ -85,11 +92,9 @@ class Despesas(models.Model):
     )
     data = models.DateField(verbose_name='Data')
     descricao = models.TextField(verbose_name='Descrição')
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='a_vencer',
-        verbose_name='Status'
+    pago = models.BooleanField(
+        default=False,
+        verbose_name='Pago'
     )
 
     class Meta:

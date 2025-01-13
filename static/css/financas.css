@@ -1,0 +1,443 @@
+.financas-container {
+    padding: 24px 24px; /* ou 0 se quiser colar completamente */
+    margin: 0;       /* remove o auto-centro */
+    max-width: 100%;
+}
+.financas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.financas-header h1 {
+    font-family: Inter;
+    font-size: 24px;
+    font-weight: 500;
+    color: #0D0D0D;
+    margin: 0;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 16px;
+    background: #F3F3F3;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.toggle-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-family: Inter;
+    font-size: 14px;
+    color: #3D3D3D;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.toggle-btn.active {
+    background: white;
+    color: #1A73E8;
+}
+
+.header-actions {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 24px;
+    width: 100%;
+}
+
+.search-box {
+    position: relative;
+    width: 55%;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 8px 16px 8px 40px;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    font-family: Inter;
+    font-size: 14px;
+    box-sizing: border-box;
+    height: 35px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8695AB;
+}
+
+.status-filter {
+    width: 15%;
+}
+
+.status-filter select {
+    width: 100%;
+    padding: 8px 16px;
+    border: 1px solid #CBD5E1;
+    background: #FFFFFF;
+    border-radius: 6px;
+    font-family: Inter;
+    font-size: 14px;
+    color: #8F97A4;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    height: 35px;
+}
+
+.filter-btn,
+.export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-family: Inter;
+    font-size: 16px;
+    cursor: pointer;
+    height: 35px;
+}
+.period-filter {
+    width: 15%;
+    position: relative;
+}
+
+.period-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #E3E3E3;
+    border-radius: 4px;
+    padding: 4px 0;
+    min-width: 200px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.period-option {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: Inter;
+    font-size: 14px;
+    color: #0D0D0D;
+}
+
+.period-option:hover {
+    background: #F5F5F5;
+}
+
+.period-option[data-selected] {
+    background: #F0F7FF;
+    color: #1A73E8;
+}
+
+.custom-range {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    border-top: 1px solid #E3E3E3;
+    margin-top: 8px;
+}
+
+.custom-range label {
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    color: #3D3D3D;
+    margin-bottom: 4px;
+    text-align: left;
+    width: 100%;
+}
+
+.custom-range input[type="date"] {
+    display: block;
+    width: 200px;  /* Fixed width to match dashboard */
+    margin-bottom: 12px;
+    padding: 8px;
+    height: 22px;
+    border: 1px solid #E3E3E3;
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    color: #0D0D0D;
+    background: #F3F3F3;
+    text-align: left;
+}
+
+.custom-range button {
+    display: block;
+    width: 200px;  /* Fixed width to match dashboard */
+    margin: 0 auto;
+    padding: 8px;
+    background: #1A73E8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.custom-range button:hover {
+    background: #1557B0;
+}
+
+.filter-btn {
+    background: #F3F3F3;
+    color: #3D3D3D;
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    min-width: 150px;
+}
+
+.export-btn {
+    background: #1A73E8;
+    color: white;
+    width: 15%;
+    justify-content: center;
+}
+
+.financas-table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    width: 100%;
+}
+
+.financas-table table {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+.financas-table th {
+    padding: 16px;
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 16.94px;
+    text-align: left;
+    color: #505050;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.financas-table td {
+    padding: 16px;
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 16.94px;
+    text-align: left;
+    color: #8695AB;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.edit-btn {
+    background: none;
+    border: none;
+    color: #1A73E8;
+    cursor: pointer;
+    padding: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s ease;
+}
+
+.edit-btn:hover {
+    color: #1557b0;
+}
+
+.edit-btn i {
+    font-size: 16px;
+    -webkit-text-stroke: 1px #1A73E8;
+    -webkit-text-fill-color: white;
+}
+
+.add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #1A73E8;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-family: Inter;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 24px;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.modal-content h2 {
+    color: #1A73E8;
+    font-family: Inter, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    margin: 0 0 24px 0;
+    display: inline-block;
+}
+
+.modal .close {
+    color: #646464;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 16px; /* Align with the title */
+}
+
+.modal .close:hover {
+    color: #000000;
+}
+
+.modal .form-group {
+    margin: 0 0 16px 0 !important; /* Force bottom margin only */
+    padding: 0 !important;
+    display: block !important;
+    gap: 0 !important;
+}
+
+.modal .form-group label {
+    margin: 0;
+    padding: 0;
+    display: flex !important;
+    align-items: center;
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #3D3D3D;
+}
+
+.modal input[type="text"],
+.modal input[type="number"],
+.modal input[type="date"],
+.modal select {
+    margin: 0 !important;
+    padding: 8px !important;
+    width: 100%;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: Inter, sans-serif;
+    background-color: #ffffff;
+    color: #000000;
+    box-sizing: border-box;
+    line-height: normal !important;
+}
+
+.modal select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z' fill='%23000000'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+/* Checkbox container styling */
+.modal .form-group label:has(input[type="checkbox"]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #3D3D3D;
+}
+
+/* Checkbox input styling */
+.modal .form-group input[type="checkbox"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Modal actions styling */
+.modal-actions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.modal-actions button {
+    padding: 10px 24px;
+    height: 40px;
+    font-size: 14px;
+}
+
+
+@media (max-width: 768px) {
+    .financas-header {
+        flex-direction: row;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+        margin-bottom: 24px;
+    }
+    
+    .search-box,
+    .status-filter,
+    .period-filter,
+    .export-btn {
+        width: 100%;
+    }
+    
+    .financas-table {
+        overflow-x: auto;
+    }
+    
+    .period-dropdown {
+        position: absolute;
+        width: 100%;
+        right: 0;
+    }
+}
