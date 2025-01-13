@@ -82,9 +82,10 @@
             </div>
         </div>
         
-        <button class="export-btn">
+        <button class="export-btn" onclick="exportFinances()">
             Exportar
         </button>
+        
     </div>
 
     <div class="financas-table">
@@ -531,4 +532,38 @@ document.addEventListener('DOMContentLoaded', function() {
     window.openAddDespesaModal = openAddDespesaModal;
 });
 </script>
+<script>
+    function exportFinances() {
+        const view = '{{ view_type }}';
+        const status = '{{ selected_status|default_if_none:"" }}';
+        const searchQuery = '{{ search_query|default_if_none:"" }}';
+        const period = '{{ selected_period|default_if_none:"" }}';
+        const startDate = '{{ custom_start_date|default_if_none:"" }}';
+        const endDate = '{{ custom_end_date|default_if_none:"" }}';
+    
+        // Construct the URL with query parameters
+        let url = new URL('{% url "export_finances" %}', window.location.origin);
+        if (view) {
+            url.searchParams.append('view', view);
+        }
+        if (status) {
+            url.searchParams.append('status', status);
+        }
+        if (searchQuery) {
+            url.searchParams.append('search', searchQuery);
+        }
+        if (period) {
+            url.searchParams.append('period', period);
+        }
+        if (startDate) {
+            url.searchParams.append('start_date', startDate);
+        }
+        if (endDate) {
+            url.searchParams.append('end_date', endDate);
+        }
+    
+        // Redirect to the constructed URL
+        window.location.href = url.toString();
+    }
+    </script>
 {% endblock %}

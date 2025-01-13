@@ -8,6 +8,8 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
+import pandas as pd
+from django.http import HttpResponse
 
 @login_required
 def financas_view(request):
@@ -204,3 +206,108 @@ def create_finance_item(request):
             
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+@login_required
+def export_finances(request):
+    view_type = request.GET.get('view', 'receitas')
+    status = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+
+    # Get period parameters
+    period = request.GET.get('period', '')
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+
+    # Base queryset with group filtering
+    if view_type == 'receitas':
+        queryset = ProcedimentoFinancas.objects.filter(
+            procedimento__group=request.user.group,
+            procedimento__status=STATUS_FINISHED
+        ).select_related('procedimento')
+    else:
+        queryset = Despesas.objects.filter(
+            group=request.user.group  # Filter despesas by group
+        ).select_related('procedimento')
+
+    # Apply period filter
+    if period == 'custom' and start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            if start_date > end_date:
+                start_date, end_date = end_date, start_date
+
+            if view_type == 'receitas':
+                queryset = queryset.filter(
+                    procedimento__data_horario__date__gte=start_date.date(),
+                    procedimento__data_horario__date__lte=end_date.date()
+                )
+            else:
+                queryset = queryset.filter(
+                    data__gte=start_date.date(),
+                    data__lte=end_date.date()
+                )
+        except ValueError:
+            pass
+    elif period:
+        try:
+            days = int(period)
+            start_date = timezone.now() - timedelta(days=days)
+            if view_type == 'receitas':
+                queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+            else:
+                queryset = queryset.filter(data__gte=start_date.date())
+        except ValueError:
+            pass
+
+    # Apply other filters
+    if search_query:
+        if view_type == 'receitas':
+            queryset = queryset.filter(
+                Q(procedimento__nome_paciente__icontains=search_query) |
+                Q(procedimento__cpf_paciente__icontains=search_query) |
+                Q(cpsa__icontains=search_query)
+            )
+        else:
+            queryset = queryset.filter(descricao__icontains=search_query)
+
+    if status:
+        if view_type == 'receitas':
+            queryset = queryset.filter(status_pagamento=status)
+        else:
+            queryset = queryset.filter(status=status)
+
+    # Prepare data for export
+    data = []
+    if view_type == 'receitas':
+        for item in queryset:
+            data.append({
+                'Paciente': item.procedimento.nome_paciente,
+                'CPF': item.procedimento.cpf_paciente,
+                'Data da Cirurgia': item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento.data_horario else '',
+                'Valor': float(item.valor_cobranca) if item.valor_cobranca else 0.0,
+                'Fonte Pagadora': item.get_tipo_cobranca_display(),
+                'CPSA': item.cpsa or 'Ainda não informado',
+                'Anestesista': item.procedimento.anestesistas_responsaveis.first().name if item.procedimento.anestesistas_responsaveis.exists() else '',
+                'Situação': item.get_status_pagamento_display(),
+                'Data do Pagamento': item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '-',
+            })
+    else:
+        for item in queryset:
+            data.append({
+                'Descrição': item.descricao,
+                'Data': item.data.strftime('%d/%m/%Y') if item.data else '',
+                'Valor': float(item.valor) if item.valor else 0.0,
+                'Pago': 'Sim' if item.pago else 'Não',
+            })
+
+    # Create a DataFrame
+    df = pd.DataFrame(data)
+
+    # Create an Excel file in memory
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=financas_{view_type}.xlsx'
+    with pd.ExcelWriter(response, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+
+    return response

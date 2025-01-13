@@ -6,4 +6,5 @@ urlpatterns = [
     path('financas/get-item/<str:type>/<int:id>/', views.get_finance_item, name='get-finance-item'),
     path('financas/update-item/', views.update_finance_item, name='update-finance-item'),
     path('financas/create-item/', views.create_finance_item, name='create_finance_item'),
+    path('financas/export/', views.export_finances, name='export_finances'),
 ]
