@@ -107,6 +107,9 @@ def financas_view(request):
 
 @login_required
 def get_finance_item(request, type, id):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
     user_group = request.user.group
     
     try:
@@ -140,6 +143,9 @@ def get_finance_item(request, type, id):
 @login_required
 @require_http_methods(["POST"])
 def update_finance_item(request):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
     user_group = request.user.group
     
     try:
@@ -177,6 +183,9 @@ def update_finance_item(request):
 @login_required
 @require_http_methods(["POST"])
 def create_finance_item(request):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
     try:
         data = request.POST
         finance_type = data.get('finance_type')
@@ -209,6 +218,9 @@ def create_finance_item(request):
     
 @login_required
 def export_finances(request):
+    if not request.user.validado:
+        return render(request, 'usuario_nao_autenticado.html')
+    
     view_type = request.GET.get('view', 'receitas')
     status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
