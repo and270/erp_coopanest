@@ -7,4 +7,5 @@ urlpatterns = [
     path('financas/update-item/', views.update_finance_item, name='update-finance-item'),
     path('financas/create-item/', views.create_finance_item, name='create_finance_item'),
     path('financas/export/', views.export_finances, name='export_finances'),
+    path('financas/delete-item/', views.delete_finance_item, name='delete_finance_item'),
 ]

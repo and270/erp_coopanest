@@ -336,7 +336,7 @@
 .modal .form-group {
     margin: 0 0 16px 0 !important; /* Force bottom margin only */
     padding: 0 !important;
-    display: block !important;
+    display: block;
     gap: 0 !important;
 }
 

@@ -129,6 +129,9 @@
                                 <button type="button" class="edit-btn" title="Editar">
                                     <i class="fas fa-pen"></i>
                                 </button>
+                                <button type="button" class="cancel-btn" title="Cancelar" style="margin-left: 5px;">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </td>
                         {% else %}
                             <td>{{ item.descricao }}</td>
@@ -138,6 +141,9 @@
                             <td>
                                 <button type="button" class="edit-btn" title="Editar">
                                     <i class="fas fa-pen"></i>
+                                </button>
+                                <button type="button" class="cancel-btn" title="Cancelar" style="margin-left: 5px;">
+                                    <i class="fas fa-times"></i>
                                 </button>
                             </td>
                         {% endif %}
@@ -181,6 +187,14 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="tipo_cobranca">Tipo de Cobrança</label>
+                    <select id="tipo_cobranca" name="tipo_cobranca">
+                        <option value="cooperativa">Cooperativa</option>
+                        <option value="hospital">Hospital</option>
+                        <option value="particular">Direta</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="data_pagamento">Data do Pagamento</label>
                     <input type="date" id="data_pagamento" name="data_pagamento">
                 </div>
@@ -188,9 +202,20 @@
                     <label for="cpf">CPF do Paciente</label>
                     <input type="text" id="cpf" name="cpf">
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="cpsa-group">
                     <label for="cpsa">CPSA</label>
                     <input type="text" id="cpsa" name="cpsa">
+                </div>
+                <div class="form-group" id="tipo-pagamento-direto-group" style="display: none;">
+                    <label for="tipo_pagamento_direto">Tipo de Pagamento</label>
+                    <select id="tipo_pagamento_direto" name="tipo_pagamento_direto">
+                        <option value="cartao">Cartão</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="pix">Pix</option>
+                        <option value="transferencia">Transferência</option>
+                        <option value="boleto">Boleto</option>
+                    </select>
                 </div>
             </div>
 
@@ -243,6 +268,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function toggleFields() {
+        const tipoCobranca = document.getElementById('tipo_cobranca').value;
+        const cpsaGroup = document.getElementById('cpsa-group');
+        const tipoPagamentoDiretoGroup = document.getElementById('tipo-pagamento-direto-group');
+
+        console.log("toggleFields() called. Current tipo_cobranca:", tipoCobranca);
+
+        // Hide both fields by default
+        cpsaGroup.style.display = 'none';
+        tipoPagamentoDiretoGroup.style.display = 'none';
+
+        console.log("Initially hid both #cpsa-group and #tipo-pagamento-direto-group.");
+
+        // Show appropriate fields based on selection
+        if (tipoCobranca === 'cooperativa') {
+            cpsaGroup.style.display = 'block';
+            console.log("tipo_cobranca is cooperativa → showing #cpsa-group.");
+        } else if (tipoCobranca === 'particular') {
+            tipoPagamentoDiretoGroup.style.display = 'block';
+            console.log("tipo_cobranca is particular → showing #tipo-pagamento-direto-group.");
+        }
+    }
+
+    const tipoCobrancaSelect = document.getElementById('tipo_cobranca');
+    tipoCobrancaSelect.addEventListener('change', toggleFields);
+
     // Handle edit button clicks
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -251,6 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = this.closest('tr');
             const viewType = '{{ view_type }}';
             const financeId = row.dataset.id;
+            toggleFields();
             
             // Show appropriate fields and set required attributes
             if (viewType === 'receitas') {
@@ -300,9 +352,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             })}` : 'R$ 0,00';
                         document.getElementById('status_pagamento').value = data.status_pagamento;
                         document.getElementById('data_pagamento').value = data.data_pagamento || '';
+                        document.getElementById('tipo_cobranca').value = data.tipo_cobranca || 'cooperativa';
+                        toggleFields();
                         document.getElementById('cpf').value = data.cpf || '';
                         document.getElementById('cpsa').value = data.cpsa || '';
                         toggleDataPagamento();
+                        if (data.tipo_pagamento_direto) {
+                            document.getElementById('tipo_pagamento_direto').value = data.tipo_pagamento_direto;
+                        }
                     } else {
                         document.getElementById('descricao').value = data.descricao;
                         const valorInput = document.getElementById('valor');
@@ -530,6 +587,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Make the function available globally
     window.openAddDespesaModal = openAddDespesaModal;
+
+    // Add event listeners for cancel buttons
+    document.querySelectorAll('.cancel-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (confirm('Deseja realmente cancelar este item?')) {
+                const row = this.closest('tr');
+                const financeId = row.dataset.id;
+                const viewType = '{{ view_type }}';
+                
+                const formData = new FormData();
+                formData.append('finance_type', viewType);
+                formData.append('finance_id', financeId);
+                
+                fetch('/financas/delete-item/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the row from the table
+                        row.remove();
+                    } else {
+                        alert('Erro ao cancelar: ' + (data.error || 'Erro desconhecido'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Erro ao cancelar o item');
+                });
+            }
+        });
+    });
 });
 </script>
 <script>

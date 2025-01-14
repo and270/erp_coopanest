@@ -123,7 +123,9 @@ def get_finance_item(request, type, id):
                 'status_pagamento': item.status_pagamento,
                 'data_pagamento': item.data_pagamento.strftime('%Y-%m-%d') if item.data_pagamento else None,
                 'cpf': item.procedimento.cpf_paciente,
-                'cpsa': item.cpsa
+                'cpsa': item.cpsa,
+                'tipo_cobranca': item.tipo_cobranca,
+                'tipo_pagamento_direto': item.tipo_pagamento_direto
             }
         else:
             item = Despesas.objects.get(
@@ -162,6 +164,7 @@ def update_finance_item(request):
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
             item.cpsa = data.get('cpsa')
+            item.tipo_cobranca = data.get('tipo_cobranca')
             if item.procedimento:
                 item.procedimento.cpf_paciente = data.get('cpf')
                 item.procedimento.save()
@@ -323,3 +326,33 @@ def export_finances(request):
         df.to_excel(writer, index=False)
 
     return response
+
+@login_required
+@require_http_methods(["POST"])
+def delete_finance_item(request):
+    if not request.user.validado:
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'})
+    
+    try:
+        data = request.POST
+        finance_type = data.get('finance_type')
+        finance_id = data.get('finance_id')
+        user_group = request.user.group
+
+        if finance_type == 'receitas':
+            item = ProcedimentoFinancas.objects.get(
+                id=finance_id,
+                procedimento__group=user_group
+            )
+        else:
+            item = Despesas.objects.get(
+                id=finance_id,
+                group=user_group
+            )
+            
+        item.delete()
+        return JsonResponse({'success': True})
+    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
+        return JsonResponse({'error': 'Item não encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
