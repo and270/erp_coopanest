@@ -121,7 +121,7 @@
                             <td>{{ item.procedimento.data_horario|date:"d/m/Y" }}</td>
                             <td>{% if item.valor_cobranca %}R$ {{ item.valor_cobranca|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{{ item.get_tipo_cobranca_display|default:"" }}</td>
-                            <td>{{ item.cpsa|default:"Ainda não informado" }}</td>
+                            <td>{{ item.get_cpsa_display }}</td>
                             <td>{{ item.procedimento.anestesistas_responsaveis.first.name }}</td>
                             <td>{{ item.get_status_pagamento_display }}</td>
                             <td>{{ item.data_pagamento|date:"d/m/Y"|default:"-" }}</td>

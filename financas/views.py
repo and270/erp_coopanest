@@ -302,7 +302,7 @@ def export_finances(request):
                 'Data da Cirurgia': item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento.data_horario else '',
                 'Valor': float(item.valor_cobranca) if item.valor_cobranca else 0.0,
                 'Fonte Pagadora': item.get_tipo_cobranca_display(),
-                'CPSA': item.cpsa or 'Ainda não informado',
+                'CPSA': item.get_cpsa_display(),
                 'Anestesista': item.procedimento.anestesistas_responsaveis.first().name if item.procedimento.anestesistas_responsaveis.exists() else '',
                 'Situação': item.get_status_pagamento_display(),
                 'Data do Pagamento': item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '-',

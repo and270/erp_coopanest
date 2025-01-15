@@ -70,6 +70,11 @@ class ProcedimentoFinancas(models.Model):
     def __str__(self):
         return f"Finanças - {self.procedimento}"
 
+    def get_cpsa_display(self):
+        if self.tipo_cobranca == 'cooperativa':
+            return self.cpsa or "Ainda não informado"
+        return "--"
+
 class Despesas(models.Model):
     group = models.ForeignKey(
         'registration.Groups',  # Using string to avoid circular import
