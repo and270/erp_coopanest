@@ -31,11 +31,16 @@ def financas_view(request):
         queryset = ProcedimentoFinancas.objects.filter(
             procedimento__group=user_group,
             procedimento__status=STATUS_FINISHED
-        ).select_related('procedimento')
+        ).select_related('procedimento').order_by(
+            '-procedimento__data_horario'  # Most recent procedures first
+        )
     else:
         queryset = Despesas.objects.filter(
             group=user_group  # Filter despesas by group
-        ).select_related('procedimento')
+        ).select_related('procedimento').order_by(
+            '-data',  # Most recent expenses first
+            '-id'     # If same date, newer entries first
+        )
     
     # Apply period filter
     if period == 'custom' and start_date_str and end_date_str:
