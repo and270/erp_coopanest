@@ -158,13 +158,14 @@ def update_finance_item(request):
         if finance_type == 'receitas':
             item = ProcedimentoFinancas.objects.get(
                 id=finance_id,
-                procedimento__group=user_group  # Ensure user has access
+                procedimento__group=user_group
             )
             item.valor_cobranca = data.get('valor_cobranca')
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
             item.cpsa = data.get('cpsa')
             item.tipo_cobranca = data.get('tipo_cobranca')
+            item.tipo_pagamento_direto = data.get('tipo_pagamento_direto')
             if item.procedimento:
                 item.procedimento.cpf_paciente = data.get('cpf')
                 item.procedimento.save()
