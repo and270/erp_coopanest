@@ -39,12 +39,16 @@
 
     <h4>Entrar em outro grupo ou criar um novo</h4>
     
-    <label>Selecione um grupo existente:</label>
     <form method="POST">
         {% csrf_token %}
         <input type="hidden" name="add_group" value="1" />
         <div class="form-row">
-            <input type="text" name="existing_group" placeholder="--------" class="form-control">
+            <select name="group" id="id_group" class="form-control">
+                <option value="">---------</option>
+                {% for group in add_group_form.fields.group.queryset %}
+                    <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endfor %}
+            </select>
             <button type="submit" class="btn btn-primary">Adicionar grupo</button>
         </div>
     </form>
@@ -57,4 +61,20 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var createNewGroupCheckbox = document.getElementById('id_create_new_group');
+        var newGroupFields = document.getElementById('new-group-fields');
+        
+        if (createNewGroupCheckbox && newGroupFields) {
+            createNewGroupCheckbox.addEventListener('change', function() {
+                newGroupFields.style.display = this.checked ? 'block' : 'none';
+            });
+            
+            // Initial state
+            newGroupFields.style.display = createNewGroupCheckbox.checked ? 'block' : 'none';
+        }
+    });
+</script>
 {% endblock %}

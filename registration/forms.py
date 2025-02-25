@@ -37,31 +37,7 @@ class CustomUserCreationForm(UserCreationForm):
             'password2': 'Confirme a senha',
         }
 
-    def clean(self):
-        cleaned_data = super().clean()
-        user_type = cleaned_data.get("user_type")
-        create_new_group = cleaned_data.get("create_new_group")
-        group = cleaned_data.get("group")
-        new_group = cleaned_data.get("new_group")
-        new_group_email = cleaned_data.get("new_group_email")
-
-        # Validation rules for Gestor or other user types
-        if user_type == GESTOR_USER:
-            if create_new_group and not new_group:
-                raise forms.ValidationError("Por favor, insira o nome do novo grupo.")
-            elif create_new_group and not new_group_email:
-                raise forms.ValidationError("Por favor, insira o e-mail do novo grupo.")
-            elif not create_new_group and not group:
-                raise forms.ValidationError("Por favor, selecione um grupo.")
-        elif user_type != GESTOR_USER and not group:
-            raise forms.ValidationError("Por favor, selecione um grupo.")
-
-        return cleaned_data
-
     def save(self, commit=True):
-        """Create the user and also create a Membership record 
-           for the chosen/created group.
-        """
         user = super().save(commit=False)
         user_type = self.cleaned_data.get("user_type")
         create_new_group = self.cleaned_data.get("create_new_group")
@@ -69,30 +45,37 @@ class CustomUserCreationForm(UserCreationForm):
         new_group = self.cleaned_data.get("new_group")
         new_group_email = self.cleaned_data.get("new_group_email")
 
-        # Decide which group is "active" for the user
         if user_type == GESTOR_USER:
             if create_new_group:
                 # Create new group
-                group_obj, created = Groups.objects.get_or_create(
+                group_obj, was_created = Groups.objects.get_or_create(
                     name=new_group,
                     defaults={'email': new_group_email}
                 )
                 user.group = group_obj
             else:
+                was_created = False  # Because we didn't create a new group
                 user.group = group
         else:
+            was_created = False
             user.group = group
 
         if commit:
-            user.save()  # Save the user first, so we can reference user in the membership
+            user.save()
 
-            # Create a membership for the group
             from registration.models import Membership
+            # If the user is a Gestor AND the group was created now, validado=True
+            gestor_created_new = (user_type == GESTOR_USER and was_created)
             Membership.objects.create(
                 user=user,
                 group=user.group,
-                validado=False  # default false; can be changed by an admin later
+                validado=gestor_created_new
             )
+
+            if gestor_created_new:
+                # Mirror the membership validation in user.validado
+                user.validado = True
+                user.save()
 
         return user
 
@@ -286,6 +269,7 @@ class AddGroupMembershipForm(forms.Form):
                 name=new_group,
                 defaults={'email': new_group_email}
             )
-            return group_obj
+            return (group_obj, created)
         else:
-            return group
+            # If not creating new, we didn't actually "create" it, so return (group, False)
+            return (group, False)

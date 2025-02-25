@@ -78,19 +78,21 @@ def profile_view(request):
             return redirect('profile')
 
         elif 'add_group' in request.POST:
-            # The user wants to add themselves to another group or create a new group
             add_group_form = AddGroupMembershipForm(request.POST, user=request.user)
             if add_group_form.is_valid():
-                group_obj = add_group_form.create_or_get_group()
+                group_obj, is_new_group = add_group_form.create_or_get_group()
 
-                # Create or get the membership
-                # By default, new membership has validado=False unless admin changes it
+                # If the user is Gestor and actually created a brand-new group, validado=True
+                gestor_created_new = (
+                    request.user.user_type == GESTOR_USER
+                    and is_new_group
+                )
+
                 membership, created = Membership.objects.get_or_create(
                     user=request.user,
                     group=group_obj,
-                    defaults={'validado': False}
+                    defaults={'validado': gestor_created_new}
                 )
-                # If membership already existed, no big deal, we don't do anything else
             return redirect('profile')
 
     # If GET request or no recognized form submission, just render the forms
