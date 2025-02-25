@@ -21,34 +21,43 @@
 
     <!-- 1) SWITCH ACTIVE GROUP -->
     <p>Você participa de vários grupos? Selecione abaixo o grupo que deseja ativar agora:</p>
-    <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="switch_active_group" value="1" />
-        <label for="group_id">Selecione um grupo:</label>
-        <select name="group_id" id="group_id">
-            {% for membership in user_memberships %}
-                <option value="{{ membership.group.id }}"
-                    {% if membership.group == user.group %}selected{% endif %}>
-                    {{ membership.group.name }}
-                    {% if membership.validado %}(validado){% else %}(não validado){% endif %}
-                </option>
-            {% endfor %}
-        </select>
-        <button type="submit">Ativar este grupo</button>
-    </form>
-
-    <br><br>
+    
+    <div class="form-group">
+        <form method="POST" class="form-group-inline">
+            {% csrf_token %}
+            <input type="hidden" name="switch_active_group" value="1" />
+            <div class="form-field">
+                <label for="group_id">Selecione um grupo:</label>
+                <select name="group_id" id="group_id">
+                    {% for membership in user_memberships %}
+                        <option value="{{ membership.group.id }}"
+                            {% if membership.group == user.group %}selected{% endif %}>
+                            {{ membership.group.name }}
+                            {% if membership.validado %}(validado){% else %}(não validado){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Ativar este grupo</button>
+        </form>
+    </div>
 
     <!-- 2) ADD ANOTHER GROUP MEMBERSHIP -->
     <h4>Entrar em outro grupo ou criar um novo</h4>
-    <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="add_group" value="1" />
-        {{ add_group_form.as_p }}
-        <button type="submit">Adicionar grupo</button>
-    </form>
-
-    <br><br>
+    
+    <div class="form-group">
+        <form method="POST" class="form-group-inline">
+            {% csrf_token %}
+            <input type="hidden" name="add_group" value="1" />
+            
+            <div class="form-field">
+                <label>Selecione um grupo existente:</label>
+                <input type="text" name="existing_group" placeholder="--------">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Adicionar grupo</button>
+        </form>
+    </div>
 
     <p>Para alterar seu e-mail ou tipo de acesso, contate o administrador do sistema.</p>
 
