@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from agenda.models import EscalaAnestesiologista, Procedimento
-from registration.models import Anesthesiologist, CustomUser, Groups, HospitalClinic, Surgeon
+from registration.models import Anesthesiologist, CustomUser, Groups, HospitalClinic, Membership, Surgeon
 from django.contrib.auth.admin import UserAdmin
 
 class CustomUserAdmin(UserAdmin):
@@ -24,6 +24,7 @@ class CustomUserAdmin(UserAdmin):
     ordering = ('email',)
 
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(Membership)
 admin.site.register(Groups)
 admin.site.register(Anesthesiologist)
 admin.site.register(Surgeon)

@@ -1,5 +1,4 @@
 {% extends 'layout.html' %}
-
 {% block title %}Perfil{% endblock %}
 
 {% block content %}
@@ -8,7 +7,7 @@
     <p><strong>Seu e-mail:</strong> {{ user.email }}</p>
     <p><strong>Seu acesso ao sistema:</strong> {{ user.get_user_type_display }}</p>
     {% if user.group %}
-        <p><strong>Seu Grupo:</strong> {{ user.group }}</p>
+        <p><strong>Seu Grupo ativo:</strong> {{ user.group }}</p>
     {% endif %}
 
     {% if user.validado %}
@@ -17,8 +16,43 @@
         <p class="validation-status not-validated">Acesso completo ainda não validado. Solicite ao administrador do sistema.</p>
     {% endif %}
 
+    <hr>
+    <h3>Múltiplos Grupos</h3>
+
+    <!-- 1) SWITCH ACTIVE GROUP -->
+    <p>Você participa de vários grupos? Selecione abaixo o grupo que deseja ativar agora:</p>
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="switch_active_group" value="1" />
+        <label for="group_id">Selecione um grupo:</label>
+        <select name="group_id" id="group_id">
+            {% for membership in user_memberships %}
+                <option value="{{ membership.group.id }}"
+                    {% if membership.group == user.group %}selected{% endif %}>
+                    {{ membership.group.name }}
+                    {% if membership.validado %}(validado){% else %}(não validado){% endif %}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Ativar este grupo</button>
+    </form>
+
+    <br><br>
+
+    <!-- 2) ADD ANOTHER GROUP MEMBERSHIP -->
+    <h4>Entrar em outro grupo ou criar um novo</h4>
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="add_group" value="1" />
+        {{ add_group_form.as_p }}
+        <button type="submit">Adicionar grupo</button>
+    </form>
+
+    <br><br>
+
     <p>Para alterar seu e-mail ou tipo de acesso, contate o administrador do sistema.</p>
 
+    <!-- LOGOUT -->
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit" class="logout-button">Logout</button>
