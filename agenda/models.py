@@ -12,6 +12,16 @@ class ProcedimentoDetalhes(models.Model):
 
     def __str__(self):
         return self.name
+
+class Convenios(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        verbose_name = "Convênio"
+        verbose_name_plural = "Convênios"
     
 class Procedimento(models.Model):
     PROCEDIMENTO_TYPE = (
@@ -36,7 +46,13 @@ class Procedimento(models.Model):
     #telefone_paciente = models.CharField(max_length=20, verbose_name='Telefone do Paciente', blank=True, null=True)
     email_paciente = models.EmailField(verbose_name='Email do Paciente', blank=True, null=True)
     cpf_paciente = models.CharField(max_length=15, blank=True, null=True, verbose_name='CPF do Paciente')
-    convenio = models.CharField(max_length=255, blank=True, null=True, verbose_name='Convênio')
+    convenio = models.ForeignKey(
+        Convenios,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Convênio'
+    )
     procedimento_principal = models.ForeignKey(
         ProcedimentoDetalhes,
         on_delete=models.SET_NULL,

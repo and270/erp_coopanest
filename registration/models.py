@@ -60,6 +60,17 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+    
+class Membership(models.Model):
+    user = models.ForeignKey('registration.CustomUser', on_delete=models.CASCADE, related_name='memberships')
+    group = models.ForeignKey('registration.Groups', on_delete=models.CASCADE)
+    validado = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('user', 'group')
+
+    def __str__(self):
+        return f"{self.user.email} in {self.group.name} (validado={self.validado})"
 
 class Anesthesiologist(models.Model):
     ROLE_CHOICES = [
