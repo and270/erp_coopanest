@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
 from registration.models import Anesthesiologist, CustomUser
-from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes
+from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes, Convenios
 from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange, weekday
@@ -186,7 +186,10 @@ def get_procedure(request, procedure_id):
         'end_time': end_time.strftime('%H:%M'),
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
-        'convenio': procedure.convenio,
+        'convenio': {
+            'id': procedure.convenio.id,
+            'text': procedure.convenio.name
+        } if procedure.convenio else None,
         'cpf_paciente': procedure.cpf_paciente,
         'procedimento_principal': {
             'id': procedure.procedimento_principal.id,
@@ -405,6 +408,21 @@ class ProcedureAutocomplete(Select2QuerySetView):
 
         if self.q:
             qs = qs.filter(name__icontains=self.q)
+
+        return qs.order_by('name')
+
+class ConvenioAutocomplete(Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Convenios.objects.none()
+
+        qs = Convenios.objects.all()
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+        else:
+            # Return some results even when no query is provided
+            qs = qs[:20]  # Limit to first 20 results when no search term
 
         return qs.order_by('name')
 

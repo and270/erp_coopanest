@@ -25,34 +25,17 @@ class CustomUserCreationForm(UserCreationForm):
 
     class Meta:
         model = CustomUser
-        fields = ('email', 'user_type', 'create_new_group', 'group', 'new_group', 'new_group_email', 'password1', 'password2', 'agree_terms', 'agree_privacy')
+        fields = (
+            'email', 'user_type', 'create_new_group', 'group', 
+            'new_group', 'new_group_email', 'password1', 'password2', 
+            'agree_terms', 'agree_privacy'
+        )
         labels = {
             'email': 'E-mail',
             'user_type': 'Tipo de usuário',
             'password1': 'Senha',
             'password2': 'Confirme a senha',
         }
-
-    def clean(self):
-        cleaned_data = super().clean()
-        user_type = cleaned_data.get("user_type")
-        create_new_group = cleaned_data.get("create_new_group")
-        group = cleaned_data.get("group")
-        new_group = cleaned_data.get("new_group")
-        new_group_email = cleaned_data.get("new_group_email")
-
-        if user_type == GESTOR_USER:
-            if create_new_group and not new_group:
-                raise forms.ValidationError("Por favor, insira o nome do novo grupo.")
-            elif create_new_group and not new_group_email:
-                raise forms.ValidationError("Por favor, insira o e-mail do novo grupo.")
-            elif not create_new_group and not group:
-                raise forms.ValidationError("Por favor, selecione um grupo.")
-
-        elif user_type != GESTOR_USER and not group:
-            raise forms.ValidationError("Por favor, selecione um grupo.")
-
-        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -64,20 +47,38 @@ class CustomUserCreationForm(UserCreationForm):
 
         if user_type == GESTOR_USER:
             if create_new_group:
-                group, created = Groups.objects.get_or_create(
+                # Create new group
+                group_obj, was_created = Groups.objects.get_or_create(
                     name=new_group,
                     defaults={'email': new_group_email}
                 )
-                user.group = group
+                user.group = group_obj
             else:
+                was_created = False  # Because we didn't create a new group
                 user.group = group
         else:
+            was_created = False
             user.group = group
 
         if commit:
             user.save()
 
+            from registration.models import Membership
+            # If the user is a Gestor AND the group was created now, validado=True
+            gestor_created_new = (user_type == GESTOR_USER and was_created)
+            Membership.objects.create(
+                user=user,
+                group=user.group,
+                validado=gestor_created_new
+            )
+
+            if gestor_created_new:
+                # Mirror the membership validation in user.validado
+                user.validado = True
+                user.save()
+
         return user
+
 
 class CustomUserLoginForm(AuthenticationForm):
     class Meta:
@@ -199,3 +200,76 @@ class HospitalClinicForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+    
+class AddGroupMembershipForm(forms.Form):
+    group = forms.ModelChoiceField(
+        queryset=Groups.objects.all().order_by('name'),
+        required=False,
+        label='Selecione um grupo existente'
+    )
+    create_new_group = forms.BooleanField(
+        required=False,
+        label='Criar novo grupo'
+    )
+    new_group = forms.CharField(
+        required=False,
+        label='Nome do novo grupo'
+    )
+    new_group_email = forms.EmailField(
+        required=False,
+        label='E-mail do novo grupo'
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # If user is not a Gestor, remove the fields for creating a new group
+        if not self.user or self.user.user_type != GESTOR_USER:
+            self.fields.pop('create_new_group')
+            self.fields.pop('new_group')
+            self.fields.pop('new_group_email')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Because for non-gestor, we have already popped the fields out,
+        # the code below only applies to a Gestor user.
+        create_new_group = cleaned_data.get('create_new_group')
+        group = cleaned_data.get('group')
+        new_group = cleaned_data.get('new_group')
+        new_group_email = cleaned_data.get('new_group_email')
+
+        if self.user and self.user.user_type == GESTOR_USER:
+            if create_new_group:
+                if not new_group or not new_group_email:
+                    raise ValidationError("Por favor, preencha o nome e e-mail do novo grupo.")
+            else:
+                if not group:
+                    raise ValidationError("Por favor, selecione um grupo existente ou crie um novo.")
+        else:
+            # Non-gestor logic:
+            #   - We have removed those fields entirely,
+            #     so the only requirement left is that group is selected.
+            if not group:
+                raise ValidationError("Por favor, selecione um grupo existente.")
+
+        return cleaned_data
+
+    def create_or_get_group(self):
+        """Return the group object the user wants to join (or has created).
+           For gestor creating a new group, create it. Otherwise, just use `group`.
+        """
+        create_new_group = self.cleaned_data.get('create_new_group')
+        group = self.cleaned_data.get('group')
+        new_group = self.cleaned_data.get('new_group')
+        new_group_email = self.cleaned_data.get('new_group_email')
+
+        if self.user and self.user.user_type == GESTOR_USER and create_new_group:
+            group_obj, created = Groups.objects.get_or_create(
+                name=new_group,
+                defaults={'email': new_group_email}
+            )
+            return (group_obj, created)
+        else:
+            # If not creating new, we didn't actually "create" it, so return (group, False)
+            return (group, False)

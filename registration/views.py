@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .forms import CustomUserCreationForm, CustomUserLoginForm, AnesthesiologistForm, SurgeonForm, HospitalClinicForm
+from .forms import AddGroupMembershipForm, CustomUserCreationForm, CustomUserLoginForm, AnesthesiologistForm, SurgeonForm, HospitalClinicForm
 from .models import Anesthesiologist, Surgeon, HospitalClinic
 from django.contrib.auth import authenticate, login
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
@@ -56,14 +56,55 @@ def login_register_view(request):
 
 @login_required
 def profile_view(request):
+    from registration.models import Membership  # so we can reference it easily
+
+    # Query all of this user's group memberships for the "switch active group" dropdown
+    user_memberships = request.user.memberships.select_related('group').all()
+
+    # We'll instantiate the "AddGroupMembershipForm" with the logged-in user
+    add_group_form = AddGroupMembershipForm(user=request.user)
+
+    if request.method == 'POST':
+
+        # Distinguish which form was submitted:
+        if 'switch_active_group' in request.POST:
+            # The user changed the group_id dropdown
+            group_id = request.POST.get('group_id')
+            membership = get_object_or_404(Membership, user=request.user, group_id=group_id)
+            # Switch the user's active group
+            request.user.group = membership.group
+            request.user.validado = membership.validado
+            request.user.save()
+            return redirect('profile')
+
+        elif 'add_group' in request.POST:
+            add_group_form = AddGroupMembershipForm(request.POST, user=request.user)
+            if add_group_form.is_valid():
+                group_obj, is_new_group = add_group_form.create_or_get_group()
+
+                # If the user is Gestor and actually created a brand-new group, validado=True
+                gestor_created_new = (
+                    request.user.user_type == GESTOR_USER
+                    and is_new_group
+                )
+
+                membership, created = Membership.objects.get_or_create(
+                    user=request.user,
+                    group=group_obj,
+                    defaults={'validado': gestor_created_new}
+                )
+            return redirect('profile')
+
+    # If GET request or no recognized form submission, just render the forms
     context = {
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
+        'user_memberships': user_memberships,
+        'add_group_form': add_group_form,
     }
     return render(request, 'profile.html', context)
-
 
 @login_required
 def cadastro_view(request):
