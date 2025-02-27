@@ -128,7 +128,7 @@
                                         <br>
                                         <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                         <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
-                                        <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
+                                        <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
                                         <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
                                         <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
                                         <p>Anestesistas: <strong>
@@ -201,7 +201,7 @@
                                                 <br>
                                                 <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                                 <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
-                                                <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio|default:"Não informado" }}</strong></span></p>
+                                                <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
                                                 <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
                                                 <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
                                                 <p>Anestesistas: <strong>
@@ -364,6 +364,29 @@
             language: 'pt-BR',
             ajax: {
                 url: '{% url "procedure-autocomplete" %}',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        page: params.page
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('#{{ form.convenio.auto_id }}').select2({
+            placeholder: 'Digite para buscar convênio...',
+            minimumInputLength: 2,
+            language: 'pt-BR',
+            ajax: {
+                url: '{% url "convenio-autocomplete" %}',
                 dataType: 'json',
                 delay: 250,
                 data: function(params) {

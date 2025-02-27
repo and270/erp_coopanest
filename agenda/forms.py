@@ -2,7 +2,7 @@ from django import forms
 
 from qualidade.models import ProcedimentoQualidade
 from registration.models import Anesthesiologist, HospitalClinic, Surgeon
-from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes
+from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes, Convenios
 from datetime import datetime, timedelta
 from dal import autocomplete
 from dal_select2 import widgets as dal_widgets
@@ -19,6 +19,19 @@ class ProcedimentoForm(forms.ModelForm):
             }
         ),
         label='Procedimento Principal',
+    )
+
+    convenio = forms.ModelChoiceField(
+        queryset=Convenios.objects.all(),
+        widget=dal_widgets.ModelSelect2(
+            url='convenio-autocomplete',
+            attrs={
+                'data-placeholder': 'Digite para buscar convênio...',
+                'data-minimum-input-length': 2,
+            }
+        ),
+        label='Convênio',
+        required=False,
     )
 
     data = forms.DateField(
@@ -68,6 +81,8 @@ class ProcedimentoForm(forms.ModelForm):
             self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
             self.fields['anestesistas_responsaveis'].queryset = Anesthesiologist.objects.filter(group=user.group).order_by('name')
+            self.fields['convenio'].queryset = Convenios.objects.all().order_by('name')
+            self.fields['procedimento_principal'].queryset = ProcedimentoDetalhes.objects.all().order_by('name')
 
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['foto_anexo'].widget.attrs.update({'class': 'form-control conditional-field'})
