@@ -12,7 +12,7 @@ class ProcedimentoDetalhes(models.Model):
 
     def __str__(self):
         return self.name
-
+    
 class Convenios(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
@@ -22,7 +22,7 @@ class Convenios(models.Model):
     class Meta:
         verbose_name = "Convênio"
         verbose_name_plural = "Convênios"
-    
+
 class Procedimento(models.Model):
     PROCEDIMENTO_TYPE = (
         (CIRURGIA_PROCEDIMENTO , 'Cirurgia'),
@@ -113,7 +113,7 @@ class EscalaAnestesiologista(models.Model):
             5: '6',  # Saturday -> Sábado
             6: '0',  # Sunday -> Domingo
         }
-    
+
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     escala_type = models.CharField(
         max_length=40,
@@ -126,7 +126,7 @@ class EscalaAnestesiologista(models.Model):
     hora_inicio = models.TimeField(verbose_name='Hora de Início do Turno', default=timezone.now().replace(hour=8, minute=0, second=0, microsecond=0))
     hora_fim = models.TimeField(verbose_name='Hora de Fim do Turno', default=timezone.now().replace(hour=17, minute=0, second=0, microsecond=0))
     observacoes = models.TextField(blank=True, verbose_name='Observações', default='')
-    
+
     class Meta:
         verbose_name = "Escala do Anestesiologista"
         verbose_name_plural = "Escalas dos Anestesiologistas"
