@@ -64,7 +64,8 @@ class Procedimento(models.Model):
     data_horario_fim = models.DateTimeField(verbose_name='Previsão de Término', default=timezone.now().replace(hour=20, minute=0, second=0, microsecond=0))
     hospital = models.ForeignKey(HospitalClinic, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hospital/Clínica')
     outro_local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Outro Local')
-    cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião')
+    cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião (selecionar se cadastrado no sistema)')
+    cirurgiao_nome = models.CharField(max_length=255, blank=True, null=True, verbose_name='Nome do Cirurgião (Se não cadastrado)')
     anestesistas_responsaveis = models.ManyToManyField(
         Anesthesiologist,
         related_name='procedimentos',

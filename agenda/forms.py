@@ -69,7 +69,7 @@ class ProcedimentoForm(forms.ModelForm):
         fields = [
             'procedimento_type', 'nome_paciente', 'email_paciente', 'cpf_paciente',
             'convenio', 'procedimento_principal', 'hospital', 'outro_local',
-            'cirurgiao', 'anestesistas_responsaveis', 'visita_pre_anestesica',
+            'cirurgiao', 'cirurgiao_nome', 'anestesistas_responsaveis', 'visita_pre_anestesica',
             'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita'
         ]
 
@@ -87,6 +87,10 @@ class ProcedimentoForm(forms.ModelForm):
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['foto_anexo'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['nome_responsavel_visita'].widget.attrs.update({'class': 'form-control conditional-field'})
+        self.fields['cirurgiao_nome'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Digite o nome do cirurgião não cadastrado'
+        })
 
     def save(self, commit=True):
         instance = super().save(commit=False)

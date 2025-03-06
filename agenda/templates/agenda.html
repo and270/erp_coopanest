@@ -130,7 +130,13 @@
                                         <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                         <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
                                         <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
-                                        <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
+                                        <p>Cirurgião: <strong><span class="modal-surgeon">
+                                            {% if procedimento.cirurgiao %}
+                                                {{ procedimento.cirurgiao.name }}
+                                            {% else %}
+                                                {{ procedimento.cirurgiao_nome|default:"Não informado" }}
+                                            {% endif %}
+                                        </span></strong></p>
                                         <p>Anestesistas: <strong>
                                             <span class="modal-anesthesiologists">
                                                 {% for anestesista in procedimento.anestesistas_responsaveis.all %}
@@ -203,7 +209,13 @@
                                                 <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                                 <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
                                                 <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
-                                                <p>Cirurgião: <strong><span class="modal-surgeon">{{ procedimento.cirurgiao.name|default:"Não informado" }}</span></strong></p>
+                                                <p>Cirurgião: <strong><span class="modal-surgeon">
+                                                    {% if procedimento.cirurgiao %}
+                                                        {{ procedimento.cirurgiao.name }}
+                                                    {% else %}
+                                                        {{ procedimento.cirurgiao_nome|default:"Não informado" }}
+                                                    {% endif %}
+                                                </span></strong></p>
                                                 <p>Anestesistas: <strong>
                                                     <span class="modal-anesthesiologists">
                                                         {% for anestesista in procedimento.anestesistas_responsaveis.all %}
@@ -310,6 +322,10 @@
             <div class="form-group">
                 <label for="{{ form.cirurgiao.id_for_label }}">{{ form.cirurgiao.label }}</label>
                 {{ form.cirurgiao }}
+                <div class="mt-2">
+                    <label for="{{ form.cirurgiao_nome.id_for_label }}">{{ form.cirurgiao_nome.label }}</label>
+                    {{ form.cirurgiao_nome }}
+                </div>
             </div>
             
             <div class="form-group">
@@ -827,6 +843,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
                 document.getElementById('id_cirurgiao').value = data.cirurgiao;
+                document.getElementById('id_cirurgiao_nome').value = data.cirurgiao_nome;
                 document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
@@ -1214,6 +1231,26 @@ document.addEventListener('DOMContentLoaded', function() {
             if (results) {
                 results.remove();
             }
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cirurgiaoSelect = document.getElementById('id_cirurgiao');
+    const cirurgiaoNomeInput = document.getElementById('id_cirurgiao_nome');
+
+    // When one field is filled, clear the other
+    cirurgiaoSelect.addEventListener('change', function() {
+        if (this.value) {
+            cirurgiaoNomeInput.value = '';
+        }
+    });
+
+    cirurgiaoNomeInput.addEventListener('input', function() {
+        if (this.value) {
+            cirurgiaoSelect.value = '';
         }
     });
 });
