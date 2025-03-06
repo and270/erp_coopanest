@@ -198,6 +198,7 @@ def get_procedure(request, procedure_id):
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
         'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
+        'cirurgiao_nome': procedure.cirurgiao_nome or '',
         'anestesistas_responsaveis': [
             {'id': anestesista.id, 'name': anestesista.name}
             for anestesista in procedure.anestesistas_responsaveis.all()
