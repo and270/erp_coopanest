@@ -249,6 +249,21 @@
     </div>
 </div>
 
+<div id="conciliation-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Conciliação de Dados</h2>
+        
+        <div id="conciliation-cards">
+            <!-- Cards will be inserted here -->
+        </div>
+        
+        <div id="no-matches" style="display: none;">
+            <p>Não há dados para conciliar no momento.</p>
+        </div>
+    </div>
+</div>
+
 <script src="https://unpkg.com/imask"></script>
 
 <script>
@@ -662,4 +677,138 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = url.toString();
     }
     </script>
+<script>
+function loadConciliationData() {
+    fetch('/financas/conciliar/')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('conciliation-cards');
+            container.innerHTML = '';
+            
+            if (data.matches && data.matches.length > 0) {
+                data.matches.forEach(match => {
+                    const card = createConciliationCard(match);
+                    container.appendChild(card);
+                });
+                document.getElementById('no-matches').style.display = 'none';
+            } else {
+                document.getElementById('no-matches').style.display = 'block';
+            }
+            
+            document.getElementById('conciliation-modal').style.display = 'block';
+        });
+}
+
+function createConciliationCard(match) {
+    const card = document.createElement('div');
+    card.className = 'conciliation-card';
+    
+    card.innerHTML = `
+        <div class="comparison">
+            <div class="system-data">
+                <h3>Dados do Sistema</h3>
+                <p>Paciente: ${match.sistema_data.paciente}</p>
+                <p>Data: ${match.sistema_data.data}</p>
+                <p>Hospital: ${match.sistema_data.hospital}</p>
+            </div>
+            <div class="api-data">
+                <h3>Dados da API</h3>
+                <p>Paciente: ${match.api_data.paciente}</p>
+                <p>Data: ${match.api_data.data || 'Não informada'}</p>
+                <p>Valor: R$ ${match.api_data.valor}</p>
+                <p>Status: ${match.api_data.status}</p>
+                <p>Hospital: ${match.api_data.hospital}</p>
+            </div>
+        </div>
+        <div class="actions">
+            <button onclick="confirmConciliation(${match.financa_id}, '${match.cpsa_id}', true)">
+                Confirmar Match
+            </button>
+            <button onclick="confirmConciliation(${match.financa_id}, '${match.cpsa_id}', false)">
+                Não é o Mesmo
+            </button>
+        </div>
+    `;
+    
+    return card;
+}
+
+function confirmConciliation(financaId, cpsaId, conciliado) {
+    fetch('/financas/confirmar-conciliacao/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            financa_id: financaId,
+            cpsa_id: cpsaId,
+            conciliado: conciliado
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the card and check if there are more
+            const card = document.querySelector(`[data-financa-id="${financaId}"]`);
+            card.remove();
+            
+            if (document.querySelectorAll('.conciliation-card').length === 0) {
+                document.getElementById('no-matches').style.display = 'block';
+            }
+        } else {
+            alert('Erro ao processar conciliação');
+        }
+    });
+}
+
+// Add button to header actions
+document.querySelector('.header-actions').insertAdjacentHTML('beforeend', `
+    <button onclick="loadConciliationData()" class="conciliate-btn">
+        <i class="fas fa-sync"></i>
+        Conciliar Dados
+    </button>
+`);
+</script>
+
+<style>
+/* TODO: Ajustar conforme estilo passado ou fazer com semelhança aos atuais */
+
+.conciliation-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.comparison {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.system-data, .api-data {
+    flex: 1;
+    padding: 10px;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.conciliate-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.conciliate-btn:hover {
+    background-color: #45a049;
+}
+</style>
 {% endblock %}

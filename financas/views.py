@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED
-from .models import ProcedimentoFinancas, Despesas
+from registration.models import Groups
+from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
 from django.db.models import Q
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -10,6 +11,9 @@ from django.views.decorators.http import require_http_methods
 import json
 import pandas as pd
 from django.http import HttpResponse
+import requests
+from difflib import SequenceMatcher
+from .models import Membership
 
 @login_required
 def financas_view(request):
@@ -360,5 +364,170 @@ def delete_finance_item(request):
         return JsonResponse({'success': True})
     except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
         return JsonResponse({'error': 'Item não encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def similar(a, b):
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+@login_required
+def conciliar_financas(request):
+    if not request.user.validado:
+        return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
+
+    user = request.user
+    validated_memberships = Membership.objects.filter(
+        user=user,
+        validado=True
+    )
+    groups_to_check = [m.group for m in validated_memberships]
+
+    if not groups_to_check:
+        return JsonResponse({'error': 'Usuário não possui grupos validados'}, status=403)
+
+    auto_matched = []
+    needs_confirmation = []
+    
+    for group in groups_to_check:
+        try:
+            #TODO PONTOS PARA RESOLVER SOBRE O REQUEST DA API
+            #TODO: acertar: autenticação (token?). Como vai ser a padronização do group_name, ou temos um código (seria a "senha?)? Da pra especificar datas? Até que limite de datas vamos puxar para conciliar?
+            response = requests.get(f'/api/guias/?group_name={group.name}')
+            api_data = response.json()
+            
+            if api_data.get('erro') != '000':
+                continue
+                
+            guias = api_data.get('listaguias', [])
+            
+            base_queryset = ProcedimentoFinancas.objects.filter(
+                procedimento__group=group,
+                procedimento__status=STATUS_FINISHED
+            ).exclude(
+                conciliacaotentativa__conciliado__isnull=False
+            )
+
+            if user.user_type == ANESTESISTA_USER:
+                base_queryset = base_queryset.filter(
+                    procedimento__anestesistas_responsaveis=user.anesthesiologist
+                )
+
+            financas = base_queryset.select_related('procedimento')
+
+            for guia in guias:
+                if not guia.get('paciente'):
+                    continue
+
+                for financa in financas:
+                    # Skip if already attempted to match
+                    if ConciliacaoTentativa.objects.filter(
+                        procedimento_financas=financa,
+                        cpsa_id=guia['idcpsa']
+                    ).exists():
+                        continue
+
+                    # For anestesista, check if they are the cooperado
+                    if (user.user_type == ANESTESISTA_USER and 
+                        not similar(user.anesthesiologist.name, guia['cooperado']) > 0.8):
+                        continue
+
+                    # Check for exact match
+                    exact_name_match = guia['paciente'].lower() == financa.procedimento.nome_paciente.lower()
+                    exact_date_match = False
+                    
+                    if guia['dt_cirurg']:
+                        api_date = datetime.strptime(guia['dt_cirurg'], '%Y-%m-%d').date()
+                        proc_date = financa.procedimento.data_horario.date()
+                        exact_date_match = api_date == proc_date
+
+                    if exact_name_match and exact_date_match:
+                        # Auto conciliate
+                        ConciliacaoTentativa.objects.create(
+                            procedimento_financas=financa,
+                            cpsa_id=guia['idcpsa'],
+                            conciliado=True
+                        )
+                        
+                        # Update ProcedimentoFinancas
+                        financa.valor_cobranca = guia['valor_faturado']
+                        financa.status_pagamento = guia['STATUS'].lower()
+                        financa.save()
+                        
+                        auto_matched.append({
+                            'paciente': guia['paciente'],
+                            'data': guia['dt_cirurg'],
+                            'valor': guia['valor_faturado'],
+                            'status': guia['STATUS']
+                        })
+                        
+                    else:
+                        # Check for similar match
+                        nome_similar = similar(guia['paciente'], 
+                                            financa.procedimento.nome_paciente) > 0.8
+                        
+                        data_similar = False
+                        if guia['dt_cirurg']:
+                            data_similar = abs((api_date - proc_date).days) <= 1
+
+                        if nome_similar and (data_similar or not guia['dt_cirurg']):
+                            needs_confirmation.append({
+                                'financa_id': financa.id,
+                                'cpsa_id': guia['idcpsa'],
+                                'api_data': {
+                                    'paciente': guia['paciente'],
+                                    'data': guia['dt_cirurg'],
+                                    'valor': guia['valor_faturado'],
+                                    'status': guia['STATUS'],
+                                    'hospital': guia['hospital'],
+                                    'cooperado': guia['cooperado']
+                                },
+                                'sistema_data': {
+                                    'paciente': financa.procedimento.nome_paciente,
+                                    'data': financa.procedimento.data_horario.strftime('%Y-%m-%d'),
+                                    'hospital': financa.procedimento.hospital.name if financa.procedimento.hospital else '',
+                                    'anestesista': financa.procedimento.anestesistas_responsaveis.first().name if financa.procedimento.anestesistas_responsaveis.exists() else ''
+                                }
+                            })
+
+        except Exception as e:
+            print(f"Error fetching data for group {group.name}: {str(e)}")
+            continue
+
+    return JsonResponse({
+        'auto_matched': auto_matched,
+        'needs_confirmation': needs_confirmation
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def confirmar_conciliacao(request):
+    try:
+        data = json.loads(request.body)
+        financa_id = data.get('financa_id')
+        cpsa_id = data.get('cpsa_id')
+        conciliado = data.get('conciliado')
+        
+        financa = ProcedimentoFinancas.objects.get(id=financa_id)
+        
+        # Create conciliation attempt record
+        ConciliacaoTentativa.objects.create(
+            procedimento_financas=financa,
+            cpsa_id=cpsa_id,
+            conciliado=conciliado
+        )
+        
+        if conciliado:
+            # Update ProcedimentoFinancas with API data
+            response = requests.get(f'/api/guias/?cpsa_id={cpsa_id}')
+            api_data = response.json()
+            
+            if api_data.get('erro') == '000' and api_data.get('listaguias'):
+                guia = api_data['listaguias'][0]
+                financa.valor_cobranca = guia['valor_faturado']
+                financa.status_pagamento = guia['STATUS'].lower()
+                financa.save()
+        
+        return JsonResponse({'success': True})
+        
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

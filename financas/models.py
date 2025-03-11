@@ -108,3 +108,12 @@ class Despesas(models.Model):
 
     def __str__(self):
         return f"Despesa - {self.descricao[:30]}"
+
+class ConciliacaoTentativa(models.Model):
+    procedimento_financas = models.ForeignKey(ProcedimentoFinancas, on_delete=models.CASCADE)
+    cpsa_id = models.CharField(max_length=255)  # idcpsa from API
+    conciliado = models.BooleanField(null=True)  # True=matched, False=rejected, None=pending
+    data_tentativa = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('procedimento_financas', 'cpsa_id')
