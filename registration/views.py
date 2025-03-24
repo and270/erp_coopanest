@@ -382,6 +382,7 @@ def fetch_user_details_from_api(user):
         response = requests.post(validate_url, json=validate_data)
         
         if response.status_code == 200:
+            #TODO: Implement logic to get user details from the API
             # Make additional API calls to get user details
             # For example, you might want to get the user's hospitals, groups, etc.
             # And update the user model accordingly
