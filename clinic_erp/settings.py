@@ -60,7 +60,21 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'registration.middleware.CoopahubConnectionMiddleware',
 ]
+
+AUTHENTICATION_BACKENDS = [
+    'registration.backends.CoopahubAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+COOPAHUB_API = {
+    'BASE_URL': 'https://aplicacao.coopanestrio.org.br',
+    'LOGIN_ENDPOINT': '/portal/acesso/loginportal.php',
+    'VALIDATE_ENDPOINT': '/portal/acesso/ajaxValidaConexao.php',
+    'DEFAULT_ORIGIN': 'PF',
+    'TOKEN_REFRESH_MINUTES': 30,
+}
 
 ROOT_URLCONF = 'clinic_erp.urls'
 

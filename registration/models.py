@@ -27,6 +27,9 @@ class CustomUser(AbstractUser):
     groups = models.ManyToManyField(Group, blank=True, related_name="%(app_label)s_%(class)s_related")
     user_permissions = models.ManyToManyField(Permission, blank=True, related_name="%(app_label)s_%(class)s_related")
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
+    
+    # Add connection key field
+    connection_key = models.CharField(max_length=255, null=True, blank=True, verbose_name='API Connection Key')
 
     user_type = models.CharField(
         max_length=40,

@@ -9,6 +9,8 @@ from django.http import FileResponse
 from django.conf import settings
 import os
 from django.db import IntegrityError
+from .backends import CoopahubAuthBackend
+import requests
 
 def home_view(request):
     context = {
@@ -34,13 +36,34 @@ def login_register_view(request):
         elif 'login' in request.POST:
             login_form = CustomUserLoginForm(request, data=request.POST)
             register_form = CustomUserCreationForm()
-            if login_form.is_valid():
-                email = login_form.cleaned_data.get('username')
-                password = login_form.cleaned_data.get('password')
-                user = authenticate(username=email, password=password)
-                if user is not None:
-                    login(request, user)
-                    return redirect('home')  # Redirect to a homepage or dashboard
+            
+            # Get credentials from form
+            username = request.POST.get('username')
+            password = request.POST.get('password')
+            
+            # Authenticate using custom backend
+            user = authenticate(
+                request, 
+                username=username, 
+                password=password,
+                backend='registration.backends.CoopahubAuthBackend'
+            )
+            
+            if user is not None:
+                login(request, user)
+                
+                # After login, validate connection and fetch user data
+                if hasattr(user, 'connection_key') and user.connection_key:
+                    # You could add logic here to validate the connection key
+                    # and fetch user details from the API
+                    # For example:
+                    # fetch_user_details_from_api(user)
+                    pass
+                    
+                return redirect('home')
+            else:
+                # Authentication failed, show error
+                login_form.add_error(None, 'Credenciais inválidas.')
     else:
         register_form = CustomUserCreationForm()
         login_form = CustomUserLoginForm()
@@ -342,3 +365,32 @@ def cadastro_redirect(request, tab):
         'ANESTESISTA_USER': ANESTESISTA_USER,
         'active_tab': tab,
     })
+
+# Add a utility function to fetch and update user data from the API
+def fetch_user_details_from_api(user):
+    """
+    Fetch additional user details from the Coopahub API using the connection key.
+    Update the user model with these details.
+    """
+    if not user.connection_key:
+        return
+    
+    try:
+        # Validate connection
+        validate_url = "https://aplicacao.coopanestrio.org.br/portal/acesso/ajaxValidaConexao.php"
+        validate_data = {"conexao": user.connection_key}
+        response = requests.post(validate_url, json=validate_data)
+        
+        if response.status_code == 200:
+            # Make additional API calls to get user details
+            # For example, you might want to get the user's hospitals, groups, etc.
+            # And update the user model accordingly
+            
+            # Example (pseudocode):
+            # user_data = fetch_user_data_from_api(user.connection_key)
+            # user.group = map_group_from_api(user_data.get('group'))
+            # user.user_type = map_user_type_from_api(user_data.get('user_type'))
+            # user.save()
+            pass
+    except Exception as e:
+        print(f"Error fetching user details: {e}")
