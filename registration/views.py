@@ -25,6 +25,7 @@ def home_view(request):
 def login_register_view(request):
     if request.method == 'POST':
         if 'register' in request.POST:
+            #TODO ALTERAR FORMULARIO PARA CAMPOS DE LOGIN COOPERATIVA API E ALTERAR O TEMPLATE (DEIXAR NO MESMO ESTILO MAS DEPOIS TROCAR PRO ESTILO PASSADO NO FIGMA)
             register_form = CustomUserCreationForm(request.POST)
             login_form = CustomUserLoginForm()
             try:
