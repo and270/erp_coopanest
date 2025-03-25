@@ -389,8 +389,8 @@ def fetch_user_details_from_api(user):
             
             # Example (pseudocode):
             # user_data = fetch_user_data_from_api(user.connection_key)
-            # user.group = map_group_from_api(user_data.get('group'))
-            # user.user_type = map_user_type_from_api(user_data.get('user_type'))
+            # user.group = map_group_from_api(user_data.get('group'))   #TODO: ver no json da onde vem o grupo
+            # user.user_type = map_user_type_from_api(user_data.get('user_type')) #TODO: ver no json da onde vem o tipo de usuario
             # user.save()
             pass
     except Exception as e:

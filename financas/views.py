@@ -391,7 +391,26 @@ def conciliar_financas(request):
     for group in groups_to_check:
         try:
             #TODO PONTOS PARA RESOLVER SOBRE O REQUEST DA API
-            #TODO: acertar: autenticação (token?). Como vai ser a padronização do group_name, ou temos um código (seria a "senha?)? Da pra especificar datas? Até que limite de datas vamos puxar para conciliar?
+            #TODO: acertar: na solicitação, usar o id de login (agora usando login da cooparativa) no parâmetro "conexao"!
+            #TODO: INFORMAÇÕES SOBRE URL E PARÂMETROS DA API DE GUIAS:
+            """
+            url:
+            https://aplicacao.coopanestrio.org.br/portal/guias/ajaxGuias.php
+
+            parâmetros
+            conexao: 
+            periodo_ate: 
+            periodo_de:
+            status: 
+
+            status possíveis
+            - Listagem Geral
+            - Aguardando Envio  
+            - Em Processamento  (no processo de validação pela equipe)
+            - Aguardando Pagamento (Aguardando resposta da operadora)
+            - Recurso de Glosa 
+            - Processo Finalizado
+            """
             response = requests.get(f'/api/guias/?group_name={group.name}')
             api_data = response.json()
             
