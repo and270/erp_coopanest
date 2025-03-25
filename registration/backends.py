@@ -42,79 +42,79 @@ class CoopahubAuthBackend(ModelBackend):
             data = response.json()
             
             if 'conexao' in data:
-                # Authentication successful, get or create user
+                # Authentication successful, get connection key
                 connection_key = data['conexao']
                 
-                # Fetch additional user information using the connection key
-                user_data = self._fetch_user_data(connection_key, origem)
-                
+                # Check if user exists in our database
                 try:
-                    # Try to get existing user by username/login ID
                     user = User.objects.get(username=username)
                 except User.DoesNotExist:
-                    # Create a new user
+                    # User doesn't exist in our database, create a new one
+                    # with minimal information initially
                     user = User(
                         username=username,
-                        email=f"{username}@example.com",  # Default email, would be updated later
+                        email=f"{username}@temp.com",  # Temporary email, will be updated later
+                        is_active=True,
+                        origem=origem
                     )
+                    # Save the user to generate an ID
+                    user.save()
                 
-                # Update user attributes
+                # Update connection information
                 user.connection_key = connection_key
                 user.origem = origem
-                user.external_id = user_data.get('IdMedico')  # If available in user_data
                 user.last_token_check = timezone.now()
-                
-                # Set user type based on origem and admin status
-                is_admin = user_data.get('adm_pj', False)
-                user.is_admin = is_admin
-                
-                if origem == 'PF':
-                    user.user_type = ANESTESISTA_USER
-                else:  # PJ
-                    user.user_type = GESTOR_USER if is_admin else SECRETARIA_USER
-                
-                # User is validated by the external system
-                user.validado = True
-                
+                user.validado = True  # User is validated through the API
                 user.save()
                 
-                # Process and associate user with their groups/empresas
-                self._process_user_groups(user, user_data)
+                # Fetch additional user information 
+                self._fetch_and_update_user_data(user)
                 
                 return user
-                
+            
         except Exception as e:
             print(f"Authentication error for origin {origem}: {e}")
             return None
     
-    def _fetch_user_data(self, connection_key, origem):
-        """Fetch user data from the API after successful authentication."""
+    def _fetch_and_update_user_data(self, user):
+        """Fetch user data from the API and update the user model."""
+        if not user.connection_key or not user.origem:
+            return
+        
         try:
-            # First validate the connection
-            validate_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/acesso/ajaxValidaConexao.php"
-            validate_data = {"conexao": connection_key}
-            validate_response = requests.post(validate_url, json=validate_data)
-            
-            if validate_response.status_code != 200:
-                raise Exception("Failed to validate connection")
-            
             # Get user's company/group information
             empresas_url = f"{settings.COOPAHUB_API['BASE_URL']}/coopaapi/guia/index.php"
             empresas_data = {
-                "conexao": connection_key,
-                "origem": origem,
+                "conexao": user.connection_key,
+                "origem": user.origem,
                 "metodo": "empresas"
             }
             
             empresas_response = requests.post(empresas_url, json=empresas_data)
             if empresas_response.status_code == 200:
-                return empresas_response.json()
-            
-            return {}
-            
+                user_data = empresas_response.json()
+                
+                # Update admin status
+                is_admin = user_data.get('adm_pj', False)
+                user.is_admin = is_admin
+                
+                # Update user type based on origem and admin status
+                if user.origem == 'PF':
+                    user.user_type = ANESTESISTA_USER
+                else:  # PJ
+                    user.user_type = GESTOR_USER if is_admin else SECRETARIA_USER
+                
+                # Update external ID if available
+                if 'IdMedico' in user_data:
+                    user.external_id = user_data['IdMedico']
+                
+                # Process user's groups from empresa data
+                self._process_user_groups(user, user_data)
+                
+                user.save()
+                
         except Exception as e:
             print(f"Error fetching user data: {e}")
-            return {}
     
     def _process_user_groups(self, user, user_data):
         """Process and associate user with their groups/empresas."""
@@ -148,7 +148,7 @@ class CoopahubAuthBackend(ModelBackend):
                 group.save()
             
             # Associate user with this group through membership
-            membership, created = Membership.objects.get_or_create(
+            membership, _ = Membership.objects.get_or_create(
                 user=user,
                 group=group,
                 defaults={'validado': True}

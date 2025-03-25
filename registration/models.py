@@ -9,7 +9,6 @@ from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
 class Groups(models.Model):
     name = models.CharField(max_length=255, verbose_name='Nome do Grupo')
     email = models.EmailField(default='', verbose_name='E-mail do Grupo')
-    # External API ID for the group/empresa
     external_id = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:

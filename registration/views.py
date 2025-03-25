@@ -24,26 +24,15 @@ def home_view(request):
 
 def login_register_view(request):
     if request.method == 'POST':
-        if 'register' in request.POST:
-            #TODO ALTERAR FORMULARIO PARA CAMPOS DE LOGIN COOPERATIVA API E ALTERAR O TEMPLATE (DEIXAR NO MESMO ESTILO MAS DEPOIS TROCAR PRO ESTILO PASSADO NO FIGMA)
-            register_form = CustomUserCreationForm(request.POST)
-            login_form = CustomUserLoginForm()
-            try:
-                if register_form.is_valid():
-                    user = register_form.save()
-                    login(request, user)
-                    return redirect('home')
-            except IntegrityError:
-                register_form.add_error('email', 'Este email já está cadastrado.')
-        elif 'login' in request.POST:
+        if 'login' in request.POST:
             login_form = CustomUserLoginForm(request, data=request.POST)
-            register_form = CustomUserCreationForm()
             
             # Get credentials from form
             username = request.POST.get('username')
             password = request.POST.get('password')
             
-            # Authenticate using custom backend
+            # Try to authenticate using custom backend
+            # The backend will create a new user if it doesn't exist but authenticates with the API
             user = authenticate(
                 request, 
                 username=username, 
@@ -54,24 +43,17 @@ def login_register_view(request):
             if user is not None:
                 login(request, user)
                 
-                # After login, validate connection and fetch user data
-                if hasattr(user, 'connection_key') and user.connection_key:
-                    # You could add logic here to validate the connection key
-                    # and fetch user details from the API
-                    # For example:
-                    # fetch_user_details_from_api(user)
-                    pass
+                # After login, fetch user data to ensure we have the latest information
+                fetch_user_details_from_api(user)
                     
                 return redirect('home')
             else:
                 # Authentication failed, show error
-                login_form.add_error(None, 'Credenciais inválidas.')
+                login_form.add_error(None, 'Credenciais inválidas. Verifique seu login e senha.')
     else:
-        register_form = CustomUserCreationForm()
         login_form = CustomUserLoginForm()
 
     return render(request, 'login_register.html', {
-        'register_form': register_form,
         'login_form': login_form,
         'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,

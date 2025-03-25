@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 
-{% block title %}Login / Registro{% endblock %}
+{% block title %}Login{% endblock %}
 
 {% block content %}
 <div class="auth-container">
@@ -9,7 +9,7 @@
         <form method="post" action="{% url 'login_register' %}">
             {% csrf_token %}
             <div class="form-group">
-                <label for="login-email"><span>&#x2709;</span> Digite seu email</label>
+                <label for="login-username"><span>&#x1F464;</span> Digite seu login</label>
                 {{ login_form.username }}
                 {% if login_form.username.errors %}
                     <div class="error-message">
@@ -37,141 +37,5 @@
             {% endif %}
         </form>
     </div>
-    <hr>
-    <div class="auth-box">
-        <h2>Registro</h2>
-        <form method="post" action="{% url 'login_register' %}">
-            {% csrf_token %}
-            {% if register_form.non_field_errors %}
-                <div class="error-message">
-                    {% for error in register_form.non_field_errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
-            <div class="form-group">
-                <label for="register-email"><span>&#x2709;</span> Digite seu email</label>
-                {{ register_form.email }}
-                {% if register_form.email.errors %}
-                    <div class="error-message">
-                        {{ register_form.email.errors.0 }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="form-group">
-                <label for="register-user-type"><span>&#x1F464;</span> Tipo de usuário</label>
-                {{ register_form.user_type }}
-                {% if register_form.user_type.errors %}
-                    <div class="error-message">
-                        {{ register_form.user_type.errors.0 }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="form-group-checkbox" id="create-new-group-option">
-                {{ register_form.create_new_group }}
-                <label for="{{ register_form.create_new_group.id_for_label }}">
-                    <span>&#x1F6A7;</span> Criar novo grupo
-                </label>
-            </div>
-            <div class="form-group" id="group-selection">
-                <label for="register-group"><span>&#x1F3E2;</span> Grupo</label>
-                {{ register_form.group }}
-                <p class="form-options-text">Se o seu grupo não está nesta lista, primeiro é necessário a criação da conta de um gestor do grupo.</p>
-                {% if register_form.group.errors %}
-                    <div class="error-message">
-                        {{ register_form.group.errors.0 }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="form-group" id="new-group">
-                <label for="register-new-group"><span>&#x1F3E2;</span> Nome do Novo Grupo</label>
-                {{ register_form.new_group }}
-                {% if register_form.new_group.errors %}
-                    <div class="error-message">
-                        {{ register_form.new_group.errors.0 }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="form-group" id="new-group-email">
-                <label for="register-new-group-email"><span>&#x2709;</span> E-mail do Novo Grupo</label>
-                {{ register_form.new_group_email }}
-                {% if register_form.new_group_email.errors %}
-                    <div class="error-message">
-                        {{ register_form.new_group_email.errors.0 }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="form-group">
-                <label for="register-password1"><span>&#x1F512;</span> Crie uma senha</label>
-                {{ register_form.password1 }}
-                {% if register_form.password1.errors %}
-                    <div class="error-message">
-                        {{ register_form.password1.errors.0 }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="form-group">
-                <label for="register-password2"><span>&#x1F512;</span> Confirme sua senha</label>
-                {{ register_form.password2 }}
-                {% if register_form.password2.errors %}
-                    <div class="error-message">
-                        {{ register_form.password2.errors.0 }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="form-group-checkbox">
-                <input type="checkbox" id="agree-terms" name="agree_terms" required>
-                <label for="agree-terms">
-                    Concordo com os <a href="{% url 'terms_of_service' %}" target="_blank">Termos de Serviço</a>
-                </label>
-            </div>
-            <div class="form-group-checkbox">
-                <input type="checkbox" id="agree-privacy" name="agree_privacy" required>
-                <label for="agree-privacy">
-                    Concordo com a <a href="{% url 'privacy_policy' %}" target="_blank">Política de Privacidade</a>
-                </label>
-            </div>
-            
-            <button type="submit" name="register" class="auth-button">Criar conta</button>
-        </form>
-    </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const userTypeField = document.querySelector('#id_user_type');
-        const createNewGroupField = document.querySelector('#id_create_new_group');
-        const groupSelection = document.querySelector('#group-selection');
-        const newGroup = document.querySelector('#new-group');
-        const newGroupEmail = document.querySelector('#new-group-email');
-        const createNewGroupOption = document.querySelector('#create-new-group-option');
-        
-        function toggleFields() {
-            const userType = userTypeField.value;
-            const createNewGroupChecked = createNewGroupField.checked;
-            
-            if (userType === '{{ GESTOR_USER }}') {
-                createNewGroupOption.style.display = 'block';
-                if (createNewGroupChecked) {
-                    groupSelection.style.display = 'none';
-                    newGroup.style.display = 'block';
-                    newGroupEmail.style.display = 'block';
-                } else {
-                    groupSelection.style.display = 'block';
-                    newGroup.style.display = 'none';
-                    newGroupEmail.style.display = 'none';
-                }
-            } else {
-                createNewGroupOption.style.display = 'none';
-                groupSelection.style.display = 'block';
-                newGroup.style.display = 'none';
-                newGroupEmail.style.display = 'none';
-            }
-        }
-    
-        userTypeField.addEventListener('change', toggleFields);
-        createNewGroupField.addEventListener('change', toggleFields);
-        toggleFields();  // Initialize the correct state
-    });
-</script>
 {% endblock %}
