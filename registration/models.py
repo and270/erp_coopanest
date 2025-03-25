@@ -9,6 +9,8 @@ from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
 class Groups(models.Model):
     name = models.CharField(max_length=255, verbose_name='Nome do Grupo')
     email = models.EmailField(default='', verbose_name='E-mail do Grupo')
+    # External API ID for the group/empresa
+    external_id = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
         verbose_name = "Grupo"
@@ -28,8 +30,12 @@ class CustomUser(AbstractUser):
     user_permissions = models.ManyToManyField(Permission, blank=True, related_name="%(app_label)s_%(class)s_related")
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     
-    # Add connection key field
+    # Add fields for API integration
     connection_key = models.CharField(max_length=255, null=True, blank=True, verbose_name='API Connection Key')
+    origem = models.CharField(max_length=2, null=True, blank=True, choices=[('PF', 'Médico'), ('PJ', 'Administrativo')], verbose_name='Origem no Sistema')
+    external_id = models.CharField(max_length=50, null=True, blank=True, verbose_name='ID Externo')
+    is_admin = models.BooleanField(default=False, verbose_name='Administrador Global')
+    last_token_check = models.DateTimeField(null=True, blank=True, verbose_name='Última Verificação de Token')
 
     user_type = models.CharField(
         max_length=40,

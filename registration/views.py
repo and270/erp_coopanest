@@ -11,6 +11,7 @@ import os
 from django.db import IntegrityError
 from .backends import CoopahubAuthBackend
 import requests
+from django.utils import timezone
 
 def home_view(request):
     context = {
@@ -372,26 +373,49 @@ def fetch_user_details_from_api(user):
     Fetch additional user details from the Coopahub API using the connection key.
     Update the user model with these details.
     """
-    if not user.connection_key:
+    if not user.connection_key or not user.origem:
         return
     
     try:
         # Validate connection
-        validate_url = "https://aplicacao.coopanestrio.org.br/portal/acesso/ajaxValidaConexao.php"
+        validate_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/acesso/ajaxValidaConexao.php"
         validate_data = {"conexao": user.connection_key}
         response = requests.post(validate_url, json=validate_data)
         
         if response.status_code == 200:
-            #TODO: Implement logic to get user details from the API
-            # Make additional API calls to get user details
-            # For example, you might want to get the user's hospitals, groups, etc.
-            # And update the user model accordingly
+            # Get user's company/group information
+            empresas_url = f"{settings.COOPAHUB_API['BASE_URL']}/coopaapi/guia/index.php"
+            empresas_data = {
+                "conexao": user.connection_key,
+                "origem": user.origem,
+                "metodo": "empresas"
+            }
             
-            # Example (pseudocode):
-            # user_data = fetch_user_data_from_api(user.connection_key)
-            # user.group = map_group_from_api(user_data.get('group'))   #TODO: ver no json da onde vem o grupo
-            # user.user_type = map_user_type_from_api(user_data.get('user_type')) #TODO: ver no json da onde vem o tipo de usuario
-            # user.save()
-            pass
+            empresas_response = requests.post(empresas_url, json=empresas_data)
+            if empresas_response.status_code == 200:
+                user_data = empresas_response.json()
+                
+                # Update admin status
+                is_admin = user_data.get('adm_pj', False)
+                user.is_admin = is_admin
+                
+                # Update user type based on origem and admin status
+                if user.origem == 'PF':
+                    user.user_type = ANESTESISTA_USER
+                else:  # PJ
+                    user.user_type = GESTOR_USER if is_admin else SECRETARIA_USER
+                
+                # Update external ID if available
+                if 'IdMedico' in user_data:
+                    user.external_id = user_data['IdMedico']
+                
+                # Process and update groups
+                from registration.backends import CoopahubAuthBackend
+                CoopahubAuthBackend()._process_user_groups(user, user_data)
+                
+                # Update last token check time
+                user.last_token_check = timezone.now()
+                user.save()
+                
     except Exception as e:
         print(f"Error fetching user details: {e}")

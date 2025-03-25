@@ -1,6 +1,7 @@
 import requests
 from django.utils import timezone
 from datetime import timedelta
+from django.conf import settings
 
 class CoopahubConnectionMiddleware:
     def __init__(self, get_response):
@@ -8,34 +9,32 @@ class CoopahubConnectionMiddleware:
 
     def __call__(self, request):
         # Check if user is authenticated and has a connection key
-        if request.user.is_authenticated and hasattr(request.user, 'connection_key'):
-            #TODO: Implement logic to check if the token needs refreshing
-            # Here you could implement logic to check if the token needs refreshing
-            # For example, you might store a timestamp of when the token was last validated
-            # and refresh it if it's older than a certain threshold
+        if request.user.is_authenticated and hasattr(request.user, 'connection_key') and request.user.connection_key:
+            # Check if token needs refreshing
+            token_refresh_minutes = settings.COOPAHUB_API.get('TOKEN_REFRESH_MINUTES', 30)
             
-            # Example (pseudocode):
-            # if request.user.last_token_check < (timezone.now() - timedelta(minutes=30)):
-            #     self.validate_connection_key(request.user)
-            pass
+            if (not request.user.last_token_check or 
+                request.user.last_token_check < (timezone.now() - timedelta(minutes=token_refresh_minutes))):
+                self.validate_connection_key(request.user)
             
         response = self.get_response(request)
         return response
     
     def validate_connection_key(self, user):
-        """Validate the user's connection key and refresh if needed."""
+        """Validate the user's connection key and update user data if needed."""
         try:
-            validate_url = "https://aplicacao.coopanestrio.org.br/portal/acesso/ajaxValidaConexao.php"
+            validate_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/acesso/ajaxValidaConexao.php"
             validate_data = {"conexao": user.connection_key}
             response = requests.post(validate_url, json=validate_data)
-
-            #TODO: Implement logic to refresh the token if needed
             
             # Update the last checked timestamp
-            # user.last_token_check = timezone.now()
-            # user.save()
+            user.last_token_check = timezone.now()
+            user.save()
             
-            # If validation fails, you might want to force a re-login
-            # or attempt to refresh the token automatically
+            # If validation is successful, refresh user data
+            if response.status_code == 200:
+                from registration.views import fetch_user_details_from_api
+                fetch_user_details_from_api(user)
+                
         except Exception as e:
             print(f"Error validating connection: {e}")
