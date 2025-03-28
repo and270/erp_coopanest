@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED
-from registration.models import Groups
+from registration.models import Groups, Membership
 from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
 from django.db.models import Q
 from datetime import datetime, timedelta
@@ -13,7 +13,6 @@ import pandas as pd
 from django.http import HttpResponse
 import requests
 from difflib import SequenceMatcher
-from .models import Membership
 
 @login_required
 def financas_view(request):
