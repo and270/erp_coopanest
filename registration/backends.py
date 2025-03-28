@@ -92,50 +92,71 @@ class CoopahubAuthBackend(ModelBackend):
             
             empresas_response = requests.post(empresas_url, json=empresas_data)
             if empresas_response.status_code == 200:
-                user_data = empresas_response.json()
+                user_data_list = empresas_response.json() # Rename to indicate it's a list
                 
-                # Update admin status
-                is_admin = user_data.get('adm_pj', False)
-                user.is_admin = is_admin
+                # --- Debugging Start ---
+                print("----- API User Data Response -----")
+                print(json.dumps(user_data_list, indent=2)) # Use json.dumps for pretty printing
+                print("-------------------------------")
+                # --- Debugging End ---
                 
-                # Update user type based on origem and admin status
-                if user.origem == 'PF':
-                    user.user_type = ANESTESISTA_USER
-                else:  # PJ
-                    user.user_type = GESTOR_USER if is_admin else SECRETARIA_USER
-                
-                # Update external ID if available
-                if 'IdMedico' in user_data:
-                    user.external_id = user_data['IdMedico']
-                
-                # Process user's groups from empresa data
-                self._process_user_groups(user, user_data)
-                
-                user.save()
+                # Check if the response is a non-empty list
+                if isinstance(user_data_list, list) and user_data_list:
+                    # Assuming adm_pj and IdMedico might be in the first item
+                    # If they are not always present or could be elsewhere, this needs adjustment
+                    first_item = user_data_list[0]
+
+                    # Update admin status (assuming it's in the first item)
+                    is_admin = first_item.get('adm_pj', False) # Get from the dictionary inside the list
+                    user.is_admin = is_admin
+
+                    # Update user type based on origem and admin status
+                    if user.origem == 'PF':
+                        user.user_type = ANESTESISTA_USER
+                    else:  # PJ
+                        user.user_type = GESTOR_USER if is_admin else SECRETARIA_USER
+
+                    # Update external ID if available (assuming it's in the first item)
+                    if 'IdMedico' in first_item:
+                        user.external_id = first_item['IdMedico'] # Get from the dictionary
+
+                    # Process user's groups using the entire list received
+                    self._process_user_groups(user, user_data_list) # Pass the list directly
+
+                    user.save()
+                else:
+                    # Handle cases where the response is not a list or is empty
+                    print(f"API response for user {user.username} was not a valid list or was empty: {user_data_list}")
                 
         except Exception as e:
-            print(f"Error fetching user data: {e}")
+            # Add the exception type for better debugging
+            print(f"Error fetching user data ({type(e).__name__}): {e}") # Updated print
     
-    def _process_user_groups(self, user, user_data):
-        """Process and associate user with their groups/empresas."""
-        if not user_data or 'empresa' not in user_data:
-            return
-        
-        # Get the list of empresas/groups
-        empresas = user_data.get('empresa', [])
-        
+    def _process_user_groups(self, user, empresas_list): # Renamed parameter
+        """Process and associate user with their groups/empresas from a list."""
+        # Check if the received data is actually a list
+        if not isinstance(empresas_list, list):
+             print("----- _process_user_groups did not receive a list -----")
+             print(f"Received data: {empresas_list}")
+             print("-------------------------------------------------------")
+             return
+
+        # --- Debugging removed/adjusted as the previous step now passes the list ---
+
         # If user has no empresas, there's nothing to do
-        if not empresas:
-            return
-        
-        # Process each empresa
-        for empresa in empresas:
-            external_id = empresa.get('value')
-            name = empresa.get('label')
-            
+        if not empresas_list:
+             print("----- Empty empresas list received -----")
+             return
+
+        # Process each empresa dictionary in the list
+        for empresa_data in empresas_list: # Iterate directly over the list
+            external_id = empresa_data.get('id_empresa') # Use the correct key 'id_empresa'
+            name = empresa_data.get('razao_social')   # Use the correct key 'razao_social'
+
             if not external_id or not name:
+                print(f"Skipping invalid empresa data: {empresa_data}") # Added log
                 continue
-            
+
             # Get or create group
             group, created = Groups.objects.get_or_create(
                 external_id=external_id,
@@ -154,7 +175,7 @@ class CoopahubAuthBackend(ModelBackend):
                 defaults={'validado': True}
             )
             
-            # TODO: In the future, check empresa.get('adm', False) to determine
+            # TODO: In the future, check empresa_data.get('adm', False) to determine
             # if user is admin of this specific group
             
             # Set the user's active group if not already set
