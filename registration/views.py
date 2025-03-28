@@ -12,6 +12,7 @@ from django.db import IntegrityError
 from .backends import CoopahubAuthBackend
 import requests
 from django.utils import timezone
+import json
 
 def home_view(request):
     context = {
@@ -31,7 +32,7 @@ def login_register_view(request):
             password = request.POST.get('password')
             
             # Try to authenticate using custom backend
-            # The backend will create a new user if it doesn't exist but authenticates with the API
+            # The backend will create/update user and fetch data via _fetch_and_update_user_data
             user = authenticate(
                 request, 
                 username=username, 
@@ -41,9 +42,6 @@ def login_register_view(request):
             
             if user is not None:
                 login(request, user)
-                
-                # After login, fetch user data to ensure we have the latest information
-                fetch_user_details_from_api(user)
                     
                 return redirect('home')
             else:
@@ -325,47 +323,82 @@ def fetch_user_details_from_api(user):
     """
     if not user.connection_key or not user.origem:
         return
-    
+
     try:
-        # Validate connection
+        # Validate connection first (optional but good practice)
         validate_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/acesso/ajaxValidaConexao.php"
         validate_data = {"conexao": user.connection_key}
         response = requests.post(validate_url, json=validate_data)
-        
+
         if response.status_code == 200:
-            # Get user's company/group information
+            # Connection validated, now get user's company/group information
             empresas_url = f"{settings.COOPAHUB_API['BASE_URL']}/coopaapi/guia/index.php"
             empresas_data = {
                 "conexao": user.connection_key,
                 "origem": user.origem,
                 "metodo": "empresas"
             }
-            
+
             empresas_response = requests.post(empresas_url, json=empresas_data)
             if empresas_response.status_code == 200:
-                user_data = empresas_response.json()
-                
-                # Update admin status
-                is_admin = user_data.get('adm_pj', False)
-                user.is_admin = is_admin
-                
-                # Update user type based on origem and admin status
-                if user.origem == 'PF':
-                    user.user_type = ANESTESISTA_USER
-                else:  # PJ
-                    user.user_type = GESTOR_USER
-                
-                # Update external ID if available
-                if 'IdMedico' in user_data:
-                    user.external_id = user_data['IdMedico']
-                
-                # Process and update groups
-                from registration.backends import CoopahubAuthBackend
-                CoopahubAuthBackend()._process_user_groups(user, user_data)
-                
-                # Update last token check time
-                user.last_token_check = timezone.now()
-                user.save()
-                
+                user_data_list = empresas_response.json() # Expecting a list
+
+                # --- Debugging Start (optional, can be removed later) ---
+                print("----- API User Data Response (fetch_user_details_from_api in views.py) -----")
+                print(json.dumps(user_data_list, indent=2))
+                print("--------------------------------------------------------------------------")
+                # --- Debugging End ---
+
+                # Check if the response is a non-empty list
+                if isinstance(user_data_list, list) and user_data_list:
+                    # Process data similar to the backend logic
+                    first_item = user_data_list[0]
+
+                    # Get admin status from API
+                    is_admin = first_item.get('adm_pj', False)
+                    # user.is_admin = is_admin # Decide if you still need this based on previous discussion
+
+                    # --- Debugging Start: User Type Logic (in views.py function) ---
+                    print(f"--- Debug (views.py): Assigning User Type for {user.username} ---")
+                    print(f"User Origem: {user.origem}")
+                    print(f"API adm_pj value (is_admin variable): {is_admin}")
+
+                    # Determine user type based on API admin status or origem
+                    if is_admin or user.origem == 'PJ':
+                        user.user_type = GESTOR_USER
+                        print(f"Condition 'is_admin or user.origem == PJ' is TRUE (is_admin={is_admin}, origem={user.origem})")
+                        print(f"Assigning User Type: GESTOR_USER")
+                    else:
+                        user.user_type = ANESTESISTA_USER
+                        print(f"Condition 'is_admin or user.origem == PJ' is FALSE (is_admin={is_admin}, origem={user.origem})")
+                        print(f"Assigning User Type: ANESTESISTA_USER")
+
+                    print(f"Final User Type Set: {user.user_type}")
+                    print(f"--- End Debug: Assigning User Type ---")
+                    # --- Debugging End: User Type Logic ---
+
+                    # Update external ID if available
+                    if 'IdMedico' in first_item:
+                        user.external_id = first_item['IdMedico']
+
+                    # Process and update groups - Need to call the *backend's* method
+                    from registration.backends import CoopahubAuthBackend
+                    # Use the *instance* method, not the class directly if possible,
+                    # though for this static-like processing it might be okay.
+                    # Creating a temporary instance is common if needed here.
+                    auth_backend_instance = CoopahubAuthBackend()
+                    auth_backend_instance._process_user_groups(user, user_data_list) # Pass the list
+
+                    # Update last token check time
+                    user.last_token_check = timezone.now()
+                    user.save()
+                else:
+                     print(f"API response for user {user.username} in fetch_user_details_from_api was not a valid list or was empty: {user_data_list}")
+
+        # Optionally handle non-200 status from validation if needed
+        # else:
+        #    print(f"Connection key validation failed for user {user.username} with status {response.status_code}")
+
     except Exception as e:
-        print(f"Error fetching user details: {e}")
+        # Add the exception type for better debugging
+        print(f"Error in fetch_user_details_from_api ({type(e).__name__}): {e}")
