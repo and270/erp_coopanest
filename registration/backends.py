@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.utils import timezone
-from constants import ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
+from constants import ANESTESISTA_USER, GESTOR_USER
 from .models import Groups, Membership
 
 User = get_user_model()
@@ -94,11 +94,10 @@ class CoopahubAuthBackend(ModelBackend):
             if empresas_response.status_code == 200:
                 user_data_list = empresas_response.json() # Rename to indicate it's a list
                 
-                # --- Debugging Start ---
-                print("----- API User Data Response -----")
-                print(json.dumps(user_data_list, indent=2)) # Use json.dumps for pretty printing
-                print("-------------------------------")
-                # --- Debugging End ---
+                # Optional: Print the raw API response if still needed for context
+                # print("----- API User Data Response (_fetch_and_update_user_data) -----")
+                # print(json.dumps(user_data_list, indent=2))
+                # print("-------------------------------------------------------------")
                 
                 # Check if the response is a non-empty list
                 if isinstance(user_data_list, list) and user_data_list:
@@ -106,15 +105,28 @@ class CoopahubAuthBackend(ModelBackend):
                     # If they are not always present or could be elsewhere, this needs adjustment
                     first_item = user_data_list[0]
 
-                    # Update admin status (assuming it's in the first item)
-                    is_admin = first_item.get('adm_pj', False) # Get from the dictionary inside the list
-                    user.is_admin = is_admin
+                    # --- Debugging Start: User Type Logic ---
+                    print(f"--- Debug: Assigning User Type for {user.username} ---")
+                    print(f"User Origem: {user.origem}")
 
-                    # Update user type based on origem and admin status
-                    if user.origem == 'PF':
+                    # Get admin status from API
+                    is_admin = first_item.get('adm_pj', False) # Get from the dictionary inside the list
+                    print(f"API adm_pj value (is_admin variable): {is_admin}")
+
+                    # Determine user type based on API admin status or origem
+                    if is_admin or user.origem == 'PJ':
+                        user.user_type = GESTOR_USER
+                        print(f"Condition 'is_admin or user.origem == PJ' is TRUE (is_admin={is_admin}, origem={user.origem})")
+                        print(f"Assigning User Type: GESTOR_USER")
+                    else:
                         user.user_type = ANESTESISTA_USER
-                    else:  # PJ
-                        user.user_type = GESTOR_USER if is_admin else SECRETARIA_USER
+                        print(f"Condition 'is_admin or user.origem == PJ' is FALSE (is_admin={is_admin}, origem={user.origem})")
+                        print(f"Assigning User Type: ANESTESISTA_USER")
+
+                    print(f"Final User Type Set: {user.user_type}")
+                    print(f"--- End Debug: Assigning User Type ---")
+                    # --- Debugging End: User Type Logic ---
+
 
                     # Update external ID if available (assuming it's in the first item)
                     if 'IdMedico' in first_item:

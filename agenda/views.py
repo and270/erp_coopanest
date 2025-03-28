@@ -7,7 +7,7 @@ from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange, weekday
 from datetime import datetime, timedelta, date
-from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
+from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 from django.http import JsonResponse, HttpResponseForbidden
@@ -319,7 +319,6 @@ def search_agenda(request):
         'current_month': month,
         'current_week_start': week_start,
         'month_name': MONTH_NAMES_PT[month],
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -481,7 +480,6 @@ def agenda_view(request):
         'current_month': month,
         'current_week_start': week_start,
         'month_name': MONTH_NAMES_PT[month],
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -543,7 +541,6 @@ def escala_view(request):
         'escalas': escalas,
         'form': form,
         'single_day_form': single_day_form,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,

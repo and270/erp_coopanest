@@ -35,7 +35,7 @@
             </button>
             <ul class="nav-links">
                 {% if user.is_authenticated %}
-                    {% if user.user_type == SECRETARIA_USER or user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
+                    {% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
                         <li><a href="{% url 'members' %}" {% if request.resolver_match.url_name == 'members' %}class="active"{% endif %}>Membros</a></li>
                         <li><a href="{% url 'cadastro' %}" {% if request.resolver_match.url_name == 'cadastro' %}class="active"{% endif %}>Cadastro</a></li>
                     {% elif user.user_type == ANESTESISTA_USER %}

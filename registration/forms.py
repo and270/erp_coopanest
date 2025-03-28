@@ -1,5 +1,5 @@
 from django import forms
-from constants import ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
+from constants import ANESTESISTA_USER, GESTOR_USER
 from registration.models import Anesthesiologist, CustomUser, Groups, HospitalClinic, Surgeon
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model

@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.db.models import Avg, Count, Case, When, F, Q, Sum
-from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
 from agenda.models import ProcedimentoDetalhes, Procedimento
@@ -173,7 +173,6 @@ def dashboard_view(request):
         'selected_period': selected_period,  # can be int or 'custom'
         'custom_start_date': start_date_str,
         'custom_end_date': end_date_str,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -509,8 +508,6 @@ def financas_dashboard_view(request):
         'custom_start_date': start_date_str,
         'custom_end_date': end_date_str,
 
-        # Roles
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,

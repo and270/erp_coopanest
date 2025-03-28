@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
+from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER
 
 class Groups(models.Model):
     name = models.CharField(max_length=255, verbose_name='Nome do Grupo')
@@ -20,8 +20,7 @@ class Groups(models.Model):
     
 class CustomUser(AbstractUser):
     USER_TYPE = (
-        (SECRETARIA_USER , 'Secretária'),
-        (GESTOR_USER , 'Gestor'),
+        (GESTOR_USER , 'Administração'),
         (ANESTESISTA_USER , 'Anestesista'),
     )
 

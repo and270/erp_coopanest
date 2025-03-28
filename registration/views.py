@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import CustomUserLoginForm, AnesthesiologistForm, SurgeonForm, HospitalClinicForm
 from .models import Anesthesiologist, Surgeon, HospitalClinic
 from django.contrib.auth import authenticate, login
-from constants import SECRETARIA_USER, GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from django.http import HttpResponseForbidden
 from django.http import FileResponse
 from django.conf import settings
@@ -15,7 +15,6 @@ from django.utils import timezone
 
 def home_view(request):
     context = {
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -55,7 +54,6 @@ def login_register_view(request):
 
     return render(request, 'login_register.html', {
         'login_form': login_form,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -84,7 +82,6 @@ def profile_view(request):
 
     # If GET request or no recognized form submission, just render the page
     context = {
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -98,7 +95,7 @@ def cadastro_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
     
-    if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+    if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
         return render(request, 'usuario_fora_funcao.html')
     
     anesthesiologist_form = AnesthesiologistForm(user=request.user)
@@ -118,7 +115,6 @@ def cadastro_view(request):
                 'anesthesiologist_form': anesthesiologist_form,
                 'surgeon_form': surgeon_form,
                 'hospital_clinic_form': hospital_clinic_form,
-                'SECRETARIA_USER': SECRETARIA_USER,
                 'GESTOR_USER': GESTOR_USER,
                 'ADMIN_USER': ADMIN_USER,
                 'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -134,7 +130,6 @@ def cadastro_view(request):
                 'anesthesiologist_form': AnesthesiologistForm(user=request.user) if form_type != 'anesthesiologist' else form,
                 'surgeon_form': SurgeonForm() if form_type != 'surgeon' else form,
                 'hospital_clinic_form': HospitalClinicForm() if form_type != 'hospital_clinic' else form,
-                'SECRETARIA_USER': SECRETARIA_USER,
                 'GESTOR_USER': GESTOR_USER,
                 'ADMIN_USER': ADMIN_USER,
                 'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -145,7 +140,6 @@ def cadastro_view(request):
             'anesthesiologist_form': anesthesiologist_form,
             'surgeon_form': surgeon_form,
             'hospital_clinic_form': hospital_clinic_form,
-            'SECRETARIA_USER': SECRETARIA_USER,
             'GESTOR_USER': GESTOR_USER,
             'ADMIN_USER': ADMIN_USER,
             'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -166,13 +160,13 @@ def edit_view(request, model_name, object_id):
             return redirect('home')
         
     elif model_name == 'surgeon':
-        if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+        if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
             return redirect('home')
         instance = get_object_or_404(Surgeon, id=object_id)
         form_class = SurgeonForm
         template_name = 'edit_surgeon.html'
     elif model_name == 'hospital_clinic':
-        if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+        if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
             return redirect('home')
         instance = get_object_or_404(HospitalClinic, id=object_id)
         form_class = HospitalClinicForm
@@ -191,7 +185,6 @@ def edit_view(request, model_name, object_id):
     return render(request, template_name, {
         'form': form,
         'instance': instance,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -205,7 +198,7 @@ def members_view(request):
     
     user_group = request.user.group
 
-    if request.user.user_type in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+    if request.user.user_type in [GESTOR_USER, ADMIN_USER]:
         anesthesiologists = Anesthesiologist.objects.filter(group=user_group)
         surgeons = Surgeon.objects.filter(group=user_group)
         hospitals = HospitalClinic.objects.filter(group=user_group)
@@ -221,7 +214,6 @@ def members_view(request):
                 'anesthesiologists': anesthesiologists,
                 'surgeons': surgeons,
                 'hospitals': hospitals,
-                'SECRETARIA_USER': SECRETARIA_USER,
                 'GESTOR_USER': GESTOR_USER,
                 'ADMIN_USER': ADMIN_USER,
                 'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -234,7 +226,6 @@ def members_view(request):
         'anesthesiologists': anesthesiologists,
         'surgeons': surgeons,
         'hospitals': hospitals,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -273,7 +264,7 @@ def cadastro_redirect(request, tab):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
     
-    if request.user.user_type not in [SECRETARIA_USER, GESTOR_USER, ADMIN_USER]:
+    if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
         return render(request, 'usuario_fora_funcao.html')
     
     anesthesiologist_form = AnesthesiologistForm(user=request.user)
@@ -293,7 +284,6 @@ def cadastro_redirect(request, tab):
                 'anesthesiologist_form': anesthesiologist_form,
                 'surgeon_form': surgeon_form,
                 'hospital_clinic_form': hospital_clinic_form,
-                'SECRETARIA_USER': SECRETARIA_USER,
                 'GESTOR_USER': GESTOR_USER,
                 'ADMIN_USER': ADMIN_USER,
                 'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -310,7 +300,6 @@ def cadastro_redirect(request, tab):
                 'anesthesiologist_form': AnesthesiologistForm(user=request.user) if form_type != 'anesthesiologist' else form,
                 'surgeon_form': SurgeonForm() if form_type != 'surgeon' else form,
                 'hospital_clinic_form': HospitalClinicForm() if form_type != 'hospital_clinic' else form,
-                'SECRETARIA_USER': SECRETARIA_USER,
                 'GESTOR_USER': GESTOR_USER,
                 'ADMIN_USER': ADMIN_USER,
                 'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -322,7 +311,6 @@ def cadastro_redirect(request, tab):
         'anesthesiologist_form': anesthesiologist_form,
         'surgeon_form': surgeon_form,
         'hospital_clinic_form': hospital_clinic_form,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -365,7 +353,7 @@ def fetch_user_details_from_api(user):
                 if user.origem == 'PF':
                     user.user_type = ANESTESISTA_USER
                 else:  # PJ
-                    user.user_type = GESTOR_USER if is_admin else SECRETARIA_USER
+                    user.user_type = GESTOR_USER
                 
                 # Update external ID if available
                 if 'IdMedico' in user_data:
