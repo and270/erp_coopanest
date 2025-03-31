@@ -478,11 +478,12 @@ def conciliar_financas(request):
                         #TODO VERIFICAR SE OS TYPES DE STATUS SÃO REALMENTE OS QUE APARTECEM NO EXEMPLO DE RESPONSE. SE NÃO, VAMOS AJUSTAR OS TYPES
                         #TODO VERRIFICAR SE ESATMOS COMPARANDO CORRETAMENTE AS KEYS DO STATUS ou os valores de display
                         #STATUS QUE NA VERDADE VEM NA API:
+                        #"Aguardando Envio" -> ignorar (?)
                         #"Em Processamento" -> "pendente" (?)
                         #"Aguardando Pagamento" -> "pendente" (?)
-                        #"Aguardando Envio" -> "pendente" (?)
                         #"Recurso de Glosa" -> "glosa" (?)
                         #"Processo Finalizado" -> "pago" (?)
+                        #"Cancelada" -> "cancelado" (?) (teria que criar esse status no model e ver se há algo a tratar no dashboard e na view principal de finanças)
                         if api_status in [choice[0] for choice in ProcedimentoFinancas.STATUS_PAGAMENTO_CHOICES]:
                              financa.status_pagamento = api_status
                         else:
