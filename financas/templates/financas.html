@@ -762,11 +762,10 @@ function confirmConciliation(financaId, cpsaId, conciliado) {
     });
 }
 
-// Add button to header actions
-document.querySelector('.header-actions').insertAdjacentHTML('beforeend', `
-    <button onclick="loadConciliationData()" class="conciliate-btn">
+// Replace the button with a floating action button
+document.body.insertAdjacentHTML('beforeend', `
+    <button id="conciliate-fab" onclick="loadConciliationData()" title="Conciliar Dados">
         <i class="fas fa-sync"></i>
-        Conciliar Dados
     </button>
 `);
 </script>
@@ -809,6 +808,36 @@ document.querySelector('.header-actions').insertAdjacentHTML('beforeend', `
 
 .conciliate-btn:hover {
     background-color: #45a049;
+}
+
+/* Replace the old button style with new FAB style */
+#conciliate-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+#conciliate-fab:hover {
+    background-color: #45a049;
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+#conciliate-fab i {
+    font-size: 20px;
 }
 </style>
 {% endblock %}
