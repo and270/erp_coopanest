@@ -13,6 +13,7 @@ from .backends import CoopahubAuthBackend
 import requests
 from django.utils import timezone
 import json
+from django.contrib import messages # Keep for potential messages
 
 def home_view(request):
     context = {
@@ -92,55 +93,64 @@ def cadastro_view(request):
     # Check if the user is validated and has the appropriate user type
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
-    
+
+    # Allow only GESTOR and ADMIN
     if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
-        return render(request, 'usuario_fora_funcao.html')
-    
-    anesthesiologist_form = AnesthesiologistForm(user=request.user)
+        # return render(request, 'usuario_fora_funcao.html') # Or redirect to home
+        return redirect('home') # Redirect home if not authorized
+
+    # Remove AnesthesiologistForm instantiation
+    # anesthesiologist_form = AnesthesiologistForm(user=request.user)
     surgeon_form = SurgeonForm()
     hospital_clinic_form = HospitalClinicForm()
-    
+
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
-        if form_type == 'anesthesiologist':
-            form = AnesthesiologistForm(request.POST, user=request.user)
-        elif form_type == 'surgeon':
+        # Remove 'anesthesiologist' case
+        # if form_type == 'anesthesiologist':
+        #     form = AnesthesiologistForm(request.POST, user=request.user)
+        if form_type == 'surgeon':
             form = SurgeonForm(request.POST)
         elif form_type == 'hospital_clinic':
             form = HospitalClinicForm(request.POST)
         else:
+            # Form type is invalid or missing
+            form = None # Explicitly set form to None
+            error_message = 'Formulário inválido ou tipo não reconhecido.'
+
+        # Check if a valid form was identified and then if it's valid
+        if form and form.is_valid():
+            # Pass the request.user to save method to associate the group
+            form.save(user=request.user)
+            return redirect('members')
+        else:
+            # If form is None or form is not valid, re-render with errors
+            # Determine which form had the error if possible, otherwise show generic error
+            if form_type == 'surgeon' and form: # Check if form exists (wasn't invalid type)
+                surgeon_form = form # Keep the submitted form with errors
+            elif form_type == 'hospital_clinic' and form:
+                hospital_clinic_form = form # Keep the submitted form with errors
+
             return render(request, 'cadastro.html', {
-                'anesthesiologist_form': anesthesiologist_form,
+                # 'anesthesiologist_form': anesthesiologist_form, # Remove
                 'surgeon_form': surgeon_form,
                 'hospital_clinic_form': hospital_clinic_form,
                 'GESTOR_USER': GESTOR_USER,
                 'ADMIN_USER': ADMIN_USER,
                 'ANESTESISTA_USER': ANESTESISTA_USER,
-                'error_message': 'Formulário inválido. Por favor, tente novamente.'
-            })
-        
-        if form and form.is_valid():
-            form.save(user=request.user)
-            return redirect('members')
-        else:
-            # Form is invalid, re-render the page with error messages
-            return render(request, 'cadastro.html', {
-                'anesthesiologist_form': AnesthesiologistForm(user=request.user) if form_type != 'anesthesiologist' else form,
-                'surgeon_form': SurgeonForm() if form_type != 'surgeon' else form,
-                'hospital_clinic_form': HospitalClinicForm() if form_type != 'hospital_clinic' else form,
-                'GESTOR_USER': GESTOR_USER,
-                'ADMIN_USER': ADMIN_USER,
-                'ANESTESISTA_USER': ANESTESISTA_USER,
-                'error_message': 'Por favor, corrija os erros no formulário.'
+                'error_message': 'Por favor, corrija os erros no formulário.' if form else error_message, # Use specific or generic error
+                'active_tab': form_type if form_type in ['surgeon', 'hospital_clinic'] else 'surgeons' # Default to surgeons tab on error
             })
     else:
+        # GET request
         return render(request, 'cadastro.html', {
-            'anesthesiologist_form': anesthesiologist_form,
+            # 'anesthesiologist_form': anesthesiologist_form, # Remove
             'surgeon_form': surgeon_form,
             'hospital_clinic_form': hospital_clinic_form,
             'GESTOR_USER': GESTOR_USER,
             'ADMIN_USER': ADMIN_USER,
             'ANESTESISTA_USER': ANESTESISTA_USER,
+            'active_tab': 'surgeons' # Default to surgeons tab on initial load
         })
 
 @login_required
@@ -148,25 +158,35 @@ def edit_view(request, model_name, object_id):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
 
+    instance = None
+    form_class = None
+    template_name = None
+
     if model_name == 'anesthesiologist':
         instance = get_object_or_404(Anesthesiologist, id=object_id)
+        # Permission Check: User must be GESTOR/ADMIN in the *same group* or the specific ANESTESISTA user
+        is_correct_user = (request.user.user_type == ANESTESISTA_USER and instance.user == request.user)
+        is_group_manager = (request.user.user_type in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group)
+
+        if not (is_correct_user or is_group_manager):
+             return redirect('home') # Or show permission denied
+
         form_class = AnesthesiologistForm
         template_name = 'edit_anesthesiologist.html'
 
-        # ANESTESISTA_USER can only edit their own record
-        if request.user.user_type == ANESTESISTA_USER and instance.user != request.user:
-            return redirect('home')
-        
     elif model_name == 'surgeon':
-        if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
-            return redirect('home')
         instance = get_object_or_404(Surgeon, id=object_id)
+        # Permission Check: User must be GESTOR/ADMIN in the *same group*
+        if not (request.user.user_type in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group):
+            return redirect('home')
         form_class = SurgeonForm
         template_name = 'edit_surgeon.html'
+
     elif model_name == 'hospital_clinic':
-        if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
-            return redirect('home')
         instance = get_object_or_404(HospitalClinic, id=object_id)
+         # Permission Check: User must be GESTOR/ADMIN in the *same group*
+        if not (request.user.user_type in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group):
+            return redirect('home')
         form_class = HospitalClinicForm
         template_name = 'edit_hospital_clinic.html'
     else:
@@ -193,61 +213,91 @@ def edit_view(request, model_name, object_id):
 def members_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
-    
+
     user_group = request.user.group
 
-    if request.user.user_type in [GESTOR_USER, ADMIN_USER]:
+    # Handle case where user has no active group assigned *before* checking type
+    if not user_group:
+        # Instead of an error page, maybe show a specific message or redirect to profile
+        # For now, rendering a simple message template.
+        return render(request, 'generic_message.html', {
+            'message_title': 'Grupo não definido',
+            'message_body': 'Você não está associado a um grupo ativo no momento. Por favor, verifique seu perfil ou selecione um grupo.',
+            'GESTOR_USER': GESTOR_USER, # Pass these for layout consistency if needed
+            'ADMIN_USER': ADMIN_USER,
+            'ANESTESISTA_USER': ANESTESISTA_USER,
+         })
+
+    if request.user.user_type == ANESTESISTA_USER:
+        # Anestesista only sees their own record
+        my_anesthesiologist_record = Anesthesiologist.objects.filter(user=request.user, group=user_group).first()
+
+        return render(request, 'members.html', {
+            'my_anesthesiologist_record': my_anesthesiologist_record,
+            'GESTOR_USER': GESTOR_USER,
+            'ADMIN_USER': ADMIN_USER,
+            'ANESTESISTA_USER': ANESTESISTA_USER,
+        })
+
+    elif request.user.user_type in [GESTOR_USER, ADMIN_USER]:
+        # Gestor/Admin sees all members in the group
         anesthesiologists = Anesthesiologist.objects.filter(group=user_group)
         surgeons = Surgeon.objects.filter(group=user_group)
         hospitals = HospitalClinic.objects.filter(group=user_group)
-    elif request.user.user_type == ANESTESISTA_USER:
-        try:
-            anesthesiologist = Anesthesiologist.objects.get(user=request.user)
-            # Redirect to the edit view if the user has a record
-            return redirect('edit', model_name='anesthesiologist', object_id=anesthesiologist.id)
-        except Anesthesiologist.DoesNotExist:
-            anesthesiologists = None
-            surgeons = hospitals = None
-            return render(request, 'members.html', {
-                'anesthesiologists': anesthesiologists,
-                'surgeons': surgeons,
-                'hospitals': hospitals,
-                'GESTOR_USER': GESTOR_USER,
-                'ADMIN_USER': ADMIN_USER,
-                'ANESTESISTA_USER': ANESTESISTA_USER,
-                'no_record_message': True  # Pass a flag to show the message
-            })
-    else:
-        anesthesiologists = surgeons = hospitals = None
 
-    return render(request, 'members.html', {
-        'anesthesiologists': anesthesiologists,
-        'surgeons': surgeons,
-        'hospitals': hospitals,
-        'GESTOR_USER': GESTOR_USER,
-        'ADMIN_USER': ADMIN_USER,
-        'ANESTESISTA_USER': ANESTESISTA_USER,
-    })
+        return render(request, 'members.html', {
+            'anesthesiologists': anesthesiologists,
+            'surgeons': surgeons,
+            'hospitals': hospitals,
+            'GESTOR_USER': GESTOR_USER,
+            'ADMIN_USER': ADMIN_USER,
+            'ANESTESISTA_USER': ANESTESISTA_USER,
+        })
+    else:
+        # Should not happen if user types are well defined, but handle defensively
+        return HttpResponseForbidden("Tipo de usuário não reconhecido ou sem permissão para ver membros.")
 
 @login_required
 def delete_view(request, model_name, object_id):
+    # Check validation and base permissions first
     if not request.user.validado:
-        return HttpResponseForbidden("Você não tem permissão para deletar este registro.")
+        return HttpResponseForbidden("Você não tem permissão para acessar esta funcionalidade.")
 
+    if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
+         return HttpResponseForbidden("Você não tem permissão para deletar registros.")
+
+    instance = None
+    model_class = None
+
+    # Determine model and fetch instance, checking permissions
     if model_name == 'anesthesiologist':
-        instance = get_object_or_404(Anesthesiologist, id=object_id)
+        return HttpResponseForbidden("Anestesiologistas não podem ser deletados.")
     elif model_name == 'surgeon':
-        instance = get_object_or_404(Surgeon, id=object_id)
+        model_class = Surgeon
+        instance = get_object_or_404(model_class, id=object_id)
     elif model_name == 'hospital_clinic':
-        instance = get_object_or_404(HospitalClinic, id=object_id)
+        model_class = HospitalClinic
+        instance = get_object_or_404(model_class, id=object_id)
     else:
-        return redirect('home')
-
-    if request.method == 'POST':
-        instance.delete()
+        messages.error(request, "Tipo de registro inválido para exclusão.")
         return redirect('members')
 
-    return render(request, 'confirm_delete.html', {'instance': instance})
+    # Check group permission
+    # Ensure instance was found before checking group
+    if instance and instance.group != request.user.group:
+         return HttpResponseForbidden("Você só pode deletar registros do seu próprio grupo.")
+
+    # If checks pass, proceed with deletion (assuming GET or POST after browser confirm)
+    try:
+        instance_name = str(instance)
+        instance.delete()
+        messages.success(request, f"{model_class._meta.verbose_name.title()} '{instance_name}' deletado com sucesso.")
+    except Exception as e:
+        messages.error(request, f"Erro ao deletar o registro: {e}")
+        # Log the error e.g., logger.error(f"Error deleting {model_name} {object_id}: {e}")
+
+    # Redirect back to members list regardless of GET/POST or success/error (within try/except)
+    return redirect('members')
 
 def terms_of_service(request):
     file_path = os.path.join(settings.BASE_DIR, 'registration/terms_and_privacy/terms_of_service.pdf')
@@ -261,58 +311,65 @@ def privacy_policy(request):
 def cadastro_redirect(request, tab):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
-    
+
+    # Allow only GESTOR and ADMIN
     if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
-        return render(request, 'usuario_fora_funcao.html')
-    
-    anesthesiologist_form = AnesthesiologistForm(user=request.user)
+        # return render(request, 'usuario_fora_funcao.html')
+         return redirect('home') # Redirect home if not authorized
+
+    # Remove AnesthesiologistForm
     surgeon_form = SurgeonForm()
     hospital_clinic_form = HospitalClinicForm()
-    
+
+    # Determine default active tab if provided tab is invalid
+    valid_tabs = ['surgeons', 'hospitals']
+    active_tab = tab if tab in valid_tabs else 'surgeons' # Default to surgeons
+
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
-        if form_type == 'anesthesiologist':
-            form = AnesthesiologistForm(request.POST, user=request.user)
-        elif form_type == 'surgeon':
+        form = None
+        error_message = 'Formulário inválido. Por favor, tente novamente.' # Default error
+
+        # Remove anesthesiologist case
+        if form_type == 'surgeon':
             form = SurgeonForm(request.POST)
+            active_tab = 'surgeons' # Ensure tab matches submitted form
         elif form_type == 'hospital_clinic':
             form = HospitalClinicForm(request.POST)
+            active_tab = 'hospitals' # Ensure tab matches submitted form
         else:
+            form = None # Invalid form type
+
+        if form and form.is_valid():
+            form.save(user=request.user) # Pass user to set group
+            return redirect('members')
+        else:
+            # Form is invalid or type was wrong
+            if form_type == 'surgeon' and form:
+                 surgeon_form = form # Keep invalid form data
+            elif form_type == 'hospital_clinic' and form:
+                 hospital_clinic_form = form # Keep invalid form data
+
             return render(request, 'cadastro.html', {
-                'anesthesiologist_form': anesthesiologist_form,
+                # 'anesthesiologist_form': anesthesiologist_form, # Remove
                 'surgeon_form': surgeon_form,
                 'hospital_clinic_form': hospital_clinic_form,
                 'GESTOR_USER': GESTOR_USER,
                 'ADMIN_USER': ADMIN_USER,
                 'ANESTESISTA_USER': ANESTESISTA_USER,
-                'active_tab': tab,
-                'error_message': 'Formulário inválido. Por favor, tente novamente.'
+                'active_tab': active_tab,
+                'error_message': 'Por favor, corrija os erros no formulário.' if form else error_message
             })
-        
-        if form and form.is_valid():
-            form.save(user=request.user)
-            return redirect('members')
-        else:
-            # Form is invalid, re-render the page with error messages
-            return render(request, 'cadastro.html', {
-                'anesthesiologist_form': AnesthesiologistForm(user=request.user) if form_type != 'anesthesiologist' else form,
-                'surgeon_form': SurgeonForm() if form_type != 'surgeon' else form,
-                'hospital_clinic_form': HospitalClinicForm() if form_type != 'hospital_clinic' else form,
-                'GESTOR_USER': GESTOR_USER,
-                'ADMIN_USER': ADMIN_USER,
-                'ANESTESISTA_USER': ANESTESISTA_USER,
-                'active_tab': tab,
-                'error_message': 'Por favor, corrija os erros no formulário.'
-            })
-    
+
+    # GET request
     return render(request, 'cadastro.html', {
-        'anesthesiologist_form': anesthesiologist_form,
+         # 'anesthesiologist_form': anesthesiologist_form, # Remove
         'surgeon_form': surgeon_form,
         'hospital_clinic_form': hospital_clinic_form,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
-        'active_tab': tab,
+        'active_tab': active_tab, # Pass the determined active tab
     })
 
 # Add a utility function to fetch and update user data from the API
@@ -402,3 +459,4 @@ def fetch_user_details_from_api(user):
     except Exception as e:
         # Add the exception type for better debugging
         print(f"Error in fetch_user_details_from_api ({type(e).__name__}): {e}")
+

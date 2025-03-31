@@ -6,7 +6,6 @@
 {% block content %}
 <div class="cadastro-container">
     <div class="tab-container">
-        <button class="tab-button {% if active_tab == 'anesthesiologists' %}active{% endif %}" data-tab="medicos-anestesiologistas">Médicos anestesiologistas</button>
         <button class="tab-button {% if active_tab == 'surgeons' %}active{% endif %}" data-tab="medicos-cirurgioes">Médicos cirurgiões</button>
         <button class="tab-button {% if active_tab == 'hospitals' %}active{% endif %}" data-tab="hospitais-clinicas">Hospitais e clínicas</button>
     </div>
@@ -17,48 +16,68 @@
         </div>
     {% endif %}
 
-    <div id="medicos-anestesiologistas" class="tab-content active">
-        <form method="post">
-            {% csrf_token %}
-            <div class="form-group">
-                {% for field in anesthesiologist_form %}
-                    <div class="form-field">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                    </div>
-                {% endfor %}
-            </div>
-            <button type="submit" name="form_type" value="anesthesiologist" class="cadastrar-btn">Cadastrar</button>
-        </form>
-    </div>
 
-    <div id="medicos-cirurgioes" class="tab-content">
+    {# Add active class based on active_tab for Surgeons #}
+    <div id="medicos-cirurgioes" class="tab-content {% if active_tab == 'surgeons' %}active{% endif %}">
+        <h2 class="tab-title">Cadastro de Cirurgião</h2> {# Optional: Add title #}
         <form method="post">
             {% csrf_token %}
+             <input type="hidden" name="form_type" value="surgeon"> {# Hidden input to identify form #}
             <div class="form-group">
                 {% for field in surgeon_form %}
                     <div class="form-field">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                         {% if field.errors %} {# Display field errors #}
+                            <div class="errorlist text-danger"> {# Optional: Style errors #}
+                                {% for error in field.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 {% endfor %}
+                 {% if surgeon_form.non_field_errors %} {# Display non-field errors #}
+                    <div class="errorlist text-danger">
+                         {% for error in surgeon_form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
-            <button type="submit" name="form_type" value="surgeon" class="cadastrar-btn">Cadastrar</button>
+            <button type="submit" class="cadastrar-btn">Cadastrar Cirurgião</button> {# Updated button text #}
         </form>
     </div>
 
-    <div id="hospitais-clinicas" class="tab-content">
+    {# Add active class based on active_tab for Hospitals #}
+    <div id="hospitais-clinicas" class="tab-content {% if active_tab == 'hospitals' %}active{% endif %}">
+         <h2 class="tab-title">Cadastro de Hospital/Clínica</h2> {# Optional: Add title #}
         <form method="post">
             {% csrf_token %}
+             <input type="hidden" name="form_type" value="hospital_clinic"> {# Hidden input to identify form #}
             <div class="form-group">
                 {% for field in hospital_clinic_form %}
                     <div class="form-field">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                         {% if field.errors %} {# Display field errors #}
+                            <div class="errorlist text-danger"> {# Optional: Style errors #}
+                                {% for error in field.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 {% endfor %}
+                 {% if hospital_clinic_form.non_field_errors %} {# Display non-field errors #}
+                     <div class="errorlist text-danger">
+                         {% for error in hospital_clinic_form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
-            <button type="submit" name="form_type" value="hospital_clinic" class="cadastrar-btn">Cadastrar</button>
+            <button type="submit" class="cadastrar-btn">Cadastrar Hospital/Clínica</button> {# Updated button text #}
         </form>
     </div>
 </div>
@@ -72,47 +91,63 @@
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
 
+        // Function to activate a tab
         function activateTab(tabName) {
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-
-            const activeButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
-            activeButton.classList.add('active');
-            document.getElementById(tabName).classList.add('active');
+            tabButtons.forEach(btn => {
+                if (btn.getAttribute('data-tab') === tabName) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            tabContents.forEach(content => {
+                if (content.id === tabName) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
         }
 
+        // Add click listeners to tab buttons
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const tabName = button.getAttribute('data-tab');
                 activateTab(tabName);
+                // Optional: Update URL hash or use history API if desired
+                // window.location.hash = tabName;
             });
         });
 
-        // Activate the initial tab based on the active_tab variable
-        const initialTab = '{{ active_tab }}';
-        if (initialTab === 'anesthesiologists') {
-            activateTab('medicos-anestesiologistas');
-        } else if (initialTab === 'surgeons') {
-            activateTab('medicos-cirurgioes');
-        } else if (initialTab === 'hospitals') {
-            activateTab('hospitais-clinicas');
-        }else{
-            activateTab('medicos-anestesiologistas');
+        // Activate the initial tab based on the active_tab variable passed from the view
+        const initialTabName = '{{ active_tab|escapejs }}'; // Get tab name from view context
+        let tabToActivate = 'medicos-cirurgioes'; // Default tab ID
+
+        if (initialTabName === 'surgeons') {
+            tabToActivate = 'medicos-cirurgioes';
+        } else if (initialTabName === 'hospitals') {
+            tabToActivate = 'hospitais-clinicas';
         }
+        // No need for anesthesiologists case anymore
+
+        activateTab(tabToActivate); // Activate the determined tab
     });
 </script>
 <script>
     $(document).ready(function(){
-        // Date fields mask
-        $('.date-input').mask('00/00/0000', {placeholder: "dd/mm/yyyy"});
+        // Date fields mask (keep if needed for other forms, e.g., future date fields)
+        // $('.date-input').mask('00/00/0000', {placeholder: "dd/mm/yyyy"});
 
-        // CPF field mask
-        $('input[name="cpf"]').mask('000.000.000-00');
+        // CPF field mask (keep if needed for other forms)
+        // $('input[name="cpf"]').mask('000.000.000-00');
 
-        // Phone fields mask
+        // Phone fields mask (used by Surgeon and Hospital forms)
         $('.phone-mask').mask('(00) 00000-0000', {
             placeholder: "(00) 00000-0000"
         });
+
+        // -- Removed CRM mask --
+        // $('input[name="crm"]').mask('...');
     });
 </script>
 {% endblock %}

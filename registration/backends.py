@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.utils import timezone
 from constants import ANESTESISTA_USER, GESTOR_USER
-from .models import Groups, Membership
+from .models import Groups, Membership, Anesthesiologist
 
 User = get_user_model()
 
@@ -113,16 +113,12 @@ class CoopahubAuthBackend(ModelBackend):
                     is_admin = first_item.get('adm_pj', False) # Get from the dictionary inside the list
                     print(f"API adm_pj value (is_admin variable): {is_admin}")
 
-                    # Determine user type based on API admin status or origem
-                    if is_admin or user.origem == 'PJ':
-                        user.user_type = GESTOR_USER
-                        print(f"Condition 'is_admin or user.origem == PJ' is TRUE (is_admin={is_admin}, origem={user.origem})")
-                        print(f"Assigning User Type: GESTOR_USER")
-                    else:
-                        user.user_type = ANESTESISTA_USER
-                        print(f"Condition 'is_admin or user.origem == PJ' is FALSE (is_admin={is_admin}, origem={user.origem})")
-                        print(f"Assigning User Type: ANESTESISTA_USER")
+                    # Determine user type
+                    assigned_user_type = GESTOR_USER if is_admin or user.origem == 'PJ' else ANESTESISTA_USER
+                    user.user_type = assigned_user_type # Assign determined type
 
+                    print(f"Condition 'is_admin or user.origem == PJ' is {is_admin or user.origem == 'PJ'} (is_admin={is_admin}, origem={user.origem})")
+                    print(f"Assigning User Type: {assigned_user_type}")
                     print(f"Final User Type Set: {user.user_type}")
                     print(f"--- End Debug: Assigning User Type ---")
                     # --- Debugging End: User Type Logic ---
@@ -134,6 +130,25 @@ class CoopahubAuthBackend(ModelBackend):
 
                     # Process user's groups using the entire list received
                     self._process_user_groups(user, user_data_list) # Pass the list directly
+
+                    # --- Automatic Anesthesiologist Creation ---
+                    if user.user_type == ANESTESISTA_USER and user.group:
+                        # Check if an Anesthesiologist record already exists for this user
+                        if not Anesthesiologist.objects.filter(user=user).exists():
+                            print(f"--- Creating Anesthesiologist record for user {user.username} ---")
+                            #TODO VERIFICAR EXEMPLO DE RESPOSTA API E VER SE HÁ ALGUM DESSES CAMPOS / AJUSTAR
+                            api_name = first_item.get('nome_completo', '') or first_item.get('nome', '')
+
+                            Anesthesiologist.objects.create(
+                                user=user,
+                                group=user.group, # Assign to user's active group
+                                name=api_name if api_name else user.username, # Use API name, fallback ONLY to username
+
+                            )
+                            print(f"--- Anesthesiologist record created for {user.username} ---")
+                        else:
+                            print(f"--- Anesthesiologist record already exists for user {user.username} ---")
+                    # --- End Automatic Creation ---
 
                     user.save()
                 else:

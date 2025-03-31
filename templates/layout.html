@@ -41,8 +41,6 @@
                     {% elif user.user_type == ANESTESISTA_USER %}
                         <li><a href="{% url 'members' %}" {% if request.resolver_match.url_name == 'members' %}class="active"{% endif %}>Meu cadastro</a></li>
                     {% endif %}
-                {% else %}
-                    <li><a href="{% url 'cadastro' %}" {% if request.resolver_match.url_name == 'cadastro' %}class="active"{% endif %}>Cadastro</a></li>
                 {% endif %}
                 <li><a href="{% url 'agenda' %}" {% if request.resolver_match.url_name == 'agenda' %}class="active"{% endif %}>Agenda</a></li>
                 <li><a href="{% url 'financas' %}" {% if request.resolver_match.url_name == 'financas' %}class="active"{% endif %}>Finanças</a></li>
