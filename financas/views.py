@@ -13,6 +13,9 @@ import pandas as pd
 from django.http import HttpResponse
 import requests
 from difflib import SequenceMatcher
+from django.conf import settings
+
+DIAS_PARA_CONCILIACAO = 90
 
 @login_required
 def financas_view(request):
@@ -388,33 +391,25 @@ def conciliar_financas(request):
     
     for group in groups_to_check:
         try:
-            #TODO PONTOS PARA RESOLVER SOBRE O REQUEST DA API
-            #TODO: acertar: na solicitação, usar o id de login (agora usando login da cooparativa) no parâmetro "conexao"!
-            #TODO: INFORMAÇÕES SOBRE URL E PARÂMETROS DA API DE GUIAS:
-            """
-            url:
-            https://aplicacao.coopanestrio.org.br/portal/guias/ajaxGuias.php
+            # Construct API URL and data payload
+            api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
+            api_payload = {
+                "conexao": user.connection_key,
+                "periodo_de": (timezone.now() - timedelta(days=DIAS_PARA_CONCILIACAO)).strftime('%Y-%m-%d'),
+                "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
+                "status": "Listagem Geral" 
+            }
 
-            parâmetros
-            conexao: 
-            periodo_ate: 
-            periodo_de:
-            status: 
-
-            status possíveis
-            - Listagem Geral
-            - Aguardando Envio  
-            - Em Processamento  (no processo de validação pela equipe)
-            - Aguardando Pagamento (Aguardando resposta da operadora)
-            - Recurso de Glosa 
-            - Processo Finalizado
-            """
-            response = requests.get(f'/api/guias/?group_name={group.name}')
+            # Make the API call using POST
+            response = requests.post(api_url, json=api_payload)
+            response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
             api_data = response.json()
-            
+
+            # Check for API-specific errors
             if api_data.get('erro') != '000':
-                continue
-                
+                print(f"API Error for group {group.name}: {api_data.get('msg', 'Unknown error')}")
+                continue # Skip this group if API returns an error
+
             guias = api_data.get('listaguias', [])
             
             base_queryset = ProcedimentoFinancas.objects.filter(
@@ -432,11 +427,23 @@ def conciliar_financas(request):
             financas = base_queryset.select_related('procedimento')
 
             for guia in guias:
-                if not guia.get('paciente'):
+                # Ensure essential data is present
+                if not guia.get('paciente') or not guia.get('idcpsa'):
                     continue
+
+                # Convert API date string to date object (handle potential null or format errors)
+                api_date = None
+                if guia.get('dt_cirurg'):
+                    try:
+                        api_date = datetime.strptime(guia['dt_cirurg'], '%Y-%m-%d').date()
+                    except ValueError:
+                        # Handle cases where the date format might be different or invalid
+                        print(f"Warning: Could not parse dt_cirurg '{guia['dt_cirurg']}' for idcpsa {guia['idcpsa']}")
+                        pass # Continue matching attempt without date
 
                 for financa in financas:
                     # Skip if already attempted to match
+                    #TODO: TAMBÉM TEMOS QUE VER OS CASOS PARA FAZER UPDATE DE STATUS, VALORES, ETC... EM GUIAS QUE JÁ FORAM CONCILIDAS OU JPA REGISTYRADAS, ETC...
                     if ConciliacaoTentativa.objects.filter(
                         procedimento_financas=financa,
                         cpsa_id=guia['idcpsa']
@@ -448,67 +455,86 @@ def conciliar_financas(request):
                         not similar(user.anesthesiologist.name, guia['cooperado']) > 0.8):
                         continue
 
+                    # Get system procedure date
+                    proc_date = financa.procedimento.data_horario.date()
+
                     # Check for exact match
-                    exact_name_match = guia['paciente'].lower() == financa.procedimento.nome_paciente.lower()
-                    exact_date_match = False
-                    
-                    if guia['dt_cirurg']:
-                        api_date = datetime.strptime(guia['dt_cirurg'], '%Y-%m-%d').date()
-                        proc_date = financa.procedimento.data_horario.date()
-                        exact_date_match = api_date == proc_date
+                    exact_name_match = similar(guia['paciente'], financa.procedimento.nome_paciente) >= 0.95 # Use similarity for robustness
+                    exact_date_match = api_date == proc_date if api_date else False
 
                     if exact_name_match and exact_date_match:
                         # Auto conciliate
                         ConciliacaoTentativa.objects.create(
                             procedimento_financas=financa,
-                            cpsa_id=guia['idcpsa'],
+                            cpsa_id=str(guia['idcpsa']), # Ensure idcpsa is stored as string
                             conciliado=True
                         )
-                        
-                        # Update ProcedimentoFinancas
-                        financa.valor_cobranca = guia['valor_faturado']
-                        financa.status_pagamento = guia['STATUS'].lower()
+
+                        # Update ProcedimentoFinancas with data from the current 'guia'
+                        financa.cpsa = str(guia['idcpsa']) # Store the matched CPSA ID
+                        financa.valor_cobranca = guia.get('valor_faturado', 0) # Use .get for safety
+                        # Map API status to model choices (convert to lower, handle potential variations)
+                        api_status = str(guia.get('STATUS', '')).lower()
+                        #TODO VERIFICAR SE OS TYPES DE STATUS SÃO REALMENTE OS QUE APARTECEM NO EXEMPLO DE RESPONSE. SE NÃO, VAMOS AJUSTAR OS TYPES
+                        #TODO VERRIFICAR SE ESATMOS COMPARANDO CORRETAMENTE AS KEYS DO STATUS ou os valores de display
+                        if api_status in [choice[0] for choice in ProcedimentoFinancas.STATUS_PAGAMENTO_CHOICES]:
+                             financa.status_pagamento = api_status
+                        else:
+                             # Handle unknown statuses if necessary, maybe map to 'pendente'
+                             print(f"Warning: Unknown API status '{guia.get('STATUS')}' for idcpsa {guia['idcpsa']}. Setting to 'pendente'.")
+                             financa.status_pagamento = 'pendente'
+                        #TODO Try to parse payment date if available (needs clarification if API provides this)
+                        # financa.data_pagamento = ...
                         financa.save()
-                        
+
                         auto_matched.append({
-                            'paciente': guia['paciente'],
-                            'data': guia['dt_cirurg'],
-                            'valor': guia['valor_faturado'],
-                            'status': guia['STATUS']
+                            'paciente': guia.get('paciente'),
+                            'data': guia.get('dt_cirurg'),
+                            'valor': guia.get('valor_faturado'),
+                            'status': guia.get('STATUS')
                         })
-                        
+                        break # Move to the next guia once a match is found for this financa
+
                     else:
                         # Check for similar match
-                        nome_similar = similar(guia['paciente'], 
-                                            financa.procedimento.nome_paciente) > 0.8
-                        
+                        nome_similar = similar(guia['paciente'], financa.procedimento.nome_paciente) > 0.8
+
                         data_similar = False
                         if guia['dt_cirurg']:
                             data_similar = abs((api_date - proc_date).days) <= 1
 
-                        if nome_similar and (data_similar or not guia['dt_cirurg']):
-                            needs_confirmation.append({
-                                'financa_id': financa.id,
-                                'cpsa_id': guia['idcpsa'],
-                                'api_data': {
-                                    'paciente': guia['paciente'],
-                                    'data': guia['dt_cirurg'],
-                                    'valor': guia['valor_faturado'],
-                                    'status': guia['STATUS'],
-                                    'hospital': guia['hospital'],
-                                    'cooperado': guia['cooperado']
-                                },
-                                'sistema_data': {
-                                    'paciente': financa.procedimento.nome_paciente,
-                                    'data': financa.procedimento.data_horario.strftime('%Y-%m-%d'),
-                                    'hospital': financa.procedimento.hospital.name if financa.procedimento.hospital else '',
-                                    'anestesista': financa.procedimento.anestesistas_responsaveis.first().name if financa.procedimento.anestesistas_responsaveis.exists() else ''
-                                }
-                            })
+                        # Match if names are similar AND (dates are similar OR API date is missing)
+                        if nome_similar and (data_similar or not api_date):
+                            # Check if this potential match already exists in needs_confirmation
+                            # to avoid duplicates if one financa matches multiple similar guias
+                            existing_confirmation = next((item for item in needs_confirmation if item['financa_id'] == financa.id and item['cpsa_id'] == str(guia['idcpsa'])), None)
+                            if not existing_confirmation:
+                                needs_confirmation.append({
+                                    'financa_id': financa.id,
+                                    'cpsa_id': str(guia['idcpsa']), # Ensure string
+                                    'api_data': {
+                                        'paciente': guia.get('paciente'),
+                                        'data': guia.get('dt_cirurg'),
+                                        'valor': guia.get('valor_faturado'), # Pass value for confirmation
+                                        'status': guia.get('STATUS'),       # Pass status for confirmation
+                                        'hospital': guia.get('hospital'),
+                                        'cooperado': guia.get('cooperado')
+                                    },
+                                    'sistema_data': {
+                                        'paciente': financa.procedimento.nome_paciente,
+                                        'data': financa.procedimento.data_horario.strftime('%Y-%m-%d'),
+                                        'hospital': financa.procedimento.hospital.name if financa.procedimento.hospital else '',
+                                        'anestesista': financa.procedimento.anestesistas_responsaveis.first().name if financa.procedimento.anestesistas_responsaveis.exists() else ''
+                                    }
+                                })
+                            # Don't break here, allow checking other guias for potentially better matches for this financa
 
+        except requests.exceptions.RequestException as e:
+            print(f"Error calling Coopahub API for group {group.name}: {str(e)}")
+            continue # Skip to the next group on connection/request errors
         except Exception as e:
-            print(f"Error fetching data for group {group.name}: {str(e)}")
-            continue
+            print(f"Error processing data for group {group.name}: {str(e)}")
+            continue # Skip to the next group on other processing errors
 
     return JsonResponse({
         'auto_matched': auto_matched,
