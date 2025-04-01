@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED
-from registration.models import Groups, Membership
+from registration.models import Groups, Membership, Anesthesiologist
 from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
 from django.db.models import Q
 from datetime import datetime, timedelta
@@ -19,10 +19,21 @@ DIAS_PARA_CONCILIACAO = 90
 
 @login_required
 def financas_view(request):
+    #TODO: ALTERAR MODELO PARA PASSAR A TER OS SEGUINTES VALORES: valor_faturado, valor_recebido, valor_receuperado, valor_acatado
+    #TODO: ALTERAR NO TEMPLATE PARA A TABELA PASSAR A MOSTRAR MESMAS RUBRICAS DE VALORES COMO NA API
+    #TODO: ALTERAR OS TIPOS DE STATUS PARA TER O MESMO DA API:
+                        #"Aguardando Envio" -> ignorar e nem conciliar (?)
+                        #"Em Processamento" -> "pendente" (?)
+                        #"Aguardando Pagamento" -> "pendente" (?)
+                        #"Recurso de Glosa" -> "glosa" (?)
+                        #"Processo Finalizado" -> "pago" (?)
+                        #"Cancelada" -> "cancelado" (?) (teria que criar esse status no model e ver se há algo a tratar no dashboard e na view principal de finanças)
+    #TODO: AQUI NA VERDADE, REVER ESSA REGRA. LEM
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
     
-    user_group = request.user.group
+    user = request.user
+    user_group = user.group
     view_type = request.GET.get('view', 'receitas')
     status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
@@ -32,21 +43,48 @@ def financas_view(request):
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
     
-    # Base queryset with group filtering
+    # Base queryset - Apply filtering based on user type FIRST
     if view_type == 'receitas':
-        queryset = ProcedimentoFinancas.objects.filter(
-            procedimento__group=user_group,
-            procedimento__status=STATUS_FINISHED
-        ).select_related('procedimento').order_by(
-            '-procedimento__data_horario'  # Most recent procedures first
-        )
-    else:
-        queryset = Despesas.objects.filter(
-            group=user_group  # Filter despesas by group
-        ).select_related('procedimento').order_by(
-            '-data',  # Most recent expenses first
-            '-id'     # If same date, newer entries first
-        )
+        if user.user_type == ANESTESISTA_USER:
+            # Anesthesiologists see only procedures they are responsible for within their group
+            queryset = ProcedimentoFinancas.objects.filter(
+                procedimento__anestesistas_responsaveis__user=user,
+                procedimento__status=STATUS_FINISHED
+            ).select_related('procedimento').order_by(
+                '-procedimento__data_horario'  # Most recent procedures first
+            )
+        elif user.user_type == GESTOR_USER:
+            # Gestores see all finished procedures in their group
+            queryset = ProcedimentoFinancas.objects.filter(
+                procedimento__group=user_group,
+                procedimento__status=STATUS_FINISHED
+            ).select_related('procedimento').order_by(
+                '-procedimento__data_horario'  # Most recent procedures first
+            )
+        else:
+            # Handle other user types if necessary, e.g., show nothing or raise permission error
+            queryset = ProcedimentoFinancas.objects.none()
+    else: # view_type == 'despesas'
+        if user.user_type == ANESTESISTA_USER:
+            # Anesthesiologists see only expenses linked to procedures they are responsible for
+            queryset = Despesas.objects.filter(
+                procedimento__anestesistas_responsaveis__user=user,
+                procedimento__group=user_group # Ensure procedure is in the correct group
+            ).select_related('procedimento').order_by(
+                '-data',  # Most recent expenses first
+                '-id'     # If same date, newer entries first
+            )
+        elif user.user_type == GESTOR_USER:
+            # Gestores see all expenses linked to their group
+            queryset = Despesas.objects.filter(
+                group=user_group
+            ).select_related('procedimento').order_by(
+                '-data',  # Most recent expenses first
+                '-id'     # If same date, newer entries first
+            )
+        else:
+            # Handle other user types
+            queryset = Despesas.objects.none()
     
     # Apply period filter
     if period == 'custom' and start_date_str and end_date_str:
@@ -373,6 +411,7 @@ def similar(a, b):
 
 @login_required
 def conciliar_financas(request):
+    #TODO: TEMOS QUE REVER UMA COISA IMPORTANTE: HÁ ESSE PROCESSO DE CONCILIAÇÃO, QUE SIGNIFICA LIGAR, O PROCEDIMENTO AQUI COM O DA API COM O MESMO ID DA GUIA. MAS TAMBÉM TEM OS UPDATES, QUE SERIA PEGAR OS JPA CONCILIADOS E VER SE EXISTE ATULUALIZAÇÃO NOS VALIORES / DADOS!!
     if not request.user.validado:
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
 
@@ -381,15 +420,12 @@ def conciliar_financas(request):
         user=user,
         validado=True
     )
-    groups_to_check = [m.group for m in validated_memberships]
-
-    if not groups_to_check:
-        return JsonResponse({'error': 'Usuário não possui grupos validados'}, status=403)
+    group = user.group #vamos conciliar apenas do grupo ativo do usuário
 
     auto_matched = []
     needs_confirmation = []
     
-    for group in groups_to_check:
+    if group:
         try:
             # Construct API URL and data payload
             api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
@@ -408,9 +444,10 @@ def conciliar_financas(request):
             # Check for API-specific errors
             if api_data.get('erro') != '000':
                 print(f"API Error for group {group.name}: {api_data.get('msg', 'Unknown error')}")
-                continue # Skip this group if API returns an error
+
 
             guias = api_data.get('listaguias', [])
+            
             
             base_queryset = ProcedimentoFinancas.objects.filter(
                 procedimento__group=group,
@@ -450,6 +487,8 @@ def conciliar_financas(request):
                     ).exists():
                         continue
 
+                    #TODO: A PRIMEIRA E MAIS LÓGICA TENTATIVA DE CONCILIAÇÃO É COM O IDCPSA. DEPOIS TENTAR COM ESSES ABAIXO
+
                     # For anestesista, check if they are the cooperado
                     if (user.user_type == ANESTESISTA_USER and 
                         not similar(user.anesthesiologist.name, guia['cooperado']) > 0.8):
@@ -475,15 +514,8 @@ def conciliar_financas(request):
                         financa.valor_cobranca = guia.get('valor_faturado', 0) # Use .get for safety
                         # Map API status to model choices (convert to lower, handle potential variations)
                         api_status = str(guia.get('STATUS', '')).lower()
-                        #TODO VERIFICAR SE OS TYPES DE STATUS SÃO REALMENTE OS QUE APARTECEM NO EXEMPLO DE RESPONSE. SE NÃO, VAMOS AJUSTAR OS TYPES
-                        #TODO VERRIFICAR SE ESATMOS COMPARANDO CORRETAMENTE AS KEYS DO STATUS ou os valores de display
-                        #STATUS QUE NA VERDADE VEM NA API:
-                        #"Aguardando Envio" -> ignorar (?)
-                        #"Em Processamento" -> "pendente" (?)
-                        #"Aguardando Pagamento" -> "pendente" (?)
-                        #"Recurso de Glosa" -> "glosa" (?)
-                        #"Processo Finalizado" -> "pago" (?)
-                        #"Cancelada" -> "cancelado" (?) (teria que criar esse status no model e ver se há algo a tratar no dashboard e na view principal de finanças)
+
+                        #TODO AJUSTAR PARA CASAR STATUS CONFORME NOVOS STATUS, CONSIDERANDO FORMATO DE RESPOSTA DA API E KEY VS DISPLAY DOPS TIPOS DE STATUS DO MODELO FINANÇAS
                         if api_status in [choice[0] for choice in ProcedimentoFinancas.STATUS_PAGAMENTO_CHOICES]:
                              financa.status_pagamento = api_status
                         else:
@@ -497,6 +529,7 @@ def conciliar_financas(request):
                         auto_matched.append({
                             'paciente': guia.get('paciente'),
                             'data': guia.get('dt_cirurg'),
+                            #TODO: AGORA, AO INVÉS DE APENAS O VALOR FATURADO, ATUALIZAR TODOS OS VALORES, CONSIDERANDO OS NOVOS CAMPOS DO MODELO FINANÇAS
                             'valor': guia.get('valor_faturado'),
                             'status': guia.get('STATUS')
                         })
@@ -538,10 +571,11 @@ def conciliar_financas(request):
 
         except requests.exceptions.RequestException as e:
             print(f"Error calling Coopahub API for group {group.name}: {str(e)}")
-            continue # Skip to the next group on connection/request errors
         except Exception as e:
             print(f"Error processing data for group {group.name}: {str(e)}")
-            continue # Skip to the next group on other processing errors
+
+    else:
+        return JsonResponse({'error': 'Usuário não possui grupos validados'}, status=403)
 
     return JsonResponse({
         'auto_matched': auto_matched,
