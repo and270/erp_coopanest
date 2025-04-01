@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .forms import CustomUserLoginForm, AnesthesiologistForm, SurgeonForm, HospitalClinicForm
+from .forms import CustomUserLoginForm, AnesthesiologistForm, GestorAnesthesiologistConfirmForm, SurgeonForm, HospitalClinicForm
 from .models import Anesthesiologist, Surgeon, HospitalClinic
 from django.contrib.auth import authenticate, login
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
@@ -43,7 +43,11 @@ def login_register_view(request):
             
             if user is not None:
                 login(request, user)
-                    
+                
+                # Check if this is a GESTOR user and redirect to confirmation if needed
+                if user.user_type == GESTOR_USER and not Anesthesiologist.objects.filter(user=user).exists() and not user.gestor_anesthesiologist_check_complete:
+                    return redirect('gestor_anesthesiologist_confirm')
+                
                 return redirect('home')
             else:
                 # Authentication failed, show error
@@ -460,3 +464,47 @@ def fetch_user_details_from_api(user):
         # Add the exception type for better debugging
         print(f"Error in fetch_user_details_from_api ({type(e).__name__}): {e}")
 
+
+@login_required
+def gestor_anesthesiologist_confirm(request):
+    # Only allow access for validated GESTOR users without an existing Anesthesiologist record
+    if request.user.user_type != GESTOR_USER or not request.user.validado:
+        return redirect('home')
+    
+    # Check if user already has an Anesthesiologist record or has completed the check
+    if Anesthesiologist.objects.filter(user=request.user).exists() or request.user.gestor_anesthesiologist_check_complete:
+        return redirect('home')
+    
+    if request.method == 'POST':
+        form = GestorAnesthesiologistConfirmForm(request.POST)
+        if form.is_valid():
+            is_anesthesiologist = form.cleaned_data.get('is_anesthesiologist')
+            
+            if is_anesthesiologist:
+                name = form.cleaned_data.get('name')
+                crm = form.cleaned_data.get('crm')
+                
+                # Create Anesthesiologist record for this gestor
+                Anesthesiologist.objects.create(
+                    user=request.user,
+                    group=request.user.group,
+                    name=name,
+                    crm=crm,
+                    function='Anestesista',
+                    role_in_group='administrador'  # Default role for gestors who are also anesthesiologists
+                )
+            
+            # Mark as processed in the user model
+            request.user.gestor_anesthesiologist_check_complete = True
+            request.user.save()
+            
+            return redirect('home')
+    else:
+        form = GestorAnesthesiologistConfirmForm()
+    
+    return render(request, 'gestor_anesthesiologist_confirm.html', {
+        'form': form,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    })

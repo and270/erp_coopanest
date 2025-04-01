@@ -213,3 +213,35 @@ class AddGroupMembershipForm(forms.Form):
         else:
             # If not creating new, we didn't actually "create" it, so return (group, False)
             return (group, False)
+
+class GestorAnesthesiologistConfirmForm(forms.Form):
+    is_anesthesiologist = forms.BooleanField(
+        required=False,
+        label='Você também é Anestesista?',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    name = forms.CharField(
+        max_length=255, 
+        required=False,
+        label='Nome',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    crm = forms.CharField(
+        max_length=20, 
+        required=False,
+        label='CRM',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        is_anesthesiologist = cleaned_data.get('is_anesthesiologist')
+        name = cleaned_data.get('name')
+        crm = cleaned_data.get('crm')
+        
+        if is_anesthesiologist and not name:
+            self.add_error('name', 'Por favor, informe seu nome para o cadastro como anestesista.')
+            
+        return cleaned_data
