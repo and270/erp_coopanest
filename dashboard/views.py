@@ -182,7 +182,7 @@ def dashboard_view(request):
 def financas_dashboard_view(request):
     #TODO AJUSTAR PARA NOVOS VALORES DO MODELO FINANÇAS.
     #TODO: VALORES EM GLOSA SÃO A DIFERENÇA ENTRE O VALOR FATURADO E O RECEBIDO. DOS COM STATUS DE Recurso de Glosa E Processo Finalizado
-    #TODO: considerar todos esses status como pendentes (nem sei se o dashboard financças considera pendentes): Aguardando Envio (?) Em Processamento, Aguardando Pagamento, OU NA VERDADE, USAR APENAS O Aguardando Pagamento
+    #TODO: Se estatus Em Processamento, Aguardando Pagamento, considerar a soma do valor faturado como "Em andamento" do dahsbord
     #TODO: considerar como pago a soma de valor_recebido e valor_receuperado em processos com status Processo Finalizado ou Recurso de Glosa
 
     """Dashboard de Finanças, com opção de Período Personalizado."""
