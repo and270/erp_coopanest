@@ -190,12 +190,13 @@ def financas_dashboard_view(request):
         return render(request, 'usuario_nao_autenticado.html')
 
     user_group = request.user.group
+    user = request.user # Get the current user
 
     # Retrieve query params
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
-    selected_anestesista = request.GET.get('anestesista')
+    selected_anestesista_id = request.GET.get('anestesista') # Keep as string for comparison
     procedimento = request.GET.get('procedimento')
     selected_graph_type = request.GET.get('graph_type', 'ticket')
 
@@ -206,11 +207,36 @@ def financas_dashboard_view(request):
         .filter(procedimento__group=user_group)
     )
 
-    # Filter by anestesista if given
-    if selected_anestesista:
-        queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista)
+    # --- Anestesista Filtering Logic ---
+    anestesistas_all = Anesthesiologist.objects.filter(group=user_group).order_by('name')
+    anestesistas_for_template = anestesistas_all # Default for GESTOR/ADMIN
+    current_user_anesthesiologist = None
 
-    # Filter by procedimento if given
+    if user.user_type == ANESTESISTA_USER:
+        try:
+            current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)
+            anestesistas_for_template = [current_user_anesthesiologist] # Only self for dropdown
+            
+            # Apply filter only if the selected ID matches the logged-in anesthesiologist
+            if selected_anestesista_id and str(current_user_anesthesiologist.id) == selected_anestesista_id:
+                 queryset = queryset.filter(procedimento__anestesistas_responsaveis=current_user_anesthesiologist.id)
+            # If an ID is selected but doesn't match, or no ID is selected, don't filter by anesthesiologist
+            # (implicitly shows 'all' relevant to the user's group)
+            else:
+                 selected_anestesista_id = None # Ensure 'selected_anestesista_id' is None if not filtering by self
+
+        except Anesthesiologist.DoesNotExist:
+             # Handle case where Anesthesiologist profile might be missing for the user
+             anestesistas_for_template = []
+             selected_anestesista_id = None # Cannot filter if profile doesn't exist
+
+    elif user.user_type in [GESTOR_USER, ADMIN_USER]:
+        # Gestor/Admin can filter by any anesthesiologist
+        if selected_anestesista_id:
+            queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id)
+        # Keep anestesistas_for_template as anestesistas_all
+
+    # Filter by procedimento if given (applies after anesthesiologist filter)
     if procedimento:
         queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
 
@@ -462,33 +488,50 @@ def financas_dashboard_view(request):
         .filter(procedimento__group=user_group)
         .order_by('name').distinct()
     )
-    anestesistas = Anesthesiologist.objects.filter(
-        group=user_group
-    ).order_by('name')
-
+    # Note: 'anestesistas_all' holds all for calculations, 'anestesistas_for_template' for dropdown
+    
     # -----------------------------------------------------------------------
     # 7) Determine 'period_total' & 'anestesista_total'
+    #    Recalculate anestesista_total based on potential filtering changes
     # -----------------------------------------------------------------------
+    # period_total uses the main queryset which might be filtered by date, procedure, and potentially anesthesiologist
     if selected_graph_type == 'ticket':
         period_total = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
-    else:
+    else: # 'receitas'
         period_total = queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
-
+    
     anestesista_total = 0
-    if selected_anestesista:
-        anestesista_queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista)
-        if selected_graph_type == 'ticket':
-            anestesista_total = anestesista_queryset.aggregate(
-                avg_valor=Avg('valor_cobranca')
-            )['avg_valor'] or 0
-        else:
-            anestesista_total = anestesista_queryset.aggregate(
-                total=Sum('valor_cobranca')
-            )['total'] or 0
+    # Use selected_anestesista_id which reflects the actual applied filter
+    if selected_anestesista_id:
+         # We already filtered the main queryset if an ID was selected and valid,
+         # so period_total reflects the value for the selected anesthesiologist.
+         anestesista_total = period_total
     else:
-        num_anestesistas = anestesistas.count()
-        if num_anestesistas > 0:
-            anestesista_total = period_total / num_anestesistas
+         # If no specific anesthesiologist is filtered, calculate average across all in the group
+         num_anestesistas = anestesistas_all.count()
+         if num_anestesistas > 0:
+            # Need to calculate total for the period *without* anesthesiologist filter if GESTOR/ADMIN chose "all"
+            # Or if ANESTESISTA chose "all"
+            unfiltered_by_anest_queryset = ProcedimentoFinancas.objects.select_related(
+                'procedimento', 'procedimento__procedimento_principal'
+            ).filter(
+                procedimento__group=user_group,
+                procedimento__data_horario__gte=chart_start_date,
+                procedimento__data_horario__lte=chart_end_date # Use calculated date range
+            )
+            if procedimento: # Apply procedure filter if present
+                unfiltered_by_anest_queryset = unfiltered_by_anest_queryset.filter(procedimento__procedimento_principal__name=procedimento)
+
+            if selected_graph_type == 'ticket':
+                # Average ticket for the whole group in the period
+                 group_period_total_avg = unfiltered_by_anest_queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
+                 anestesista_total = group_period_total_avg # When "all" is selected, show group average ticket
+            else: # 'receitas'
+                 # Average revenue per anesthesiologist for the whole group in the period
+                 group_period_total_sum = unfiltered_by_anest_queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+                 anestesista_total = group_period_total_sum / num_anestesistas if num_anestesistas > 0 else 0
+         else:
+              anestesista_total = 0 # Avoid division by zero
 
     # -----------------------------------------------------------------------
     # 8) Build context
@@ -527,12 +570,12 @@ def financas_dashboard_view(request):
         'procedimentos': procedimentos,
         'selected_procedimento': procedimento,
 
-        'anestesistas': anestesistas,
-        'selected_anestesista': selected_anestesista,
-
+        'anestesistas': anestesistas_for_template, # Pass the potentially limited list for the dropdown
+        'selected_anestesista': selected_anestesista_id, # Pass the ID that was actually used for filtering
         'period_total': period_total,
         'anestesista_total': anestesista_total,
         'selected_graph_type': selected_graph_type,
+        'user_type': user.user_type,
     }
 
     return render(request, 'dashboard_financas.html', context)
@@ -561,8 +604,12 @@ def export_financas_excel(request):
 
     # Get the same data as in the dashboard view
     user_group = request.user.group
-    period_days = request.GET.get('period', 180)
-    selected_anestesista = request.GET.get('anestesista')
+    user = request.user
+    # --- Replicate filtering logic from the view ---
+    period = request.GET.get('period', '')
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    selected_anestesista_id = request.GET.get('anestesista')
     procedimento = request.GET.get('procedimento')
 
     queryset = ProcedimentoFinancas.objects.select_related(
@@ -570,93 +617,176 @@ def export_financas_excel(request):
         'procedimento__procedimento_principal'
     ).filter(procedimento__group=user_group)
 
-    # Apply filters
-    if selected_anestesista:
-        queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista)
+    # Apply Anestesista Filter based on user type
+    if user.user_type == ANESTESISTA_USER:
+        try:
+            current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)
+            if selected_anestesista_id and str(current_user_anesthesiologist.id) == selected_anestesista_id:
+                 queryset = queryset.filter(procedimento__anestesistas_responsaveis=current_user_anesthesiologist.id)
+            # else: No filtering by anesthesiologist if "Todos" or invalid ID selected by anesthesiologist
+        except Anesthesiologist.DoesNotExist:
+            pass # Don't filter if profile is missing
+
+    elif user.user_type in [GESTOR_USER, ADMIN_USER]:
+        if selected_anestesista_id:
+            queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id)
+
+    # Apply Procedure Filter
     if procedimento:
         queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
-    
-    try:
-        period_days = int(period_days)
-        start_date = timezone.now() - timedelta(days=period_days)
-        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
-    except (ValueError, TypeError):
-        period_days = 180
-        start_date = timezone.now() - timedelta(days=period_days)
-        queryset = queryset.filter(procedimento__data_horario__gte=start_date)
+
+    # Apply Date Filter
+    now = timezone.now()
+    export_start_date = None
+    export_end_date = None
+
+    if period == 'custom' and start_date_str and end_date_str:
+        try:
+            custom_start = datetime.strptime(start_date_str, '%Y-%m-%d')
+            custom_end = datetime.strptime(end_date_str, '%Y-%m-%d')
+            if custom_start > custom_end: custom_start, custom_end = custom_end, custom_start
+            export_start_date = timezone.make_aware(custom_start)
+            export_end_date = timezone.make_aware(custom_end)
+            queryset = queryset.filter(
+                procedimento__data_horario__date__gte=export_start_date.date(),
+                procedimento__data_horario__date__lte=export_end_date.date()
+            )
+        except ValueError:
+             period = 180 # fallback if custom dates are invalid
+
+    # Handle numeric period or fallback
+    if export_start_date is None: # Only if custom wasn't successful
+        if not period: period = 180
+        try:
+            period_days = int(period)
+            export_end_date = now
+            export_start_date = now - timedelta(days=period_days)
+            queryset = queryset.filter(procedimento__data_horario__gte=export_start_date)
+        except (ValueError, TypeError):
+            # Final fallback
+            period_days = 180
+            export_end_date = now
+            export_start_date = now - timedelta(days=180)
+            queryset = queryset.filter(procedimento__data_horario__gte=export_start_date)
+
+    # --- End of replicated filtering logic ---
 
     # Write headers
     headers = [
-        'Data', 'Procedimento', 'Anestesista', 'Tipo de Cobrança',
-        'Valor', 'Status', 'Data de Pagamento'
+        'Data', 'Procedimento', 'Anestesista(s)', 'Tipo de Cobrança',
+        'Valor Cobrança', 'Status Pagamento', 'Data de Pagamento', 'Paciente' # Added Paciente
     ]
     for col, header in enumerate(headers):
         worksheet.write(0, col, header, header_format)
+        worksheet.set_column(col, col, 20) # Adjust width
 
     # Write data
     row = 1
+    # Order by date for clarity in Excel
+    queryset = queryset.order_by('procedimento__data_horario')
     for item in queryset:
-        worksheet.write(row, 0, item.procedimento.data_horario.strftime('%d/%m/%Y'))
+        worksheet.write(row, 0, item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento.data_horario else '')
         worksheet.write(row, 1, item.procedimento.procedimento_principal.name if item.procedimento.procedimento_principal else '')
-        worksheet.write(row, 2, ', '.join([a.name for a in item.procedimento.anestesistas_responsaveis.all()]))
-        worksheet.write(row, 3, item.tipo_cobranca)
+        # Handle ManyToMany field for anesthesiologists
+        anestesistas_nomes = ', '.join([a.name for a in item.procedimento.anestesistas_responsaveis.all()])
+        worksheet.write(row, 2, anestesistas_nomes)
+        worksheet.write(row, 3, item.get_tipo_cobranca_display() if item.tipo_cobranca else '') # Use display value
         worksheet.write(row, 4, float(item.valor_cobranca or 0), currency_format)
-        worksheet.write(row, 5, item.status_pagamento)
+        worksheet.write(row, 5, item.get_status_pagamento_display()) # Use display value
         worksheet.write(row, 6, item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '')
+        worksheet.write(row, 7, item.procedimento.nome_paciente if item.procedimento else '') # Added paciente name
         row += 1
 
-    # Add summary sheet
+    # --- Summary Sheet ---
     summary = workbook.add_worksheet('Resumo')
-    
-    # Write summary headers
     summary_headers = ['Métrica', 'Valor']
     for col, header in enumerate(summary_headers):
         summary.write(0, col, header, header_format)
+        summary.set_column(col, col, 25) # Adjust width
 
-    # Calculate summary data
-    total_count = queryset.count()
-    total_valor = queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
-    valor_pago = queryset.filter(status_pagamento='pago').aggregate(total=Sum('valor_cobranca'))['total'] or 0
-    valor_pendente = queryset.filter(status_pagamento='pendente').aggregate(total=Sum('valor_cobranca'))['total'] or 0
-    valor_glosa = queryset.filter(status_pagamento='glosa').aggregate(total=Sum('valor_cobranca'))['total'] or 0
+    # Calculate summary data based on the final filtered queryset
+    total_count = queryset.count() # Count distinct procedures might be better if needed
+    anestesias_distinct_count = queryset.values('procedimento').distinct().count()
 
-    # Write summary data
+    # Calculate financial summaries from the filtered queryset
+    totals_by_status = queryset.values('status_pagamento').annotate(total=Sum('valor_cobranca'))
+    total_valor = sum(item['total'] for item in totals_by_status if item['total'] is not None)
+
+    def get_status_value_from_summary(status, summary_list):
+        for item in summary_list:
+            if item['status_pagamento'] == status and item['total']:
+                return item['total']
+        return 0
+
+    valor_pago = get_status_value_from_summary('pago', totals_by_status)
+    valor_pendente = get_status_value_from_summary('pendente', totals_by_status)
+    valor_glosa = get_status_value_from_summary('glosa', totals_by_status)
+
+    # Helper for percentage
+    def percentage(part, whole):
+        return (float(part) / float(whole) * 100) if whole and whole > 0 else 0
+
+    pago_pct = percentage(valor_pago, total_valor)
+    pendente_pct = percentage(valor_pendente, total_valor)
+    glosa_pct = percentage(valor_glosa, total_valor)
+
+    # Average Ticket for the filtered results
+    avg_ticket_filtered = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor']
+
     summary_data = [
-        ('Total de Anestesias', total_count),
-        ('Valor Total', total_valor),
-        ('Valor Pago', valor_pago),
-        ('Valor Pendente', valor_pendente),
-        ('Valor em Glosa', valor_glosa),
-        ('% Pago', valor_pago/total_valor if total_valor else 0),
-        ('% Pendente', valor_pendente/total_valor if total_valor else 0),
-        ('% Glosa', valor_glosa/total_valor if total_valor else 0),
+        ('Período Analisado', f"{export_start_date.strftime('%d/%m/%Y')} a {export_end_date.strftime('%d/%m/%Y')}" if export_start_date and export_end_date else "N/A"),
+        ('Filtro Anestesista', request.GET.get('anestesista_name', 'Todos') if selected_anestesista_id else 'Todos'), # Requires passing name or fetching it
+        ('Filtro Procedimento', procedimento if procedimento else 'Todos'),
+        ('Total de Registros Financeiros', total_count),
+        ('Total de Anestesias (Distintas)', anestesias_distinct_count),
+        ('Valor Total Cobrado (Filtrado)', total_valor),
+        ('Valor Pago (Filtrado)', valor_pago),
+        ('Valor Em Andamento (Filtrado)', valor_pendente),
+        ('Valor em Glosa (Filtrado)', valor_glosa),
+        ('% Pago', pago_pct / 100), # Format as percentage below
+        ('% Em Andamento', pendente_pct / 100),
+        ('% Glosa', glosa_pct / 100),
+        ('Ticket Médio (Filtrado)', avg_ticket_filtered or 0),
     ]
+
+    # Get anesthesiologist name if filtered
+    anestesista_name_for_summary = "Todos"
+    if selected_anestesista_id:
+        try:
+            filtered_anest = Anesthesiologist.objects.get(id=selected_anestesista_id)
+            anestesista_name_for_summary = filtered_anest.name
+        except Anesthesiologist.DoesNotExist:
+            anestesista_name_for_summary = f"ID {selected_anestesista_id} (Não encontrado)"
+    # Update the summary data tuple
+    summary_data[1] = ('Filtro Anestesista', anestesista_name_for_summary)
+
 
     for i, (label, value) in enumerate(summary_data, 1):
         summary.write(i, 0, label)
         if isinstance(value, (int, float)):
-            if 'Valor' in label:
+            if 'Valor' in label or 'Ticket' in label:
                 summary.write(i, 1, value, currency_format)
             elif '%' in label:
+                 # Write as fraction, apply percentage format
                 summary.write(i, 1, value, percent_format)
-            else:
+            else: # Counts
                 summary.write(i, 1, value)
+        else: # Text like dates, names
+            summary.write(i, 1, str(value))
 
-    # Adjust column widths
-    for sheet in [worksheet, summary]:
-        for i, width in enumerate([15, 30, 30, 15, 15, 15, 15]):
-            sheet.set_column(i, i, width)
 
     workbook.close()
-    
+
     # Create the HttpResponse
     output.seek(0)
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = 'attachment; filename=dashboard_financas.xlsx'
-    
+    # Make filename dynamic based on filters?
+    filename = f"dashboard_financas_{now.strftime('%Y%m%d')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
     return response
 
 def get_date_range(start_date, end_date):
