@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .forms import CustomUserLoginForm, AnesthesiologistForm, GestorAnesthesiologistConfirmForm, SurgeonForm, HospitalClinicForm
+from .forms import CustomUserLoginForm, AnesthesiologistForm, GestorAnesthesiologistConfirmForm, SurgeonForm, HospitalClinicForm, TermsAgreementForm
 from .models import Anesthesiologist, Surgeon, HospitalClinic
 from django.contrib.auth import authenticate, login
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
@@ -44,8 +44,18 @@ def login_register_view(request):
             if user is not None:
                 login(request, user)
                 
-                # Check if this is a GESTOR user and redirect to confirmation if needed
-                if user.user_type == GESTOR_USER and not Anesthesiologist.objects.filter(user=user).exists() and not user.gestor_anesthesiologist_check_complete:
+                # Check if terms need to be agreed
+                if not user.terms_agreed or not user.privacy_policy_agreed:
+                    # For all users, send to the appropriate terms page
+                    if user.user_type == GESTOR_USER:
+                        return redirect('gestor_anesthesiologist_confirm')
+                    else:
+                        return redirect('terms_agreement')
+                
+                # If terms already agreed but GESTOR needs anesthesiologist check
+                elif (user.user_type == GESTOR_USER and 
+                      not Anesthesiologist.objects.filter(user=user).exists() and 
+                      not user.gestor_anesthesiologist_check_complete):
                     return redirect('gestor_anesthesiologist_confirm')
                 
                 return redirect('home')
@@ -467,17 +477,25 @@ def fetch_user_details_from_api(user):
 
 @login_required
 def gestor_anesthesiologist_confirm(request):
-    # Only allow access for validated GESTOR users without an existing Anesthesiologist record
-    if request.user.user_type != GESTOR_USER or not request.user.validado:
+    # Allow access for any GESTOR user that hasn't agreed to terms yet
+    if request.user.user_type != GESTOR_USER:
         return redirect('home')
     
-    # Check if user already has an Anesthesiologist record or has completed the check
-    if Anesthesiologist.objects.filter(user=request.user).exists() or request.user.gestor_anesthesiologist_check_complete:
+    # Check if user already has an Anesthesiologist record or has completed everything
+    if (Anesthesiologist.objects.filter(user=request.user).exists() or 
+        request.user.gestor_anesthesiologist_check_complete) and request.user.terms_agreed and request.user.privacy_policy_agreed:
         return redirect('home')
+    
+    if (Anesthesiologist.objects.filter(user=request.user).exists() or request.user.gestor_anesthesiologist_check_complete) and (not request.user.terms_agreed or not request.user.privacy_policy_agreed):
+        return redirect('terms_agreement')
     
     if request.method == 'POST':
         form = GestorAnesthesiologistConfirmForm(request.POST)
         if form.is_valid():
+            # Set terms agreement flags
+            request.user.terms_agreed = form.cleaned_data.get('terms_agreed')
+            request.user.privacy_policy_agreed = form.cleaned_data.get('privacy_policy_agreed')
+            
             is_anesthesiologist = form.cleaned_data.get('is_anesthesiologist')
             
             if is_anesthesiologist:
@@ -503,6 +521,36 @@ def gestor_anesthesiologist_confirm(request):
         form = GestorAnesthesiologistConfirmForm()
     
     return render(request, 'gestor_anesthesiologist_confirm.html', {
+        'form': form,
+        'GESTOR_USER': GESTOR_USER,
+        'ADMIN_USER': ADMIN_USER,
+        'ANESTESISTA_USER': ANESTESISTA_USER,
+    })
+
+@login_required
+def terms_agreement_view(request):
+    # If user already agreed to both, redirect to home
+    if request.user.terms_agreed and request.user.privacy_policy_agreed:
+        return redirect('home')
+    
+    # If user is a GESTOR who needs the combined flow, redirect there
+    if request.user.user_type == GESTOR_USER and not (Anesthesiologist.objects.filter(user=request.user).exists() or request.user.gestor_anesthesiologist_check_complete) :
+        return redirect('gestor_anesthesiologist_confirm')
+    
+    if request.method == 'POST':
+        form = TermsAgreementForm(request.POST)
+        if form.is_valid():
+            # Update user agreement status
+            request.user.terms_agreed = True
+            request.user.privacy_policy_agreed = True
+            request.user.save()
+            
+            # Go to home
+            return redirect('home')
+    else:
+        form = TermsAgreementForm()
+    
+    return render(request, 'terms_agreement.html', {
         'form': form,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,

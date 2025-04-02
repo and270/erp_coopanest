@@ -4,15 +4,46 @@
 
 {% block content %}
 <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
-    <div style="background-color: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; padding: 25px 30px;">
-        <h2 style="font-family: 'Inter', sans-serif; font-weight: 600; font-size: 24px; color: #3D3D3D; margin-bottom: 15px;">Perfil de Anestesista</h2>
+    <div style="background-color: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; padding: 25px 30px;">
+        <h2 style="font-family: 'Inter', sans-serif; font-weight: 600; font-size: 24px; color: #3D3D3D; margin-bottom: 15px;">Primeiro Acesso</h2>
         
         <p style="font-family: 'Inter', sans-serif; color: #505050; margin-bottom: 25px; font-size: 14px;">
-            Este é seu primeiro acesso ao Coopahub, seja bem-vindo! Precisamos de algumas informações adicionais.
+            Seja bem-vindo ao Coopahub! Para prosseguir, precisamos da sua concordância com os termos.
         </p>
         
         <form method="post">
             {% csrf_token %}
+            
+            <!-- Termos de Serviço -->
+            <div style="display: flex; align-items: flex-start; margin-bottom: 20px;">
+                {{ form.terms_agreed }}
+                <div style="margin-left: 10px;">
+                    <label for="{{ form.terms_agreed.id_for_label }}" style="font-family: 'Inter', sans-serif; font-size: 14px; color: #3D3D3D; display: block; margin-bottom: 5px;">
+                        {{ form.terms_agreed.label }}
+                    </label>
+                    <a href="{% url 'terms_of_service' %}" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: #418FDE;">
+                        Visualizar Termos de Serviço
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Política de Privacidade -->
+            <div style="display: flex; align-items: flex-start; margin-bottom: 25px;">
+                {{ form.privacy_policy_agreed }}
+                <div style="margin-left: 10px;">
+                    <label for="{{ form.privacy_policy_agreed.id_for_label }}" style="font-family: 'Inter', sans-serif; font-size: 14px; color: #3D3D3D; display: block; margin-bottom: 5px;">
+                        {{ form.privacy_policy_agreed.label }}
+                    </label>
+                    <a href="{% url 'privacy_policy' %}" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: #418FDE;">
+                        Visualizar Política de Privacidade
+                    </a>
+                </div>
+            </div>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #f0f0f0;">
+            
+            <!-- Perfil de Anestesista -->
+            <h3 style="font-family: 'Inter', sans-serif; font-weight: 500; font-size: 18px; color: #3D3D3D; margin-bottom: 15px;">Informações Adicionais</h3>
             
             <div style="display: flex; align-items: center; margin-bottom: 25px;">
                 {{ form.is_anesthesiologist }}

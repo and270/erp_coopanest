@@ -215,23 +215,28 @@ class AddGroupMembershipForm(forms.Form):
             return (group, False)
 
 class GestorAnesthesiologistConfirmForm(forms.Form):
+    terms_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com os Termos de Serviço"
+    )
+    privacy_policy_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com a Política de Privacidade"
+    )
     is_anesthesiologist = forms.BooleanField(
         required=False,
-        label='Você também é Anestesista?',
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        label="Sou Anestesista"
     )
-    
     name = forms.CharField(
-        max_length=255, 
         required=False,
-        label='Nome',
+        max_length=255,
+        label="Nome Completo",
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
-    
     crm = forms.CharField(
-        max_length=20, 
         required=False,
-        label='CRM',
+        max_length=20,
+        label="CRM",
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
     
@@ -241,7 +246,20 @@ class GestorAnesthesiologistConfirmForm(forms.Form):
         name = cleaned_data.get('name')
         crm = cleaned_data.get('crm')
         
-        if is_anesthesiologist and not name:
-            self.add_error('name', 'Por favor, informe seu nome para o cadastro como anestesista.')
-            
+        if is_anesthesiologist:
+            if not name:
+                self.add_error('name', 'Este campo é obrigatório quando você é anestesista.')
+            if not crm:
+                self.add_error('crm', 'Este campo é obrigatório quando você é anestesista.')
+        
         return cleaned_data
+
+class TermsAgreementForm(forms.Form):
+    terms_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com os Termos de Serviço"
+    )
+    privacy_policy_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com a Política de Privacidade"
+    )

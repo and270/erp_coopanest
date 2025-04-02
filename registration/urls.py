@@ -16,4 +16,5 @@ urlpatterns = [
     path('termos-de-servico/', views.terms_of_service, name='terms_of_service'),
     path('politica-de-privacidade/', views.privacy_policy, name='privacy_policy'),
     path('gestor-anesthesiologist-confirm/', views.gestor_anesthesiologist_confirm, name='gestor_anesthesiologist_confirm'),
+    path('terms-agreement/', views.terms_agreement_view, name='terms_agreement'),
 ]

@@ -46,6 +46,10 @@ class CustomUser(AbstractUser):
     # New field to track if the gestor anesthesiologist check is complete
     gestor_anesthesiologist_check_complete = models.BooleanField(default=False, verbose_name='Verificação de Anestesista para Gestor Completa')
 
+    # Add to CustomUser class
+    terms_agreed = models.BooleanField(default=False, verbose_name='Concordou com os Termos de Serviço')
+    privacy_policy_agreed = models.BooleanField(default=False, verbose_name='Concordou com a Política de Privacidade')
+
     class Meta:
         verbose_name = "Usuário"
         verbose_name_plural = "Usuários"
