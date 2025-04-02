@@ -10,16 +10,10 @@
         <p><strong>Seu Grupo ativo:</strong> {{ user.group }}</p>
     {% endif %}
 
-    {% if user.validado %}
-        <p class="validation-status validated">Acesso validado</p>
-    {% else %}
-        <p class="validation-status not-validated">Acesso completo ainda não validado. Solicite ao administrador do sistema.</p>
-    {% endif %}
 
     <hr>
-    <h3>Múltiplos Grupos</h3>
-
     {% if user_memberships|length > 1 %} {# Only show switcher if user belongs to more than one group #}
+    <h3>Múltiplos Grupos</h3>
         <label for="group_id">Escolha o grupo que deseja usar no sistema (os dados que você verá serão referentes a este grupo):</label>
         <form method="POST">
             {% csrf_token %}
@@ -37,11 +31,7 @@
                 <button type="submit" class="btn btn-primary">Escolher grupo</button>
             </div>
         </form>
-    {% elif user_memberships|length == 1 %}
-        {# Optionally, still show the single group name if only one membership exists #}
-        <p>Você pertence ao grupo: {{ user_memberships.0.group.name }}</p>
-     {% else %}
-         <p>Você ainda não foi associado a nenhum grupo.</p>
+
     {% endif %}
 
     <p>Para alterar seu e-mail ou tipo de acesso, contate o administrador do sistema.</p>
