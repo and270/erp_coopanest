@@ -37,14 +37,34 @@ def update_procedure(request, procedure_id):
     if not request.user.validado or request.user.group != procedure.group:
         return HttpResponseForbidden("You don't have permission to update this procedure.")
     
+    # Debug: Print POST data
+    print("UPDATE PROCEDURE - POST DATA:")
+    for key, value in request.POST.items():
+        print(f"{key}: {value}")
+    
+    print("FILES:", request.FILES)
+    
     old_email = procedure.email_paciente
     form = ProcedimentoForm(request.POST, request.FILES, instance=procedure, user=request.user)
     if form.is_valid():
+        # Debug: Print cleaned data
+        print("FORM VALID - Cleaned data:")
+        for key, value in form.cleaned_data.items():
+            print(f"{key}: {value}")
+        
         updated_procedure = form.save()
+        
+        # Debug: Check if anestesistas_responsaveis is in cleaned_data
         if 'anestesistas_responsaveis' in form.cleaned_data:
+            print("SETTING ANESTHESIOLOGISTS:", form.cleaned_data['anestesistas_responsaveis'])
             updated_procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
+        else:
+            print("WARNING: anestesistas_responsaveis not in cleaned_data!")
         
         updated_procedure.save()
+        
+        # Debug: Print the final list of anesthesiologists
+        print("FINAL ANESTHESIOLOGISTS:", list(updated_procedure.anestesistas_responsaveis.all().values_list('id', 'name')))
         
         email_try = False
         email_sent = False
@@ -97,16 +117,37 @@ def create_procedure(request):
     if not request.user.validado:
         return HttpResponseForbidden("You don't have permission to create this procedure.")
     
+    # Debug: Print POST data
+    print("CREATE PROCEDURE - POST DATA:")
+    for key, value in request.POST.items():
+        print(f"{key}: {value}")
+    
+    print("FILES:", request.FILES)
+    
     form = ProcedimentoForm(request.POST, request.FILES, user=request.user)
 
     if form.is_valid():
+        # Debug: Print cleaned data
+        print("FORM VALID - Cleaned data:")
+        for key, value in form.cleaned_data.items():
+            print(f"{key}: {value}")
+            
         procedure = form.save(commit=False)
         procedure.group = request.user.group
         procedure.save() 
 
-        procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
+        # Debug: Check if anestesistas_responsaveis is in cleaned_data
+        if 'anestesistas_responsaveis' in form.cleaned_data:
+            print("SETTING ANESTHESIOLOGISTS:", form.cleaned_data['anestesistas_responsaveis'])
+            procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
+        else:
+            print("WARNING: anestesistas_responsaveis not in cleaned_data!")
+        
         procedure.save() 
 
+        # Debug: Print the final list of anesthesiologists
+        print("FINAL ANESTHESIOLOGISTS:", list(procedure.anestesistas_responsaveis.all().values_list('id', 'name')))
+        
         email_sent = False
         email_error = None
 
