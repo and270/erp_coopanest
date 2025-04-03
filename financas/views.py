@@ -19,16 +19,6 @@ DIAS_PARA_CONCILIACAO = 90
 
 @login_required
 def financas_view(request):
-    #TODO: ALTERAR MODELO PARA PASSAR A TER OS SEGUINTES VALORES: valor_faturado, valor_recebido, valor_receuperado, valor_acatado ao invés de valor_cobranca (AJUSTAR TUDO QUE FOR NECESSÁRIO)
-    #TODO: ALTERAR NO TEMPLATE PARA A TABELA PASSAR A MOSTRAR MESMAS RUBRICAS DE VALORES COMO NA API
-    #TODO: ALTERAR OS TIPOS DE STATUS PARA TER O MESMO DA API:
-                        #"Aguardando Envio" -> ignorar e nem conciliar (?)
-                        #"Em Processamento" -> "pendente" (?)
-                        #"Aguardando Pagamento" -> "pendente" (?)
-                        #"Recurso de Glosa" -> "glosa" (?)
-                        #"Processo Finalizado" -> "pago" (?)
-                        #"Cancelada" -> "cancelado" (?) (teria que criar esse status no model e ver se há algo a tratar no dashboard e na view principal de finanças)
-    #TODO: considerar na conciliação a questão de key e valor em que comparar no status
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
     
@@ -167,7 +157,10 @@ def get_finance_item(request, type, id):
                 procedimento__group=user_group
             )
             data = {
-                'valor_cobranca': float(item.valor_cobranca) if item.valor_cobranca else 0,
+                'valor_faturado': float(item.valor_faturado) if item.valor_faturado else 0,
+                'valor_recebido': float(item.valor_recebido) if item.valor_recebido else 0,
+                'valor_recuperado': float(item.valor_recuperado) if item.valor_recuperado else 0,
+                'valor_acatado': float(item.valor_acatado) if item.valor_acatado else 0,
                 'status_pagamento': item.status_pagamento,
                 'data_pagamento': item.data_pagamento.strftime('%Y-%m-%d') if item.data_pagamento else None,
                 'cpf': item.procedimento.cpf_paciente,
@@ -208,7 +201,10 @@ def update_finance_item(request):
                 id=finance_id,
                 procedimento__group=user_group
             )
-            item.valor_cobranca = data.get('valor_cobranca')
+            item.valor_faturado = data.get('valor_faturado')
+            item.valor_recebido = data.get('valor_recebido')
+            item.valor_recuperado = data.get('valor_recuperado')
+            item.valor_acatado = data.get('valor_acatado')
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
             item.cpsa = data.get('cpsa')
@@ -349,7 +345,10 @@ def export_finances(request):
                 'Paciente': item.procedimento.nome_paciente,
                 'CPF': item.procedimento.cpf_paciente,
                 'Data da Cirurgia': item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento.data_horario else '',
-                'Valor': float(item.valor_cobranca) if item.valor_cobranca else 0.0,
+                'Valor Faturado': float(item.valor_faturado) if item.valor_faturado else 0.0,
+                'Valor Recebido': float(item.valor_recebido) if item.valor_recebido else 0.0,
+                'Valor Recuperado': float(item.valor_recuperado) if item.valor_recuperado else 0.0,
+                'Valor a Recuperar': float(item.valor_acatado) if item.valor_acatado else 0.0,
                 'Fonte Pagadora': item.get_tipo_cobranca_display(),
                 'CPSA': item.get_cpsa_display(),
                 'Anestesista': item.procedimento.anestesistas_responsaveis.first().name if item.procedimento.anestesistas_responsaveis.exists() else '',
@@ -514,17 +513,23 @@ def conciliar_financas(request):
 
                         # Update ProcedimentoFinancas with data from the current 'guia'
                         financa.cpsa = str(guia['idcpsa']) # Store the matched CPSA ID
-                        financa.valor_cobranca = guia.get('valor_faturado', 0) # Use .get for safety
+                        financa.valor_faturado = guia.get('valor_faturado', 0) # Use .get for safety
                         # Map API status to model choices (convert to lower, handle potential variations)
                         api_status = str(guia.get('STATUS', '')).lower()
+                        status_mapping = {
+                            'em processamento': 'em_processamento',
+                            'aguardando pagamento': 'aguardando_pagamento',
+                            'recurso de glosa': 'recurso_de_glosa',
+                            'processo finalizado': 'processo_finalizado',
+                            'cancelada': 'cancelada',
+                        }
 
-                        #TODO AJUSTAR PARA CASAR STATUS CONFORME NOVOS STATUS, CONSIDERANDO FORMATO DE RESPOSTA DA API E KEY VS DISPLAY DOPS TIPOS DE STATUS DO MODELO FINANÇAS
-                        if api_status in [choice[0] for choice in ProcedimentoFinancas.STATUS_PAGAMENTO_CHOICES]:
-                             financa.status_pagamento = api_status
+                        # Apply the mapping
+                        if api_status.lower() in status_mapping:
+                            financa.status_pagamento = status_mapping[api_status.lower()]
                         else:
-                             # Handle unknown statuses if necessary, maybe map to 'pendente'
-                             print(f"Warning: Unknown API status '{guia.get('STATUS')}' for idcpsa {guia['idcpsa']}. Setting to 'pendente'.")
-                             financa.status_pagamento = 'pendente'
+                            # Default value for unknown status
+                            financa.status_pagamento = 'em_processamento'
                         #TODO Try to parse payment date if available (needs clarification if API provides this)
                         # financa.data_pagamento = ...
                         financa.save()
@@ -610,7 +615,7 @@ def confirmar_conciliacao(request):
             
             if api_data.get('erro') == '000' and api_data.get('listaguias'):
                 guia = api_data['listaguias'][0]
-                financa.valor_cobranca = guia['valor_faturado']
+                financa.valor_faturado = guia['valor_faturado']
                 financa.status_pagamento = guia['STATUS'].lower()
                 financa.save()
         

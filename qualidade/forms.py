@@ -96,14 +96,14 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
         required=True
     )
-    valor_cobranca = forms.DecimalField(
+    valor_faturado = forms.DecimalField(
         max_digits=15,
         decimal_places=2,
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'data-dependent-on': 'tipo_cobranca',
-            'id': 'id_valor_cobranca'
+            'id': 'id_valor_faturado'
         })
     )
     tipo_pagamento_direto = forms.ChoiceField(
@@ -238,11 +238,11 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'tipo_pagamento_direto': forms.Select(
                 attrs={'class': 'form-control'}
             ),
-            'valor_cobranca': forms.NumberInput(
+            'valor_faturado': forms.NumberInput(
                 attrs={
                     'class': 'form-control',
                     'data-dependent-on': 'tipo_cobranca',
-                    'id': 'id_valor_cobranca'
+                    'id': 'id_valor_faturado'
                 }
             ),
         }
@@ -258,7 +258,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 procedimento=qualidade_instance.procedimento
             )
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
-            financas.valor_cobranca = self.cleaned_data['valor_cobranca']
+            financas.valor_faturado = self.cleaned_data['valor_faturado']
             financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
             financas.save()
             
@@ -332,8 +332,8 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                     if cleaned_data.get(field) is None:
                         self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
 
-        if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_cobranca'):
-            self.add_error('valor_cobranca', 'Este campo é obrigatório para este tipo de cobrança.')
+        if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_faturado'):
+            self.add_error('valor_faturado', 'Este campo é obrigatório para este tipo de cobrança.')
 
         if eventos_adversos_graves and not eventos_adversos_graves_desc:
             self.add_error('eventos_adversos_graves_desc', 'Este campo é obrigatório quando há eventos adversos graves.')

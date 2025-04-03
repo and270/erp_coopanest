@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.db.models import Avg, Count, Case, When, F, Q, Sum
+from django.db.models.functions import Coalesce, TruncMonth, TruncDate
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
@@ -7,13 +8,13 @@ from agenda.models import ProcedimentoDetalhes, Procedimento
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils import timezone
-from django.db.models.functions import TruncMonth, TruncDate
 from registration.models import Anesthesiologist
 from dateutil.relativedelta import relativedelta
 from django.http import HttpResponse
 import xlsxwriter
 from io import BytesIO
 from qualidade.models import AvaliacaoRPA
+from django.db import models
 
 @login_required
 @login_required
@@ -180,12 +181,11 @@ def dashboard_view(request):
 
 @login_required
 def financas_dashboard_view(request):
-    #TODO AJUSTAR PARA NOVOS VALORES DO MODELO FINANÇAS.
-    #TODO: VALORES EM GLOSA SÃO A DIFERENÇA ENTRE O VALOR FATURADO E O RECEBIDO. DOS COM STATUS DE Recurso de Glosa E Processo Finalizado
-    #TODO: Se estatus Em Processamento, Aguardando Pagamento, considerar a soma do valor faturado como "Em andamento" do dahsbord
-    #TODO: considerar como pago a soma de valor_recebido e valor_receuperado em processos com status Processo Finalizado ou Recurso de Glosa
-
     """Dashboard de Finanças, com opção de Período Personalizado."""
+    #TODO: VALORES EM GLOSA SÃO A DIFERENÇA ENTRE O VALOR FATURADO E A SOMA DE valor_recebido + valor_recuperado PARA OS COM STATUS Recurso de Glosa E Processo Finalizado
+    #TODO: Se status Em Processamento, Aguardando Pagamento, considerar a soma do valor_faturado como "Em andamento" do dashboard
+    #TODO: considerar como pago a soma de valor_recebido e valor_recuperado em processos com status Processo Finalizado ou Recurso de Glosa
+
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
 
@@ -312,23 +312,38 @@ def financas_dashboard_view(request):
     # Distinct procedures
     anestesias_count = queryset.values('procedimento').distinct().count()
 
-    # Summations by status_pagamento
+    # Summations by status_pagamento using the new fields and statuses
     totals_by_status = queryset.values('status_pagamento').annotate(
-        total=Sum('valor_cobranca')
+        total=Sum('valor_faturado')
     )
     total_valor = sum(
         item['total'] for item in totals_by_status if item['total'] is not None
     ) if totals_by_status else 0
 
-    def get_status_value(status):
-        for item in totals_by_status:
-            if item['status_pagamento'] == status and item['total']:
-                return item['total']
-        return 0
-
-    valor_pago = get_status_value('pago')
-    valor_pendente = get_status_value('pendente')
-    valor_glosa = get_status_value('glosa')
+    # Calculate values based on the new business logic
+    valor_pago = queryset.filter(
+        status_pagamento__in=['processo_finalizado', 'recurso_de_glosa']
+    ).aggregate(
+        total=Sum(
+            Coalesce('valor_recebido', 0) + Coalesce('valor_recuperado', 0),
+            output_field=models.DecimalField()
+        )
+    )['total'] or 0
+    
+    valor_pendente = queryset.filter(
+        status_pagamento__in=['em_processamento', 'aguardando_pagamento']
+    ).aggregate(
+        total=Sum('valor_faturado')
+    )['total'] or 0
+    
+    valor_glosa = queryset.filter(
+        status_pagamento__in=['processo_finalizado', 'recurso_de_glosa']
+    ).aggregate(
+        total=Sum(
+            F('valor_faturado') - Coalesce(F('valor_recebido'), 0) - Coalesce(F('valor_recuperado'), 0),
+            output_field=models.DecimalField()
+        )
+    )['total'] or 0
 
     # Helper for percentage
     def percentage(part, whole):
@@ -360,7 +375,7 @@ def financas_dashboard_view(request):
                 avg_recebimento = f"{avg_days} dias"
 
     # Ticket Médio
-    avg_ticket = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor']
+    avg_ticket = queryset.aggregate(avg_valor=Avg('valor_faturado'))['avg_valor']
 
     # -----------------------------------------------------------------------
     # 4) Build chart data (daily or monthly)
@@ -375,10 +390,10 @@ def financas_dashboard_view(request):
         daily_data = queryset.annotate(
             date=TruncDate('procedimento__data_horario')
         ).filter(
-            valor_cobranca__isnull=False,
+            valor_faturado__isnull=False,
             status_pagamento__in=['pago', 'pendente']
         ).values('date', 'tipo_cobranca').annotate(
-            total=Sum('valor_cobranca')
+            total=Sum('valor_faturado')
         ).order_by('date')
 
         for item in daily_data:
@@ -399,7 +414,7 @@ def financas_dashboard_view(request):
         daily_revenues = []
         for d in sorted_dates:
             day_procedures = queryset.filter(procedimento__data_horario__date=d)
-            day_total = day_procedures.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+            day_total = day_procedures.aggregate(total=Sum('valor_faturado'))['total'] or 0
             day_count = day_procedures.count()
             average_for_day = day_total / day_count if day_count > 0 else 0
             daily_tickets.append(float(round(average_for_day, 2)))
@@ -422,10 +437,10 @@ def financas_dashboard_view(request):
         monthly_data = queryset.annotate(
             month=TruncMonth('procedimento__data_horario')
         ).filter(
-            valor_cobranca__isnull=False,
+            valor_faturado__isnull=False,
             status_pagamento__in=['pago', 'pendente']
         ).values('month', 'tipo_cobranca').annotate(
-            total=Sum('valor_cobranca')
+            total=Sum('valor_faturado')
         ).order_by('month')
 
         for item in monthly_data:
@@ -461,7 +476,7 @@ def financas_dashboard_view(request):
                 procedimento__data_horario__year=m.year,
                 procedimento__data_horario__month=m.month
             )
-            month_total = month_procedures.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+            month_total = month_procedures.aggregate(total=Sum('valor_faturado'))['total'] or 0
             month_count = month_procedures.count()
             monthly_tickets.append(
                 float(round(month_total / month_count if month_count > 0 else 0, 2))
@@ -496,9 +511,9 @@ def financas_dashboard_view(request):
     # -----------------------------------------------------------------------
     # period_total uses the main queryset which might be filtered by date, procedure, and potentially anesthesiologist
     if selected_graph_type == 'ticket':
-        period_total = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
+        period_total = queryset.aggregate(avg_valor=Avg('valor_faturado'))['avg_valor'] or 0
     else: # 'receitas'
-        period_total = queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+        period_total = queryset.aggregate(total=Sum('valor_faturado'))['total'] or 0
     
     anestesista_total = 0
     # Use selected_anestesista_id which reflects the actual applied filter
@@ -524,11 +539,11 @@ def financas_dashboard_view(request):
 
             if selected_graph_type == 'ticket':
                 # Average ticket for the whole group in the period
-                 group_period_total_avg = unfiltered_by_anest_queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor'] or 0
+                 group_period_total_avg = unfiltered_by_anest_queryset.aggregate(avg_valor=Avg('valor_faturado'))['avg_valor'] or 0
                  anestesista_total = group_period_total_avg # When "all" is selected, show group average ticket
             else: # 'receitas'
                  # Average revenue per anesthesiologist for the whole group in the period
-                 group_period_total_sum = unfiltered_by_anest_queryset.aggregate(total=Sum('valor_cobranca'))['total'] or 0
+                 group_period_total_sum = unfiltered_by_anest_queryset.aggregate(total=Sum('valor_faturado'))['total'] or 0
                  anestesista_total = group_period_total_sum / num_anestesistas if num_anestesistas > 0 else 0
          else:
               anestesista_total = 0 # Avoid division by zero
@@ -674,7 +689,8 @@ def export_financas_excel(request):
     # Write headers
     headers = [
         'Data', 'Procedimento', 'Anestesista(s)', 'Tipo de Cobrança',
-        'Valor Cobrança', 'Status Pagamento', 'Data de Pagamento', 'Paciente' # Added Paciente
+        'Valor Faturado', 'Valor Recebido', 'Valor Recuperado', 'Valor a Recuperar',
+        'Status Pagamento', 'Data de Pagamento', 'Paciente'
     ]
     for col, header in enumerate(headers):
         worksheet.write(0, col, header, header_format)
@@ -691,10 +707,13 @@ def export_financas_excel(request):
         anestesistas_nomes = ', '.join([a.name for a in item.procedimento.anestesistas_responsaveis.all()])
         worksheet.write(row, 2, anestesistas_nomes)
         worksheet.write(row, 3, item.get_tipo_cobranca_display() if item.tipo_cobranca else '') # Use display value
-        worksheet.write(row, 4, float(item.valor_cobranca or 0), currency_format)
-        worksheet.write(row, 5, item.get_status_pagamento_display()) # Use display value
-        worksheet.write(row, 6, item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '')
-        worksheet.write(row, 7, item.procedimento.nome_paciente if item.procedimento else '') # Added paciente name
+        worksheet.write(row, 4, float(item.valor_faturado or 0), currency_format)
+        worksheet.write(row, 5, float(item.valor_recebido or 0), currency_format)
+        worksheet.write(row, 6, float(item.valor_recuperado or 0), currency_format)
+        worksheet.write(row, 7, float(item.valor_acatado or 0), currency_format)
+        worksheet.write(row, 8, item.get_status_pagamento_display())
+        worksheet.write(row, 9, item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '')
+        worksheet.write(row, 10, item.procedimento.nome_paciente if item.procedimento else '')
         row += 1
 
     # --- Summary Sheet ---
@@ -709,7 +728,7 @@ def export_financas_excel(request):
     anestesias_distinct_count = queryset.values('procedimento').distinct().count()
 
     # Calculate financial summaries from the filtered queryset
-    totals_by_status = queryset.values('status_pagamento').annotate(total=Sum('valor_cobranca'))
+    totals_by_status = queryset.values('status_pagamento').annotate(total=Sum('valor_faturado'))
     total_valor = sum(item['total'] for item in totals_by_status if item['total'] is not None)
 
     def get_status_value_from_summary(status, summary_list):
@@ -731,7 +750,7 @@ def export_financas_excel(request):
     glosa_pct = percentage(valor_glosa, total_valor)
 
     # Average Ticket for the filtered results
-    avg_ticket_filtered = queryset.aggregate(avg_valor=Avg('valor_cobranca'))['avg_valor']
+    avg_ticket_filtered = queryset.aggregate(avg_valor=Avg('valor_faturado'))['avg_valor']
 
     summary_data = [
         ('Período Analisado', f"{export_start_date.strftime('%d/%m/%Y')} a {export_end_date.strftime('%d/%m/%Y')}" if export_start_date and export_end_date else "N/A"),

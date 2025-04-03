@@ -28,17 +28,13 @@
         </div>
         
         <div class="status-filter">
-            <select onchange="window.location.href = this.value">
-                <option value="?view={{ view_type }}">Status</option>
-                {% if view_type == 'receitas' %}
-                    <option value="?view={{ view_type }}&status=pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                    <option value="?view={{ view_type }}&status=pendente" {% if selected_status == 'pendente' %}selected{% endif %}>Em andamento</option>
-                    <option value="?view={{ view_type }}&status=glosa" {% if selected_status == 'glosa' %}selected{% endif %}>Glosa</option>
-                {% else %}
-                    <option value="?view={{ view_type }}&status=a_vencer" {% if selected_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
-                    <option value="?view={{ view_type }}&status=pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                    <option value="?view={{ view_type }}&status=atrasado" {% if selected_status == 'atrasado' %}selected{% endif %}>Pagamento Atrasado</option>
-                {% endif %}
+            <select name="status" class="form-select">
+                <option value="">Todos</option>
+                <option value="em_processamento" {% if selected_status == 'em_processamento' %}selected{% endif %}>Em Processamento</option>
+                <option value="aguardando_pagamento" {% if selected_status == 'aguardando_pagamento' %}selected{% endif %}>Aguardando Pagamento</option>
+                <option value="recurso_de_glosa" {% if selected_status == 'recurso_de_glosa' %}selected{% endif %}>Recurso de Glosa</option>
+                <option value="processo_finalizado" {% if selected_status == 'processo_finalizado' %}selected{% endif %}>Processo Finalizado</option>
+                <option value="cancelada" {% if selected_status == 'cancelada' %}selected{% endif %}>Cancelada</option>
             </select>
         </div>
         
@@ -96,7 +92,10 @@
                         <th>Paciente</th>
                         <th>CPF</th>
                         <th>Data da Cirurgia</th>
-                        <th>Valor</th>
+                        <th>Valor Faturado</th>
+                        <th>Valor Recebido</th>
+                        <th>Valor Recuperado</th>
+                        <th>Valor a Recuperar</th>
                         <th>Fonte Pagadora</th>
                         <th>CPSA</th>
                         <th>Anestesista</th>
@@ -106,7 +105,10 @@
                     {% else %}
                         <th>Descrição</th>
                         <th>Data</th>
-                        <th>Valor</th>
+                        <th>Valor Faturado</th>
+                        <th>Valor Recebido</th>
+                        <th>Valor Recuperado</th>
+                        <th>Valor a Recuperar</th>
                         <th>Pago</th>
                         <th>Editar</th>
                     {% endif %}
@@ -119,7 +121,10 @@
                             <td>{{ item.procedimento.nome_paciente }}</td>
                             <td>{{ item.procedimento.cpf_paciente }}</td>
                             <td>{{ item.procedimento.data_horario|date:"d/m/Y" }}</td>
-                            <td>{% if item.valor_cobranca %}R$ {{ item.valor_cobranca|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_faturado %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_recebido %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_recuperado %}R$ {{ item.valor_recuperado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_acatado %}R$ {{ item.valor_acatado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{{ item.get_tipo_cobranca_display|default:"" }}</td>
                             <td>{{ item.get_cpsa_display }}</td>
                             <td>{{ item.procedimento.anestesistas_responsaveis.first.name }}</td>
@@ -136,6 +141,9 @@
                         {% else %}
                             <td>{{ item.descricao }}</td>
                             <td>{{ item.data|date:"d/m/Y" }}</td>
+                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.pago %}Pago{% else %}Não Pago{% endif %}</td>
                             <td>
@@ -175,15 +183,29 @@
             <!-- Receitas fields -->
             <div id="receitas-fields">
                 <div class="form-group">
-                    <label for="valor_cobranca">Valor</label>
-                    <input type="text" class="money-input" id="valor_cobranca" name="valor_cobranca">
+                    <label for="valor_faturado">Valor Faturado</label>
+                    <input type="number" step="0.01" class="form-control" id="valor_faturado" name="valor_faturado">
+                </div>
+                <div class="form-group">
+                    <label for="valor_recebido">Valor Recebido</label>
+                    <input type="number" step="0.01" class="form-control" id="valor_recebido" name="valor_recebido">
+                </div>
+                <div class="form-group">
+                    <label for="valor_recuperado">Valor Recuperado</label>
+                    <input type="number" step="0.01" class="form-control" id="valor_recuperado" name="valor_recuperado">
+                </div>
+                <div class="form-group">
+                    <label for="valor_acatado">Valor a Recuperar</label>
+                    <input type="number" step="0.01" class="form-control" id="valor_acatado" name="valor_acatado">
                 </div>
                 <div class="form-group">
                     <label for="status_pagamento">Status do Pagamento</label>
                     <select id="status_pagamento" name="status_pagamento">
-                        <option value="pago">Pago</option>
-                        <option value="pendente">Em andamento</option>
-                        <option value="glosa">Glosa</option>
+                        <option value="em_processamento">Em Processamento</option>
+                        <option value="aguardando_pagamento">Aguardando Pagamento</option>
+                        <option value="recurso_de_glosa">Recurso de Glosa</option>
+                        <option value="processo_finalizado">Processo Finalizado</option>
+                        <option value="cancelada">Cancelada</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -329,7 +351,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 despesasFields.forEach(field => field.removeAttribute('required'));
                 
                 // Set required for relevant receitas fields
-                document.getElementById('valor_cobranca').setAttribute('required', '');
+                document.getElementById('valor_faturado').setAttribute('required', '');
+                document.getElementById('valor_recebido').setAttribute('required', '');
+                document.getElementById('valor_recuperado').setAttribute('required', '');
+                document.getElementById('valor_acatado').setAttribute('required', '');
                 document.getElementById('status_pagamento').setAttribute('required', '');
             } else {
                 document.getElementById('receitas-fields').style.display = 'none';
@@ -338,7 +363,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('descricao').required = true;
                 document.getElementById('valor').required = true;
                 // Remove required from receitas fields
-                document.getElementById('valor_cobranca').required = false;
+                document.getElementById('valor_faturado').required = false;
+                document.getElementById('valor_recebido').required = false;
+                document.getElementById('valor_recuperado').required = false;
+                document.getElementById('valor_acatado').required = false;
                 document.getElementById('status_pagamento').required = false;
                 document.getElementById('data_pagamento').required = false;
             }
@@ -359,12 +387,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('finance_type').value = viewType;
                     
                     if (viewType === 'receitas') {
-                        const valorInput = document.getElementById('valor_cobranca');
-                        valorInput.value = data.valor_cobranca ? 
-                            `R$ ${parseFloat(data.valor_cobranca).toLocaleString('pt-BR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}` : 'R$ 0,00';
+                        const valorInputs = [
+                            document.getElementById('valor_faturado'),
+                            document.getElementById('valor_recebido'),
+                            document.getElementById('valor_recuperado'),
+                            document.getElementById('valor_acatado')
+                        ];
+                        valorInputs.forEach(input => {
+                            input.value = data.valor_faturado ? 
+                                `R$ ${parseFloat(data.valor_faturado).toLocaleString('pt-BR', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}` : 'R$ 0,00';
+                        });
                         document.getElementById('status_pagamento').value = data.status_pagamento;
                         document.getElementById('data_pagamento').value = data.data_pagamento || '';
                         document.getElementById('tipo_cobranca').value = data.tipo_cobranca || 'cooperativa';
@@ -413,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate required fields based on view type
         if (viewType === 'receitas') {
-            if (!formData.get('valor_cobranca') || !formData.get('status_pagamento')) {
+            if (!formData.get('valor_faturado') || !formData.get('valor_recebido') || !formData.get('valor_recuperado') || !formData.get('valor_acatado') || !formData.get('status_pagamento')) {
                 alert('Por favor, preencha todos os campos obrigatórios');
                 return;
             }
@@ -434,13 +469,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Convert money values from "R$ 1.234,56" to "1234.56"
         if (viewType === 'receitas') {
-            const valorCobranca = formData.get('valor_cobranca');
-            if (valorCobranca) {
-                const numericValue = valorCobranca.replace('R$ ', '')
-                                                .replace(/\./g, '')
-                                                .replace(',', '.');
-                formData.set('valor_cobranca', numericValue);
-            }
+            const valorInputs = [
+                document.getElementById('valor_faturado'),
+                document.getElementById('valor_recebido'),
+                document.getElementById('valor_recuperado'),
+                document.getElementById('valor_acatado')
+            ];
+            valorInputs.forEach(input => {
+                const valor = input.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+                input.value = valor;
+            });
         } else {
             const valor = formData.get('valor');
             if (valor) {
