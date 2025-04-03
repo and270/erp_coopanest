@@ -19,7 +19,7 @@ DIAS_PARA_CONCILIACAO = 90
 
 @login_required
 def financas_view(request):
-    #TODO: ALTERAR MODELO PARA PASSAR A TER OS SEGUINTES VALORES: valor_faturado, valor_recebido, valor_receuperado, valor_acatado
+    #TODO: ALTERAR MODELO PARA PASSAR A TER OS SEGUINTES VALORES: valor_faturado, valor_recebido, valor_receuperado, valor_acatado ao invés de valor_cobranca (AJUSTAR TUDO QUE FOR NECESSÁRIO)
     #TODO: ALTERAR NO TEMPLATE PARA A TABELA PASSAR A MOSTRAR MESMAS RUBRICAS DE VALORES COMO NA API
     #TODO: ALTERAR OS TIPOS DE STATUS PARA TER O MESMO DA API:
                         #"Aguardando Envio" -> ignorar e nem conciliar (?)
@@ -28,7 +28,7 @@ def financas_view(request):
                         #"Recurso de Glosa" -> "glosa" (?)
                         #"Processo Finalizado" -> "pago" (?)
                         #"Cancelada" -> "cancelado" (?) (teria que criar esse status no model e ver se há algo a tratar no dashboard e na view principal de finanças)
-    #TODO: AQUI NA VERDADE, REVER ESSA REGRA. LEM
+    #TODO: considerar na conciliação a questão de key e valor em que comparar no status
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
     
@@ -461,7 +461,7 @@ def conciliar_financas(request):
                 base_queryset = base_queryset.filter(
                     procedimento__anestesistas_responsaveis=user.anesthesiologist
                 )
-
+ 
             financas = base_queryset.select_related('procedimento')
 
             for guia in guias:
@@ -481,14 +481,16 @@ def conciliar_financas(request):
 
                 for financa in financas:
                     # Skip if already attempted to match
-                    #TODO: TAMBÉM TEMOS QUE VER OS CASOS PARA FAZER UPDATE DE STATUS, VALORES, ETC... EM GUIAS QUE JÁ FORAM CONCILIDAS OU JPA REGISTYRADAS, ETC...
+
+                    #TODO: A PRIMEIRA E MAIS LÓGICA TENTATIVA DE CONCILIAÇÃO É COM O IDCPSA. NESSE, NÃO PRECISA CONCILIAR/CONFIRMAR, BASTA ATUALIZAR DE ACORDO
+
+                    #TODO: TAMBÉM TEMOS QUE VER OS CASOS PARA FAZER UPDATE DE STATUS, VALORES, ETC... EM GUIAS QUE JÁ FORAM CONCILIDAS OU JA REGISTYRADAS, ETC...
                     if ConciliacaoTentativa.objects.filter(
                         procedimento_financas=financa,
                         cpsa_id=guia['idcpsa']
                     ).exists():
                         continue
 
-                    #TODO: A PRIMEIRA E MAIS LÓGICA TENTATIVA DE CONCILIAÇÃO É COM O IDCPSA. DEPOIS TENTAR COM ESSES ABAIXO
 
                     # For anestesista, check if they are the cooperado
                     if (user.user_type == ANESTESISTA_USER and 
