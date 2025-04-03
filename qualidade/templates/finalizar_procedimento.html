@@ -365,13 +365,13 @@
                 {% endif %}
             </div>
 
-            <div class="radio-group" id="valor_cobranca_container">
-                <label for="{{ form.valor_cobranca.id_for_label }}">{{ form.valor_cobranca.label }}</label>
+            <div class="radio-group" id="valor_faturado_container">
+                <label for="{{ form.valor_faturado.id_for_label }}">{{ form.valor_faturado.label }}</label>
                 <div class="input-width-280">
-                    {{ form.valor_cobranca }}
-                    {% if form.valor_cobranca.errors %}
+                    {{ form.valor_faturado }}
+                    {% if form.valor_faturado.errors %}
                     <div class="error-message">
-                        {% for error in form.valor_cobranca.errors %}
+                        {% for error in form.valor_faturado.errors %}
                             {{ error }}
                         {% endfor %}
                     </div>
@@ -406,9 +406,9 @@
 <script src="https://unpkg.com/imask"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize money mask for valor_cobranca
-    const valorCobrancaInput = document.getElementById('id_valor_cobranca');
-    if (valorCobrancaInput) {
+    // Initialize money mask for valor_faturado
+    const valorFaturadoInput = document.getElementById('id_valor_faturado');
+    if (valorFaturadoInput) {
         const maskOptions = {
             mask: 'R$ num',
             blocks: {
@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
         
-        const mask = IMask(valorCobrancaInput, maskOptions);
+        const mask = IMask(valorFaturadoInput, maskOptions);
 
         // Add form submit handler to convert the masked value back to a number
         const form = document.getElementById('finalizarProcedimentoForm');
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get the raw value without mask
             const rawValue = mask.unmaskedValue;
             // Update the input value with the raw number
-            valorCobrancaInput.value = rawValue;
+            valorFaturadoInput.value = rawValue;
         });
     }
 
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const bpsFields = document.getElementById('bps-fields');
     const painadBFields = document.getElementById('painad-b-fields');
     const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]');
-    const valorCobrancaContainer = document.getElementById('valor_cobranca_container');
+    const valorFaturadoContainer = document.getElementById('valor_faturado_container');
     const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
 
     function handleTipoCobrancaChange() {
@@ -452,12 +452,12 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Tipo cobrança changed:', selectedValue);
         
         if (selectedValue === 'cooperativa') {
-            valorCobrancaContainer.style.display = 'none';
+            valorFaturadoContainer.style.display = 'none';
             tipoPagamentoDiretoContainer.style.display = 'none';
-            document.getElementById('id_valor_cobranca').value = '';
+            document.getElementById('id_valor_faturado').value = '';
             document.getElementById('id_tipo_pagamento_direto').value = '';
         } else {
-            valorCobrancaContainer.style.display = 'block';
+            valorFaturadoContainer.style.display = 'block';
             tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
             if (selectedValue !== 'particular') {
                 document.getElementById('id_tipo_pagamento_direto').value = '';

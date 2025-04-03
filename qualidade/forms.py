@@ -260,6 +260,8 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
             financas.valor_faturado = self.cleaned_data['valor_faturado']
             financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
+            # Set the default status to em_processamento
+            financas.status_pagamento = 'em_processamento'
             financas.save()
             
             # Update Procedimento status

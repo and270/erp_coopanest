@@ -73,7 +73,7 @@ class ProcedimentoFinancas(models.Model):
     status_pagamento = models.CharField(
         max_length=20,
         choices=STATUS_PAGAMENTO_CHOICES,
-        default='pendente',
+        default='em_processamento',
         verbose_name='Status do Pagamento'
     )
     data_pagamento = models.DateField(

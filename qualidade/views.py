@@ -309,7 +309,7 @@ def finalizar_procedimento_view(request, procedimento_id):
     else:
         initial_data = {
             'tipo_cobranca': financas.tipo_cobranca,
-            'valor_cobranca': financas.valor_cobranca,
+            'valor_faturado': financas.valor_faturado,
             'tipo_pagamento_direto': financas.tipo_pagamento_direto,
         }
         form = ProcedimentoFinalizacaoForm(instance=qualidade, initial=initial_data)
