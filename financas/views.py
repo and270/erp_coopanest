@@ -412,6 +412,7 @@ def similar(a, b):
 def conciliar_financas(request):
     #TODO: TEMOS QUE REVER UMA COISA IMPORTANTE: HÁ ESSE PROCESSO DE CONCILIAÇÃO, QUE SIGNIFICA LIGAR, O PROCEDIMENTO AQUI COM O DA API COM O MESMO ID DA GUIA. MAS TAMBÉM TEM OS UPDATES, QUE SERIA PEGAR OS JPA CONCILIADOS E VER SE EXISTE ATULUALIZAÇÃO NOS VALIORES / DADOS!!
     #TODO: VERIFICAR O FATO DE QUE A CONCILIAÇÃO E UPDATE É FEITO APENAS PARA OS OBJETOS FINANÇAR QUE tipo_cobranca FOR cooperativa
+    #TODO: GUIAS pegas pela api (menos as de status "Aguardando Envio") das quais não conseguimos achar nenhum correspondente no sistema, pensar num jeito de mostrar em algum modal de clicado em um ícone (também com um ícone circular ao inferiro direito, junto cvom o de concilioar), apenas para o GESTOR USER
     if not request.user.validado:
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
 
