@@ -306,7 +306,7 @@
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    max-width: 500px;
+    max-width: 600px;
     position: relative;
     color: #000000; /* Ensure text in all modals is black */
 }
@@ -549,11 +549,14 @@
 /* Styles for unmatched-guias-modal */
 #unmatched-guias-list {
     color: #000000; /* Ensure text in unmatched guias list is black */
+    overflow-x: auto; /* Add horizontal scrolling if needed */
+    max-width: 100%; /* Ensure it doesn't exceed parent width */
 }
 
 #unmatched-guias-list table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed; /* Help with sizing columns */
 }
 
 #unmatched-guias-list th,
@@ -562,11 +565,27 @@
     text-align: left;
     border-bottom: 1px solid #ddd;
     color: #000000; /* Ensure table text is black */
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Show ellipsis for overflowed text */
 }
 
-#unmatched-guias-list th {
-    font-weight: bold;
-    background-color: #f5f5f5;
+/* Make specific columns narrower */
+#unmatched-guias-list th:first-child, #unmatched-guias-list td:first-child {
+    width: 12%; /* CPSA ID column */
+}
+
+#unmatched-guias-list th:nth-child(3), #unmatched-guias-list td:nth-child(3) {
+    width: 12%; /* Data column */
+}
+
+#unmatched-guias-list th:nth-child(4), #unmatched-guias-list td:nth-child(4) {
+    width: 12%; /* Valor column */
+}
+
+/* For unmatched-guias-modal specifically, make it wider */
+#unmatched-guias-modal .modal-content {
+    max-width: 800px; /* Wider than the default */
 }
 
 #no-unmatched-guias p,
