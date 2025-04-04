@@ -171,7 +171,7 @@
 
 <div id="edit-finance-modal" class="modal">
     <div class="modal-content">
-        <span class="close">&times;</span>
+        <span class="close" data-modal-id="edit-finance-modal">&times;</span>
         <h2><span id="modal-action-type">Editar</span> <span id="modal-title-type"></span></h2>
         
         <form id="edit-finance-form">
@@ -273,7 +273,7 @@
 
 <div id="conciliation-modal" class="modal">
     <div class="modal-content">
-        <span class="close">&times;</span>
+        <span class="close" data-modal-id="conciliation-modal">&times;</span>
         <h2>Conciliação de Dados</h2>
         
         <div id="conciliation-cards">
@@ -286,22 +286,70 @@
     </div>
 </div>
 
+<!-- New Modal for Unmatched Guides -->
+<div id="unmatched-guias-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal-id="unmatched-guias-modal">&times;</span>
+        <h2>Guias da API Não Encontradas no Sistema</h2>
+        
+        <div id="unmatched-guias-list">
+            <!-- Unmatched guides will be listed here -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>CPSA ID</th>
+                        <th>Paciente</th>
+                        <th>Data</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Hospital</th>
+                        <th>Cooperado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added dynamically -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="no-unmatched-guias" style="display: none;">
+            <p>Não há guias não encontradas para exibir.</p>
+        </div>
+    </div>
+</div>
+
 <script src="https://unpkg.com/imask"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('edit-finance-modal');
-    const closeBtn = modal.querySelector('.close');
     const form = document.getElementById('edit-finance-form');
+    const editModal = document.getElementById('edit-finance-modal'); // Keep reference if needed elsewhere
+
+    // --- REMOVE THIS OLD Specific Close Logic ---
+    // const closeBtn = editModal.querySelector('.close');
+    // closeBtn.onclick = function() {
+    //     editModal.style.display = "none";
+    // }
+    // -------------------------------------------
     
-    // Close modal when clicking X or outside
-    closeBtn.onclick = function() {
-        modal.style.display = "none";
-    }
-    
+    // --- ADD THIS Generalized Modal Close Logic ---
+    document.querySelectorAll('.modal .close').forEach(closeBtn => {
+        closeBtn.onclick = function() {
+            const modalId = this.getAttribute('data-modal-id');
+            if (modalId) {
+                const modalToClose = document.getElementById(modalId);
+                if (modalToClose) {
+                    modalToClose.style.display = "none";
+                }
+            }
+        }
+    });
+    // ----------------------------------------------
+
+    // Close modal when clicking outside (for all modals) - Keep this
     window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
         }
     }
 
@@ -420,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             })}` : 'R$ 0,00';
                     }
                     
-                    modal.style.display = "block";
+                    editModal.style.display = "block";
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
@@ -635,7 +683,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('data').value = today;
         
         // Show modal
-        modal.style.display = "block";
+        editModal.style.display = "block";
     }
     
     // Make the function available globally
