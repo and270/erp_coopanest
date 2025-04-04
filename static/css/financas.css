@@ -308,6 +308,7 @@
     width: 90%;
     max-width: 500px;
     position: relative;
+    color: #000000; /* Ensure text in all modals is black */
 }
 
 .modal-content h2 {
@@ -448,6 +449,7 @@
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 4px;
+    color: #000000; /* Ensure text in conciliation cards is black */
 }
 
 .comparison {
@@ -459,6 +461,11 @@
 .system-data, .api-data {
     flex: 1;
     padding: 10px;
+    color: #000000; /* Ensure text in data sections is black */
+}
+
+.system-data h3, .api-data h3 {
+    color: #000000; /* Ensure headings are black */
 }
 
 .actions {
@@ -537,4 +544,32 @@
 
 #unmatched-guias-fab i {
     font-size: 20px;
+}
+
+/* Styles for unmatched-guias-modal */
+#unmatched-guias-list {
+    color: #000000; /* Ensure text in unmatched guias list is black */
+}
+
+#unmatched-guias-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#unmatched-guias-list th,
+#unmatched-guias-list td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    color: #000000; /* Ensure table text is black */
+}
+
+#unmatched-guias-list th {
+    font-weight: bold;
+    background-color: #f5f5f5;
+}
+
+#no-unmatched-guias p,
+#no-matches p {
+    color: #000000; /* Ensure message text is black */
 }
