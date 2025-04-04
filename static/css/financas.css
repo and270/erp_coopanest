@@ -441,3 +441,100 @@
         right: 0;
     }
 }
+
+
+.conciliation-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.comparison {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.system-data, .api-data {
+    flex: 1;
+    padding: 10px;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.conciliate-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.conciliate-btn:hover {
+    background-color: #45a049;
+}
+
+/* Replace the old button style with new FAB style */
+#conciliate-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+#conciliate-fab:hover {
+    background-color: #45a049;
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+#conciliate-fab i {
+    font-size: 20px;
+}
+
+#unmatched-guias-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 100px; /* Positioned to the left of the conciliation FAB */
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #ff9800; /* Orange */
+    color: white;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+#unmatched-guias-fab:hover {
+    background-color: #f57c00;
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+#unmatched-guias-fab i {
+    font-size: 20px;
+}

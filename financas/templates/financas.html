@@ -772,11 +772,13 @@ function loadConciliationData() {
     fetch('/financas/conciliar/')
         .then(response => response.json())
         .then(data => {
+            console.log('Conciliation data:', data); // Debug output
             const container = document.getElementById('conciliation-cards');
             container.innerHTML = '';
             
-            if (data.matches && data.matches.length > 0) {
-                data.matches.forEach(match => {
+            // Check for data that needs confirmation
+            if (data.needs_confirmation && data.needs_confirmation.length > 0) {
+                data.needs_confirmation.forEach(match => {
                     const card = createConciliationCard(match);
                     container.appendChild(card);
                 });
@@ -785,13 +787,33 @@ function loadConciliationData() {
                 document.getElementById('no-matches').style.display = 'block';
             }
             
+            // Open the modal
             document.getElementById('conciliation-modal').style.display = 'block';
+            
+            // Update the unmatched guias button visibility
+            if (data.not_found_in_system && data.not_found_in_system.length > 0) {
+                document.getElementById('unmatched-guias-fab').style.display = 'flex';
+                // Store the data for later use
+                window.unmatchedGuiasData = data.not_found_in_system;
+            } else {
+                document.getElementById('unmatched-guias-fab').style.display = 'none';
+            }
+            
+            // Show auto-matched count if any
+            if (data.auto_matched && data.auto_matched.length > 0) {
+                alert(`${data.auto_matched.length} guias foram automaticamente conciliadas.`);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading conciliation data:', error);
+            alert('Erro ao carregar dados para conciliação');
         });
 }
 
 function createConciliationCard(match) {
     const card = document.createElement('div');
     card.className = 'conciliation-card';
+    card.setAttribute('data-financa-id', match.financa_id);
     
     card.innerHTML = `
         <div class="comparison">
@@ -799,15 +821,17 @@ function createConciliationCard(match) {
                 <h3>Dados do Sistema</h3>
                 <p>Paciente: ${match.sistema_data.paciente}</p>
                 <p>Data: ${match.sistema_data.data}</p>
-                <p>Hospital: ${match.sistema_data.hospital}</p>
+                <p>Hospital: ${match.sistema_data.hospital || 'Não informado'}</p>
+                <p>Anestesista: ${match.sistema_data.anestesista || 'Não informado'}</p>
             </div>
             <div class="api-data">
                 <h3>Dados da API</h3>
                 <p>Paciente: ${match.api_data.paciente}</p>
                 <p>Data: ${match.api_data.data || 'Não informada'}</p>
-                <p>Valor: R$ ${match.api_data.valor}</p>
-                <p>Status: ${match.api_data.status}</p>
-                <p>Hospital: ${match.api_data.hospital}</p>
+                <p>Valor: R$ ${match.api_data.valor || '0.00'}</p>
+                <p>Status: ${match.api_data.status || 'Não informado'}</p>
+                <p>Hospital: ${match.api_data.hospital || 'Não informado'}</p>
+                <p>Cooperado: ${match.api_data.cooperado || 'Não informado'}</p>
             </div>
         </div>
         <div class="actions">
@@ -816,6 +840,9 @@ function createConciliationCard(match) {
             </button>
             <button onclick="confirmConciliation(${match.financa_id}, '${match.cpsa_id}', false)">
                 Não é o Mesmo
+            </button>
+            <button onclick="skipConciliation(${match.financa_id}, '${match.cpsa_id}')">
+                Pular
             </button>
         </div>
     `;
@@ -839,17 +866,99 @@ function confirmConciliation(financaId, cpsaId, conciliado) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Remove the card and check if there are more
+            // Remove the card
             const card = document.querySelector(`[data-financa-id="${financaId}"]`);
-            card.remove();
+            if (card) card.remove();
             
+            // Check if there are more cards
+            if (document.querySelectorAll('.conciliation-card').length === 0) {
+                document.getElementById('no-matches').style.display = 'block';
+            }
+            
+            // Show success message
+            if (data.action === 'conciliado') {
+                alert('Conciliação realizada com sucesso!');
+            } else if (data.action === 'rejeitado') {
+                alert('Item rejeitado com sucesso.');
+            }
+        } else {
+            alert('Erro ao processar conciliação: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error during conciliation:', error);
+        alert('Erro ao processar conciliação');
+    });
+}
+
+function skipConciliation(financaId, cpsaId) {
+    fetch('/financas/confirmar-conciliacao/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            financa_id: financaId,
+            cpsa_id: cpsaId,
+            pular: true
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the card
+            const card = document.querySelector(`[data-financa-id="${financaId}"]`);
+            if (card) card.remove();
+            
+            // Check if there are more cards
             if (document.querySelectorAll('.conciliation-card').length === 0) {
                 document.getElementById('no-matches').style.display = 'block';
             }
         } else {
-            alert('Erro ao processar conciliação');
+            alert('Erro ao pular item: ' + (data.error || 'Erro desconhecido'));
         }
+    })
+    .catch(error => {
+        console.error('Error skipping conciliation:', error);
+        alert('Erro ao pular item');
     });
+}
+
+function showUnmatchedGuiasModal() {
+    // Get data from window storage or re-fetch if needed
+    const unmatchedData = window.unmatchedGuiasData || [];
+    
+    // Get the modal and table body
+    const modal = document.getElementById('unmatched-guias-modal');
+    const tableBody = modal.querySelector('tbody');
+    const noDataMessage = document.getElementById('no-unmatched-guias');
+    
+    // Clear the table
+    tableBody.innerHTML = '';
+    
+    // Populate table with data
+    if (unmatchedData.length > 0) {
+        unmatchedData.forEach(guia => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${guia.cpsa_id || '-'}</td>
+                <td>${guia.paciente || '-'}</td>
+                <td>${guia.data || '-'}</td>
+                <td>R$ ${guia.valor || '0.00'}</td>
+                <td>${guia.status || '-'}</td>
+                <td>${guia.hospital || '-'}</td>
+                <td>${guia.cooperado || '-'}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+        noDataMessage.style.display = 'none';
+    } else {
+        noDataMessage.style.display = 'block';
+    }
+    
+    // Show the modal
+    modal.style.display = 'block';
 }
 
 // Replace the button with floating action buttons
@@ -863,103 +972,4 @@ document.body.insertAdjacentHTML('beforeend', `
 `);
 </script>
 
-<style>
-/* TODO: Ajustar conforme estilo passado ou fazer com semelhança aos atuais */
-
-.conciliation-card {
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 4px;
-}
-
-.comparison {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-}
-
-.system-data, .api-data {
-    flex: 1;
-    padding: 10px;
-}
-
-.actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.conciliate-btn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.conciliate-btn:hover {
-    background-color: #45a049;
-}
-
-/* Replace the old button style with new FAB style */
-#conciliate-fab {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1000;
-    transition: all 0.3s ease;
-}
-
-#conciliate-fab:hover {
-    background-color: #45a049;
-    transform: scale(1.1);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-#conciliate-fab i {
-    font-size: 20px;
-}
-
-#unmatched-guias-fab {
-    position: fixed;
-    bottom: 30px;
-    right: 100px; /* Positioned to the left of the conciliation FAB */
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: #ff9800; /* Orange */
-    color: white;
-    border: none;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1000;
-    transition: all 0.3s ease;
-}
-
-#unmatched-guias-fab:hover {
-    background-color: #f57c00;
-    transform: scale(1.1);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-#unmatched-guias-fab i {
-    font-size: 20px;
-}
-</style>
 {% endblock %}
