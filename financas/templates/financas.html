@@ -318,6 +318,10 @@
     </div>
 </div>
 
+<button id="unmatched-guias-fab" onclick="showUnmatchedGuiasModal()" title="Ver Guias Não Encontradas">
+    <i class="fas fa-question-circle"></i>
+</button>
+
 <script src="https://unpkg.com/imask"></script>
 
 <script>
@@ -848,10 +852,13 @@ function confirmConciliation(financaId, cpsaId, conciliado) {
     });
 }
 
-// Replace the button with a floating action button
+// Replace the button with floating action buttons
 document.body.insertAdjacentHTML('beforeend', `
     <button id="conciliate-fab" onclick="loadConciliationData()" title="Conciliar Dados">
         <i class="fas fa-sync"></i>
+    </button>
+    <button id="unmatched-guias-fab" onclick="showUnmatchedGuiasModal()" title="Ver Guias Não Encontradas">
+        <i class="fas fa-question-circle"></i>
     </button>
 `);
 </script>
@@ -923,6 +930,35 @@ document.body.insertAdjacentHTML('beforeend', `
 }
 
 #conciliate-fab i {
+    font-size: 20px;
+}
+
+#unmatched-guias-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 100px; /* Positioned to the left of the conciliation FAB */
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #ff9800; /* Orange */
+    color: white;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+#unmatched-guias-fab:hover {
+    background-color: #f57c00;
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+#unmatched-guias-fab i {
     font-size: 20px;
 }
 </style>
