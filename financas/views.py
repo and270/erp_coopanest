@@ -663,7 +663,7 @@ def conciliar_financas(request):
             if user.user_type == GESTOR_USER:
                 procedures_without_finance = Procedimento.objects.filter(
                     group=group,
-                    status=STATUS_FINISHED
+                    status=STATUS_FINISHED    #TODO:AQUI, VAMOS VER O QUE O CLIENTE QUER, SE DE FATO OBRIGAR  FINALIZAÇÃO PARA CONCILIAR OU NÃO. POR ENQUANTO, VEJA QUE MESMO A TENTATIVA DE CONCILIAR VIA PROCEDIMENTO (NÃO COM O OBJETO FINANÇAS), ESTÁ FILTRABDO O FINALIZADO, O QUE DE FATO ACABA TORNANDO INÓQUO POIS, PARA ESTAR COM STATUS DE FINALIAZO, É NECESSÁRIO TER FINALIZADO VIA "QUALIDADE, O QUE CRIA O OBJETO FINANÇAS.
                 ).exclude(
                     financas__isnull=False
                 )
