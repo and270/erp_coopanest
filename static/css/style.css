@@ -2953,3 +2953,93 @@ select {
 .btn-avaliar:hover {
     background: #1557b0;
 }
+
+/* ... existing styles ... */
+
+/* Hide the original multi-select widget */
+#id_anestesistas_responsaveis {
+    display: none !important;
+}
+
+/* Style for the container holding the selected anesthesiologists */
+#selected-anesthesiologists-container {
+    margin-top: 10px;
+    padding-top: 5px;
+    /* border-top: 1px solid #e0e0e0; /* Optional separator */
+}
+
+/* Style for each selected anesthesiologist item */
+.selected-anesthesiologist {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa; /* Light background */
+    padding: 5px 8px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #3D3D3D;
+}
+
+/* Style for the remove button */
+.selected-anesthesiologist .remove-anesthesiologist {
+    background-color: transparent;
+    border: none;
+    color: #dc3545; /* Red color for removal */
+    font-size: 12px; /* Make button smaller */
+    cursor: pointer;
+    padding: 2px 5px;
+    line-height: 1;
+    margin-left: 8px;
+}
+
+.selected-anesthesiologist .remove-anesthesiologist:hover {
+    color: #a71d2a; /* Darker red on hover */
+}
+
+
+/* Adjust Add Anesthesiologist button style */
+#add-anesthesiologist {
+    background-color: #6c757d; /* Secondary color */
+    color: #ffffff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 5px; /* Space above the button */
+    width: auto; /* Don't force full width */
+}
+
+#add-anesthesiologist:hover {
+    background-color: #5a6268;
+}
+
+/* Autocomplete results styling */
+#autocomplete-results {
+    position: absolute;
+    z-index: 1001; /* Ensure it's above other elements */
+    background-color: white;
+    border: 1px solid #ced4da;
+    border-top: none; /* Avoid double border with input */
+    max-height: 150px;
+    overflow-y: auto;
+    width: 100%; /* Match input width */
+    box-sizing: border-box;
+     box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Add shadow */
+     border-radius: 0 0 4px 4px; /* Round bottom corners */
+}
+
+#autocomplete-results div {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #3D3D3D;
+}
+
+#autocomplete-results div:hover {
+    background-color: #e9ecef;
+}
+
+/* ... rest of css ... */

@@ -1,5 +1,7 @@
 from django.db import models
 from agenda.models import Procedimento
+from django.db.models import Sum, F, Value
+from django.db.models.functions import Coalesce
 
 class ProcedimentoFinancas(models.Model):
     COBRANCA_CHOICES = [
@@ -18,9 +20,11 @@ class ProcedimentoFinancas(models.Model):
     ]
 
     STATUS_PAGAMENTO_CHOICES = [
-        ('pago', 'Pago'),
-        ('pendente', 'Em Andamento'),
-        ('glosa', 'Glosa'),
+        ('em_processamento', 'Em Processamento'),
+        ('aguardando_pagamento', 'Aguardando Pagamento'),
+        ('recurso_de_glosa', 'Recurso de Glosa'),
+        ('processo_finalizado', 'Processo Finalizado'),
+        ('cancelada', 'Cancelada'),
     ]
 
     procedimento = models.OneToOneField(Procedimento, on_delete=models.CASCADE, related_name='financas')
@@ -31,10 +35,31 @@ class ProcedimentoFinancas(models.Model):
         null=True,
         blank=True
     )
-    valor_cobranca = models.DecimalField(
+    valor_faturado = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        verbose_name='Valor',
+        verbose_name='Valor Faturado',
+        null=True,
+        blank=True
+    )
+    valor_recebido = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='Valor Recebido',
+        null=True,
+        blank=True
+    )
+    valor_recuperado = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='Valor Recuperado (Glosa)',
+        null=True,
+        blank=True
+    )
+    valor_acatado = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='Valor A Recuperar',
         null=True,
         blank=True
     )
@@ -48,7 +73,7 @@ class ProcedimentoFinancas(models.Model):
     status_pagamento = models.CharField(
         max_length=20,
         choices=STATUS_PAGAMENTO_CHOICES,
-        default='pendente',
+        default='em_processamento',
         verbose_name='Status do Pagamento'
     )
     data_pagamento = models.DateField(
@@ -60,7 +85,8 @@ class ProcedimentoFinancas(models.Model):
         max_length=255,
         verbose_name='CPSA',
         null=True,
-        blank=True
+        blank=True,
+        db_index=True
     )
 
     class Meta:
@@ -72,21 +98,33 @@ class ProcedimentoFinancas(models.Model):
 
     def get_cpsa_display(self):
         if self.tipo_cobranca == 'cooperativa':
-            return self.cpsa or "Ainda não informado"
+            return self.cpsa or "Não conciliado"
         return "--"
+
+    @property
+    def valor_total_recebido(self):
+        return (self.valor_recebido or 0) + (self.valor_recuperado or 0)
+
+    @property
+    def valor_em_glosa(self):
+        if self.status_pagamento == 'glosa' and self.valor_faturado is not None:
+            return self.valor_faturado - self.valor_total_recebido
+        elif self.status_pagamento == 'pago' and self.valor_faturado is not None and self.valor_faturado > self.valor_total_recebido:
+            return self.valor_faturado - self.valor_total_recebido
+        return 0
 
 class Despesas(models.Model):
     group = models.ForeignKey(
-        'registration.Groups',  # Using string to avoid circular import
+        'registration.Groups',
         on_delete=models.SET_NULL,
         verbose_name='Grupo',
         null=True,
         blank=True
     )
     procedimento = models.OneToOneField(
-        Procedimento, 
+        Procedimento,
         on_delete=models.SET_NULL,
-        null=True, 
+        null=True,
         blank=True,
         related_name='despesa'
     )
@@ -108,3 +146,12 @@ class Despesas(models.Model):
 
     def __str__(self):
         return f"Despesa - {self.descricao[:30]}"
+
+class ConciliacaoTentativa(models.Model):
+    procedimento_financas = models.ForeignKey(ProcedimentoFinancas, on_delete=models.CASCADE)
+    cpsa_id = models.CharField(max_length=255)
+    conciliado = models.BooleanField(null=True)
+    data_tentativa = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('procedimento_financas', 'cpsa_id')

@@ -1,93 +1,33 @@
 from django import forms
-from constants import ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER
+from constants import ANESTESISTA_USER, GESTOR_USER
 from registration.models import Anesthesiologist, CustomUser, Groups, HospitalClinic, Surgeon
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 
-class CustomUserCreationForm(UserCreationForm):
-    group = forms.ModelChoiceField(
-        queryset=Groups.objects.all().order_by('name'), 
-        required=False, 
-        label='Selecione seu Grupo'
-    )
-    new_group = forms.CharField(required=False, label='Registre o nome do seu Grupo')
-    new_group_email = forms.EmailField(required=False, label='E-mail do Grupo')
-    create_new_group = forms.BooleanField(
-        required=False, 
-        label='Criar novo grupo',
-        widget=forms.CheckboxInput(attrs={'id': 'id_create_new_group'})
-    )
-    agree_terms = forms.BooleanField(required=True, label='Concordo com os Termos de Serviço')
-    agree_privacy = forms.BooleanField(required=True, label='Concordo com a Política de Privacidade')
-
-    class Meta:
-        model = CustomUser
-        fields = (
-            'email', 'user_type', 'create_new_group', 'group', 
-            'new_group', 'new_group_email', 'password1', 'password2', 
-            'agree_terms', 'agree_privacy'
-        )
-        labels = {
-            'email': 'E-mail',
-            'user_type': 'Tipo de usuário',
-            'password1': 'Senha',
-            'password2': 'Confirme a senha',
-        }
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user_type = self.cleaned_data.get("user_type")
-        create_new_group = self.cleaned_data.get("create_new_group")
-        group = self.cleaned_data.get("group")
-        new_group = self.cleaned_data.get("new_group")
-        new_group_email = self.cleaned_data.get("new_group_email")
-
-        if user_type == GESTOR_USER:
-            if create_new_group:
-                # Create new group
-                group_obj, was_created = Groups.objects.get_or_create(
-                    name=new_group,
-                    defaults={'email': new_group_email}
-                )
-                user.group = group_obj
-            else:
-                was_created = False  # Because we didn't create a new group
-                user.group = group
-        else:
-            was_created = False
-            user.group = group
-
-        if commit:
-            user.save()
-
-            from registration.models import Membership
-            # If the user is a Gestor AND the group was created now, validado=True
-            gestor_created_new = (user_type == GESTOR_USER and was_created)
-            Membership.objects.create(
-                user=user,
-                group=user.group,
-                validado=gestor_created_new
-            )
-
-            if gestor_created_new:
-                # Mirror the membership validation in user.validado
-                user.validado = True
-                user.save()
-
-        return user
-
-
 class CustomUserLoginForm(AuthenticationForm):
+    """
+    Form for authenticating users against the Coopahub API.
+    """
+    username = forms.CharField(
+        label='Login', 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Digite seu login'})
+    )
+    password = forms.CharField(
+        label='Senha', 
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Digite sua senha'})
+    )
+
     class Meta:
         model = CustomUser
-        fields = ('email', 'password')
+        fields = ('username', 'password')
         labels = {
-            'email': 'E-mail',
+            'username': 'Login',
             'password': 'Senha',
         }
+
 
 class AnesthesiologistForm(forms.ModelForm):
     class Meta:
@@ -273,3 +213,53 @@ class AddGroupMembershipForm(forms.Form):
         else:
             # If not creating new, we didn't actually "create" it, so return (group, False)
             return (group, False)
+
+class GestorAnesthesiologistConfirmForm(forms.Form):
+    terms_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com os Termos de Serviço"
+    )
+    privacy_policy_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com a Política de Privacidade"
+    )
+    is_anesthesiologist = forms.BooleanField(
+        required=False,
+        label="Sou Anestesista"
+    )
+    name = forms.CharField(
+        required=False,
+        max_length=255,
+        label="Nome Completo",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    crm = forms.CharField(
+        required=False,
+        max_length=20,
+        label="CRM",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        is_anesthesiologist = cleaned_data.get('is_anesthesiologist')
+        name = cleaned_data.get('name')
+        crm = cleaned_data.get('crm')
+        
+        if is_anesthesiologist:
+            if not name:
+                self.add_error('name', 'Este campo é obrigatório quando você é anestesista.')
+            if not crm:
+                self.add_error('crm', 'Este campo é obrigatório quando você é anestesista.')
+        
+        return cleaned_data
+
+class TermsAgreementForm(forms.Form):
+    terms_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com os Termos de Serviço"
+    )
+    privacy_policy_agreed = forms.BooleanField(
+        required=True,
+        label="Concordo com a Política de Privacidade"
+    )

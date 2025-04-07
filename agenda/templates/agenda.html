@@ -329,9 +329,13 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.anestesistas_responsaveis.id_for_label }}">{{ form.anestesistas_responsaveis.label }}</label>
-                {{ form.anestesistas_responsaveis }}
+                <label for="{{ form.anestesista_selector.id_for_label }}">{{ form.anestesista_selector.label }}</label>
+                {{ form.anestesista_selector }}
                 <button type="button" id="add-anesthesiologist" class="btn btn-secondary btn-sm mt-2">+ Adicionar Anestesista</button>
+            </div>
+            
+            <div id="selected-anesthesiologists-container" class="mt-2">
+                <!-- Selected anesthesiologists will be added here -->
             </div>
             
             <div class="form-group-inline">
@@ -679,28 +683,62 @@ document.addEventListener('DOMContentLoaded', function() {
     const formSubmitBtn = document.getElementById('form-submit-btn');
     const procedimentoForm = document.getElementById('procedimento-form');
     const addAnesthesiologistBtn = document.getElementById('add-anesthesiologist');
-    const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
+    const anesthesiologistSelector = document.getElementById('id_anestesista_selector');
+    const hiddenAnesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
+    const selectedAnesthesiologistsContainer = document.getElementById('selected-anesthesiologists-container');
 
+    // Function to add an anesthesiologist visually and update the hidden select
+    function addAnesthesiologistToList(id, name) {
+        console.log("ADDING ANESTHESIOLOGIST", id, name);
+        // Check if already added
+        const existing = selectedAnesthesiologistsContainer.querySelector(`[data-id="${id}"]`);
+        if (existing || !id) {
+            if (!id) showCustomAlert('Selecione um anestesista para adicionar.', 'error');
+            else showCustomAlert(`${name} já foi adicionado.`, 'error');
+            return; // Don't add if empty or already exists
+        }
+
+        // Create the visual element with hidden input
+        const newDiv = document.createElement('div');
+        newDiv.className = 'selected-anesthesiologist';
+        newDiv.dataset.id = id; // Store the ID
+        newDiv.innerHTML = `
+            ${name}
+            <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist" data-id="${id}">Remover</button>
+            <input type="hidden" name="anestesistas_responsaveis" value="${id}">
+        `;
+        selectedAnesthesiologistsContainer.appendChild(newDiv);
+        console.log("Added anesthesiologist with ID:", id, name);
+    }
+
+    // Function to remove an anesthesiologist visually and update the hidden select
+    function removeAnesthesiologistFromList(id) {
+        const divToRemove = selectedAnesthesiologistsContainer.querySelector(`[data-id="${id}"]`);
+        if (divToRemove) {
+            divToRemove.remove();
+            console.log("Removed anesthesiologist with ID:", id);
+        }
+    }
+
+    // Event listener for the Add button
     addAnesthesiologistBtn.addEventListener('click', function() {
-        const selectedOptions = Array.from(anesthesiologistSelect.selectedOptions);
-        
-        if (selectedOptions.length > 0) {
-            selectedOptions.forEach(option => {
-                const newDiv = document.createElement('div');
-                newDiv.className = 'selected-anesthesiologist';
-                newDiv.innerHTML = `
-                    ${option.text}
-                    <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
-                `;
-                anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
-                option.selected = false;
-            });
+        const selectedOption = anesthesiologistSelector.options[anesthesiologistSelector.selectedIndex];
+        const selectedId = selectedOption.value;
+        const selectedName = selectedOption.text;
+
+        if (selectedId) {
+            addAnesthesiologistToList(selectedId, selectedName);
+            anesthesiologistSelector.value = ''; // Optionally reset the dropdown
+        } else {
+            showCustomAlert('Selecione um anestesista para adicionar.', 'error');
         }
     });
 
-    document.addEventListener('click', function(e) {
+    // Event listener for Remove buttons (using event delegation)
+    selectedAnesthesiologistsContainer.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('remove-anesthesiologist')) {
-            e.target.parentElement.remove();
+            const anesthesiologistId = e.target.dataset.id;
+            removeAnesthesiologistFromList(anesthesiologistId);
         }
     });
     
@@ -712,24 +750,15 @@ document.addEventListener('DOMContentLoaded', function() {
         formSubmitBtn.innerHTML = '<span class="spinner"></span> Processando...';
         formSubmitBtn.disabled = true;
 
-        // Mark all selected anesthesiologists as selected in the form's select field
-        const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
-        const selectedAnesthesiologists = document.querySelectorAll('.selected-anesthesiologist');
-        selectedAnesthesiologists.forEach(div => {
-            const anesthesiologistName = div.textContent.trim().replace('Remover', '').trim();
-            const option = Array.from(anesthesiologistSelect.options).find(opt => opt.text === anesthesiologistName);
-            if (option) {
-                option.selected = true;
-            }
-        });
-
         const formData = new FormData(this);
         const procedureId = document.getElementById('procedure_id').value;
 
+        // Debug: Log all form data being submitted
+        console.log("FORM SUBMISSION - FormData contents:");
         for (const pair of formData.entries()) {
-            console.log(pair[0]+ ', ' + pair[1]); 
+            console.log(pair[0] + ': ' + pair[1]);
         }
-        
+
         // Reset previous error messages
         document.querySelectorAll('.error-message').forEach(el => el.remove());
         document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -751,24 +780,45 @@ document.addEventListener('DOMContentLoaded', function() {
                     message += ' O link de pesquisa foi enviado para o email do paciente.';
                 }
                 showCustomAlert(message, 'success');
-                showAgendarButton(); 
+                showAgendarButton();
                 setTimeout(() => {
                     location.reload();
                 }, 2000);
             } else {
+                // Error handling (display errors, reset button)
                 const errors = JSON.parse(data.errors);
                 Object.keys(errors).forEach(fieldName => {
-                    const field = document.getElementById(`id_${fieldName}`);
+                    // Handle field errors for 'anestesistas_responsaveis' specifically if needed
+                    let field = document.getElementById(`id_${fieldName}`);
+                    if (!field && fieldName === 'anestesistas_responsaveis') {
+                        // If error is for the hidden field, show it near the selector
+                        field = document.getElementById('id_anestesista_selector');
+                    }
+
                     if (field) {
                         field.classList.add('is-invalid');
-                        const errorMessage = document.createElement('div');
-                        errorMessage.className = 'invalid-feedback error-message';
-                        errorMessage.textContent = errors[fieldName][0].message;
-                        field.parentNode.appendChild(errorMessage);
+                        // Avoid adding multiple error messages
+                        let errorMsgElement = field.parentNode.querySelector(`.invalid-feedback.error-message[data-field="${fieldName}"]`);
+                        if (!errorMsgElement) {
+                            errorMsgElement = document.createElement('div');
+                            errorMsgElement.className = 'invalid-feedback error-message';
+                            errorMsgElement.dataset.field = fieldName; // Mark which field it's for
+                            field.parentNode.appendChild(errorMsgElement);
+                        }
+                        // Update or set the error message text
+                        errorMsgElement.textContent = errors[fieldName][0].message;
+                    } else if (fieldName === '__all__') {
+                         // Handle non-field errors if necessary
+                         showCustomAlert(errors[fieldName][0].message, 'error');
                     }
                 });
-                showCustomAlert('Erro ao salvar o procedimento. Verifique os campos e tente novamente.', 'error');
-                
+                 if (!data.errors || Object.keys(JSON.parse(data.errors)).length === 0) {
+                    // Show generic error if no specific field errors were returned
+                    showCustomAlert(data.message || 'Erro ao salvar o procedimento. Verifique os campos e tente novamente.', 'error');
+                } else {
+                     showCustomAlert('Erro ao salvar o procedimento. Verifique os campos destacados.', 'error');
+                }
+
                 // Reset button state
                 formSubmitBtn.innerHTML = originalText;
                 formSubmitBtn.disabled = false;
@@ -848,36 +898,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
                 
-                document.querySelectorAll('.selected-anesthesiologist').forEach(el => el.remove());
-
+                // Fix for procedimento_principal (Select2)
                 if (data.procedimento_principal) {
-                    const procedimentoSelect = $('#id_procedimento_principal');
+                    // Create a new option and append it to the select
                     const newOption = new Option(
-                        data.procedimento_principal.text, 
-                        data.procedimento_principal.id, 
-                        true, 
+                        data.procedimento_principal.text,
+                        data.procedimento_principal.id,
+                        true,
                         true
                     );
-                    procedimentoSelect.append(newOption).trigger('change');
+                    $('#id_procedimento_principal').empty().append(newOption).trigger('change');
                 }
-            
-                
+
+                // Fix for convenio (Select2)
+                if (data.convenio) {
+                    // Create a new option and append it to the select
+                    const newOption = new Option(
+                        data.convenio.text,
+                        data.convenio.id,
+                        true,
+                        true
+                    );
+                    $('#id_convenio').empty().append(newOption).trigger('change');
+                }
+
+                // Fix for anestesistas_responsaveis
+                // Clear previous selections
+                selectedAnesthesiologistsContainer.innerHTML = '';
+
+                // Add each anesthesiologist to the list
                 data.anestesistas_responsaveis.forEach(anestesista => {
-                    const option = Array.from(anesthesiologistSelect.options).find(opt => opt.value == anestesista.id);
-                    if (option) {
-                        const newDiv = document.createElement('div');
-                        newDiv.className = 'selected-anesthesiologist';
-                        newDiv.innerHTML = `
-                            ${anestesista.name}
-                            <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
-                        `;
-                        anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
-                    }
+                    addAnesthesiologistToList(anestesista.id, anestesista.name);
                 });
 
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Salvar Alterações';
                 hideAgendarButton();
+
+                // Ensure conditional fields for visita pre-anestesica are shown/hidden correctly
+                toggleConditionalFields();
             });
     }
     
@@ -903,14 +962,17 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (data.success) {
-                location.reload();
+                showCustomAlert('Procedimento excluído com sucesso.', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
             } else {
-                showCustomAlert('Falha ao deletar o procedimento. Por favor, tente novamente.', 'error');
+                showCustomAlert('Falha ao excluir o procedimento. Por favor, tente novamente.', 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showCustomAlert('Ocorreu um erro ao deletar o procedimento. Por favor, tente novamente.', 'error');
+            showCustomAlert('Ocorreu um erro ao excluir o procedimento. Por favor, tente novamente.', 'error');
         });
     }
     
@@ -933,10 +995,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset form when opening for a new procedure
     document.getElementById('agendar-btn').addEventListener('click', function() {
         document.querySelector('#procedimento-form-modal form').reset();
+        // Clear Select2 fields
+        $('#id_procedimento_principal').val(null).trigger('change');
+        $('#id_convenio').val(null).trigger('change');
+        // Clear anesthesiologists
+        selectedAnesthesiologistsContainer.innerHTML = '';
+        Array.from(hiddenAnesthesiologistSelect.options).forEach(opt => opt.selected = false);
+        anesthesiologistSelector.value = '';
+
         document.getElementById('procedure_id').value = '';
         formSubmitBtn.textContent = 'Criar Agendamento';
         procedureFormModal.style.display = 'block';
         hideAgendarButton();
+        toggleConditionalFields(); // Set initial state for conditional fields
     });
 });
 </script>

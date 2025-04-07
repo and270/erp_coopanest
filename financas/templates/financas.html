@@ -28,17 +28,13 @@
         </div>
         
         <div class="status-filter">
-            <select onchange="window.location.href = this.value">
-                <option value="?view={{ view_type }}">Status</option>
-                {% if view_type == 'receitas' %}
-                    <option value="?view={{ view_type }}&status=pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                    <option value="?view={{ view_type }}&status=pendente" {% if selected_status == 'pendente' %}selected{% endif %}>Em andamento</option>
-                    <option value="?view={{ view_type }}&status=glosa" {% if selected_status == 'glosa' %}selected{% endif %}>Glosa</option>
-                {% else %}
-                    <option value="?view={{ view_type }}&status=a_vencer" {% if selected_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
-                    <option value="?view={{ view_type }}&status=pago" {% if selected_status == 'pago' %}selected{% endif %}>Pago</option>
-                    <option value="?view={{ view_type }}&status=atrasado" {% if selected_status == 'atrasado' %}selected{% endif %}>Pagamento Atrasado</option>
-                {% endif %}
+            <select name="status" class="form-select">
+                <option value="">Todos</option>
+                <option value="em_processamento" {% if selected_status == 'em_processamento' %}selected{% endif %}>Em Processamento</option>
+                <option value="aguardando_pagamento" {% if selected_status == 'aguardando_pagamento' %}selected{% endif %}>Aguardando Pagamento</option>
+                <option value="recurso_de_glosa" {% if selected_status == 'recurso_de_glosa' %}selected{% endif %}>Recurso de Glosa</option>
+                <option value="processo_finalizado" {% if selected_status == 'processo_finalizado' %}selected{% endif %}>Processo Finalizado</option>
+                <option value="cancelada" {% if selected_status == 'cancelada' %}selected{% endif %}>Cancelada</option>
             </select>
         </div>
         
@@ -96,7 +92,10 @@
                         <th>Paciente</th>
                         <th>CPF</th>
                         <th>Data da Cirurgia</th>
-                        <th>Valor</th>
+                        <th>Valor Faturado</th>
+                        <th>Valor Recebido</th>
+                        <th>Valor Recuperado</th>
+                        <th>Valor a Recuperar</th>
                         <th>Fonte Pagadora</th>
                         <th>CPSA</th>
                         <th>Anestesista</th>
@@ -106,7 +105,10 @@
                     {% else %}
                         <th>Descrição</th>
                         <th>Data</th>
-                        <th>Valor</th>
+                        <th>Valor Faturado</th>
+                        <th>Valor Recebido</th>
+                        <th>Valor Recuperado</th>
+                        <th>Valor a Recuperar</th>
                         <th>Pago</th>
                         <th>Editar</th>
                     {% endif %}
@@ -119,7 +121,10 @@
                             <td>{{ item.procedimento.nome_paciente }}</td>
                             <td>{{ item.procedimento.cpf_paciente }}</td>
                             <td>{{ item.procedimento.data_horario|date:"d/m/Y" }}</td>
-                            <td>{% if item.valor_cobranca %}R$ {{ item.valor_cobranca|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_faturado %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_recebido %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_recuperado %}R$ {{ item.valor_recuperado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_acatado %}R$ {{ item.valor_acatado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{{ item.get_tipo_cobranca_display|default:"" }}</td>
                             <td>{{ item.get_cpsa_display }}</td>
                             <td>{{ item.procedimento.anestesistas_responsaveis.first.name }}</td>
@@ -136,6 +141,9 @@
                         {% else %}
                             <td>{{ item.descricao }}</td>
                             <td>{{ item.data|date:"d/m/Y" }}</td>
+                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.pago %}Pago{% else %}Não Pago{% endif %}</td>
                             <td>
@@ -163,7 +171,7 @@
 
 <div id="edit-finance-modal" class="modal">
     <div class="modal-content">
-        <span class="close">&times;</span>
+        <span class="close" data-modal-id="edit-finance-modal">&times;</span>
         <h2><span id="modal-action-type">Editar</span> <span id="modal-title-type"></span></h2>
         
         <form id="edit-finance-form">
@@ -175,15 +183,29 @@
             <!-- Receitas fields -->
             <div id="receitas-fields">
                 <div class="form-group">
-                    <label for="valor_cobranca">Valor</label>
-                    <input type="text" class="money-input" id="valor_cobranca" name="valor_cobranca">
+                    <label for="valor_faturado">Valor Faturado</label>
+                    <input type="text" class="money-input form-control" id="valor_faturado" name="valor_faturado">
+                </div>
+                <div class="form-group">
+                    <label for="valor_recebido">Valor Recebido</label>
+                    <input type="text" class="money-input form-control" id="valor_recebido" name="valor_recebido">
+                </div>
+                <div class="form-group">
+                    <label for="valor_recuperado">Valor Recuperado</label>
+                    <input type="text" class="money-input form-control" id="valor_recuperado" name="valor_recuperado">
+                </div>
+                <div class="form-group">
+                    <label for="valor_acatado">Valor a Recuperar</label>
+                    <input type="text" class="money-input form-control" id="valor_acatado" name="valor_acatado">
                 </div>
                 <div class="form-group">
                     <label for="status_pagamento">Status do Pagamento</label>
                     <select id="status_pagamento" name="status_pagamento">
-                        <option value="pago">Pago</option>
-                        <option value="pendente">Em andamento</option>
-                        <option value="glosa">Glosa</option>
+                        <option value="em_processamento">Em Processamento</option>
+                        <option value="aguardando_pagamento">Aguardando Pagamento</option>
+                        <option value="recurso_de_glosa">Recurso de Glosa</option>
+                        <option value="processo_finalizado">Processo Finalizado</option>
+                        <option value="cancelada">Cancelada</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -249,22 +271,89 @@
     </div>
 </div>
 
+<div id="conciliation-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal-id="conciliation-modal">&times;</span>
+        <h2>Conciliação de Dados</h2>
+        
+        <div id="conciliation-cards">
+            <!-- Cards will be inserted here -->
+        </div>
+        
+        <div id="no-matches" style="display: none;">
+            <p>Não há dados para conciliar no momento.</p>
+        </div>
+    </div>
+</div>
+
+<!-- New Modal for Unmatched Guides -->
+<div id="unmatched-guias-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" data-modal-id="unmatched-guias-modal">&times;</span>
+        <h2>Guias da API Não Encontradas no Coopahub</h2>
+        <p>Para que os procedimentos a seguir sejam conciliados, eles precisam estar registrados no módulo Agendamento e depois finalizados no módulo de Qualidade</p>
+        <div id="unmatched-guias-list">
+            <!-- Unmatched guides will be listed here -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>CPSA ID</th>
+                        <th>Paciente</th>
+                        <th>Data</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Hospital</th>
+                        <th>Cooperado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added dynamically -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="no-unmatched-guias" style="display: none;">
+            <p>Não há guias não encontradas para exibir.</p>
+        </div>
+    </div>
+</div>
+
+<button id="unmatched-guias-fab" onclick="showUnmatchedGuiasModal()" title="Ver Guias Não Encontradas">
+    <i class="fas fa-question-circle"></i>
+</button>
+
 <script src="https://unpkg.com/imask"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('edit-finance-modal');
-    const closeBtn = modal.querySelector('.close');
     const form = document.getElementById('edit-finance-form');
+    const editModal = document.getElementById('edit-finance-modal'); // Keep reference if needed elsewhere
+
+    // --- REMOVE THIS OLD Specific Close Logic ---
+    // const closeBtn = editModal.querySelector('.close');
+    // closeBtn.onclick = function() {
+    //     editModal.style.display = "none";
+    // }
+    // -------------------------------------------
     
-    // Close modal when clicking X or outside
-    closeBtn.onclick = function() {
-        modal.style.display = "none";
-    }
-    
+    // --- ADD THIS Generalized Modal Close Logic ---
+    document.querySelectorAll('.modal .close').forEach(closeBtn => {
+        closeBtn.onclick = function() {
+            const modalId = this.getAttribute('data-modal-id');
+            if (modalId) {
+                const modalToClose = document.getElementById(modalId);
+                if (modalToClose) {
+                    modalToClose.style.display = "none";
+                }
+            }
+        }
+    });
+    // ----------------------------------------------
+
+    // Close modal when clicking outside (for all modals) - Keep this
     window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
         }
     }
 
@@ -314,7 +403,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 despesasFields.forEach(field => field.removeAttribute('required'));
                 
                 // Set required for relevant receitas fields
-                document.getElementById('valor_cobranca').setAttribute('required', '');
+                document.getElementById('valor_faturado').setAttribute('required', '');
+                document.getElementById('valor_recebido').setAttribute('required', '');
+                document.getElementById('valor_recuperado').setAttribute('required', '');
+                document.getElementById('valor_acatado').setAttribute('required', '');
                 document.getElementById('status_pagamento').setAttribute('required', '');
             } else {
                 document.getElementById('receitas-fields').style.display = 'none';
@@ -323,7 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('descricao').required = true;
                 document.getElementById('valor').required = true;
                 // Remove required from receitas fields
-                document.getElementById('valor_cobranca').required = false;
+                document.getElementById('valor_faturado').required = false;
+                document.getElementById('valor_recebido').required = false;
+                document.getElementById('valor_recuperado').required = false;
+                document.getElementById('valor_acatado').required = false;
                 document.getElementById('status_pagamento').required = false;
                 document.getElementById('data_pagamento').required = false;
             }
@@ -344,12 +439,45 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('finance_type').value = viewType;
                     
                     if (viewType === 'receitas') {
-                        const valorInput = document.getElementById('valor_cobranca');
-                        valorInput.value = data.valor_cobranca ? 
-                            `R$ ${parseFloat(data.valor_cobranca).toLocaleString('pt-BR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}` : 'R$ 0,00';
+                        // Apply mask to money inputs
+                        const valorInputs = [
+                            document.getElementById('valor_faturado'),
+                            document.getElementById('valor_recebido'),
+                            document.getElementById('valor_recuperado'),
+                            document.getElementById('valor_acatado')
+                        ];
+                        
+                        // Initialize IMask for each valor input if not already initialized
+                        valorInputs.forEach((input, index) => {
+                            const fieldNames = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
+                            const fieldValue = data[fieldNames[index]];
+                            
+                            // Create mask if not already created
+                            if (!input.maskRef) {
+                                input.maskRef = IMask(input, {
+                                    mask: 'R$ num',
+                                    blocks: {
+                                        num: {
+                                            mask: Number,
+                                            thousandsSeparator: '.',
+                                            radix: ',',
+                                            scale: 2,
+                                            padFractionalZeros: true,
+                                            normalizeZeros: true,
+                                            mapToRadix: ['.']
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            // Set the value through the mask
+                            if (fieldValue) {
+                                input.maskRef.unmaskedValue = String(fieldValue);
+                            } else {
+                                input.maskRef.unmaskedValue = '0';
+                            }
+                        });
+                        
                         document.getElementById('status_pagamento').value = data.status_pagamento;
                         document.getElementById('data_pagamento').value = data.data_pagamento || '';
                         document.getElementById('tipo_cobranca').value = data.tipo_cobranca || 'cooperativa';
@@ -370,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             })}` : 'R$ 0,00';
                     }
                     
-                    modal.style.display = "block";
+                    editModal.style.display = "block";
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
@@ -398,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate required fields based on view type
         if (viewType === 'receitas') {
-            if (!formData.get('valor_cobranca') || !formData.get('status_pagamento')) {
+            if (!formData.get('valor_faturado') || !formData.get('valor_recebido') || !formData.get('valor_recuperado') || !formData.get('valor_acatado') || !formData.get('status_pagamento')) {
                 alert('Por favor, preencha todos os campos obrigatórios');
                 return;
             }
@@ -419,20 +547,38 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Convert money values from "R$ 1.234,56" to "1234.56"
         if (viewType === 'receitas') {
-            const valorCobranca = formData.get('valor_cobranca');
-            if (valorCobranca) {
-                const numericValue = valorCobranca.replace('R$ ', '')
-                                                .replace(/\./g, '')
-                                                .replace(',', '.');
-                formData.set('valor_cobranca', numericValue);
-            }
+            const valorInputs = [
+                { elem: document.getElementById('valor_faturado'), name: 'valor_faturado' },
+                { elem: document.getElementById('valor_recebido'), name: 'valor_recebido' },
+                { elem: document.getElementById('valor_recuperado'), name: 'valor_recuperado' },
+                { elem: document.getElementById('valor_acatado'), name: 'valor_acatado' }
+            ];
+            
+            valorInputs.forEach(({elem, name}) => {
+                if (elem.maskRef) {
+                    // Get the unmasked value directly from IMask
+                    // Parse it as a float first to ensure it's in correct format
+                    const rawValue = elem.maskRef.unmaskedValue;
+                    // Convert to decimal format with dot as decimal separator
+                    const valor = parseFloat(rawValue).toString();
+                    // Set the value in the FormData
+                    formData.set(name, valor);
+                } else {
+                    // Fallback to manual conversion if maskRef is not available
+                    let valor = elem.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+                    formData.set(name, valor);
+                }
+            });
         } else {
-            const valor = formData.get('valor');
-            if (valor) {
-                const numericValue = valor.replace('R$ ', '')
-                                        .replace(/\./g, '')
-                                        .replace(',', '.');
-                formData.set('valor', numericValue);
+            // For despesas
+            const valorInput = document.getElementById('valor');
+            if (valorInput && valorInput.maskRef) {
+                const rawValue = valorInput.maskRef.unmaskedValue;
+                const valor = parseFloat(rawValue).toString();
+                formData.set('valor', valor);
+            } else if (valorInput) {
+                const valor = valorInput.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+                formData.set('valor', valor);
             }
         }
         
@@ -478,8 +624,9 @@ document.addEventListener('DOMContentLoaded', function() {
     statusSelect.addEventListener('change', toggleDataPagamento);
 
     // Initialize money mask for all money inputs
+    const moneyInputMasks = [];
     document.querySelectorAll('.money-input').forEach(element => {
-        IMask(element, {
+        const mask = IMask(element, {
             mask: 'R$ num',
             blocks: {
                 num: {
@@ -493,6 +640,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        element.maskRef = mask;
+        moneyInputMasks.push(mask);
     });
 
     // Add CPF mask
@@ -582,7 +731,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('data').value = today;
         
         // Show modal
-        modal.style.display = "block";
+        editModal.style.display = "block";
     }
     
     // Make the function available globally
@@ -662,4 +811,227 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = url.toString();
     }
     </script>
+<script>
+function loadConciliationData() {
+    fetch('/financas/conciliar/')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Conciliation data:', data); // Debug output
+            const container = document.getElementById('conciliation-cards');
+            container.innerHTML = '';
+            
+            let showModal = true;
+            
+            // Show auto-matched count if any
+            if (data.auto_matched && data.auto_matched.length > 0) {
+                alert(`${data.auto_matched.length} guias foram automaticamente conciliadas.`);
+                
+                // If there's only auto_matched items and nothing to manually conciliate,
+                // don't show the empty conciliation modal and refresh the page
+                if (!data.needs_confirmation || data.needs_confirmation.length === 0) {
+                    showModal = false;
+                    // Reload the page after alert is dismissed
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                }
+            }
+            
+            // Check for data that needs confirmation
+            if (data.needs_confirmation && data.needs_confirmation.length > 0) {
+                data.needs_confirmation.forEach(match => {
+                    const card = createConciliationCard(match);
+                    container.appendChild(card);
+                });
+                document.getElementById('no-matches').style.display = 'none';
+            } else {
+                document.getElementById('no-matches').style.display = 'block';
+            }
+            
+            // Open the modal only if needed
+            if (showModal) {
+                document.getElementById('conciliation-modal').style.display = 'block';
+            }
+            
+            // Update the unmatched guias button visibility
+            if (data.not_found_in_system && data.not_found_in_system.length > 0) {
+                document.getElementById('unmatched-guias-fab').style.display = 'flex';
+                // Store the data for later use
+                window.unmatchedGuiasData = data.not_found_in_system;
+            } else {
+                document.getElementById('unmatched-guias-fab').style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading conciliation data:', error);
+            alert('Erro ao carregar dados para conciliação');
+        });
+}
+
+function createConciliationCard(match) {
+    const card = document.createElement('div');
+    card.className = 'conciliation-card';
+    card.setAttribute('data-financa-id', match.financa_id);
+    
+    card.innerHTML = `
+        <div class="comparison">
+            <div class="system-data">
+                <h3>Dados do Sistema</h3>
+                <p>Paciente: ${match.sistema_data.paciente}</p>
+                <p>Data: ${match.sistema_data.data}</p>
+                <p>Hospital: ${match.sistema_data.hospital || 'Não informado'}</p>
+                <p>Anestesista: ${match.sistema_data.anestesista || 'Não informado'}</p>
+            </div>
+            <div class="api-data">
+                <h3>Dados da API</h3>
+                <p>Paciente: ${match.api_data.paciente}</p>
+                <p>Data: ${match.api_data.data || 'Não informada'}</p>
+                <p>Valor: R$ ${match.api_data.valor || '0.00'}</p>
+                <p>Status: ${match.api_data.status || 'Não informado'}</p>
+                <p>Hospital: ${match.api_data.hospital || 'Não informado'}</p>
+                <p>Cooperado: ${match.api_data.cooperado || 'Não informado'}</p>
+            </div>
+        </div>
+        <div class="actions">
+            <button onclick="confirmConciliation(${match.financa_id}, '${match.cpsa_id}', true)">
+                Confirmar Match
+            </button>
+            <button onclick="confirmConciliation(${match.financa_id}, '${match.cpsa_id}', false)">
+                Não é o Mesmo
+            </button>
+            <button onclick="skipConciliation(${match.financa_id}, '${match.cpsa_id}')">
+                Pular
+            </button>
+        </div>
+    `;
+    
+    return card;
+}
+
+function confirmConciliation(financaId, cpsaId, conciliado) {
+    fetch('/financas/confirmar-conciliacao/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            financa_id: financaId,
+            cpsa_id: cpsaId,
+            conciliado: conciliado
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the card
+            const card = document.querySelector(`[data-financa-id="${financaId}"]`);
+            if (card) card.remove();
+            
+            // Check if there are more cards
+            if (document.querySelectorAll('.conciliation-card').length === 0) {
+                document.getElementById('no-matches').style.display = 'block';
+            }
+            
+            // Show success message
+            if (data.action === 'conciliado') {
+                alert('Conciliação realizada com sucesso!');
+                // Reload the page after success message is dismissed
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } else if (data.action === 'rejeitado') {
+                alert('Item rejeitado com sucesso.');
+            }
+        } else {
+            alert('Erro ao processar conciliação: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error during conciliation:', error);
+        alert('Erro ao processar conciliação');
+    });
+}
+
+function skipConciliation(financaId, cpsaId) {
+    fetch('/financas/confirmar-conciliacao/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            financa_id: financaId,
+            cpsa_id: cpsaId,
+            pular: true
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the card
+            const card = document.querySelector(`[data-financa-id="${financaId}"]`);
+            if (card) card.remove();
+            
+            // Check if there are more cards
+            if (document.querySelectorAll('.conciliation-card').length === 0) {
+                document.getElementById('no-matches').style.display = 'block';
+            }
+        } else {
+            alert('Erro ao pular item: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error skipping conciliation:', error);
+        alert('Erro ao pular item');
+    });
+}
+
+function showUnmatchedGuiasModal() {
+    // Get data from window storage or re-fetch if needed
+    const unmatchedData = window.unmatchedGuiasData || [];
+    
+    // Get the modal and table body
+    const modal = document.getElementById('unmatched-guias-modal');
+    const tableBody = modal.querySelector('tbody');
+    const noDataMessage = document.getElementById('no-unmatched-guias');
+    
+    // Clear the table
+    tableBody.innerHTML = '';
+    
+    // Populate table with data
+    if (unmatchedData.length > 0) {
+        unmatchedData.forEach(guia => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${guia.cpsa_id || '-'}</td>
+                <td>${guia.paciente || '-'}</td>
+                <td>${guia.data || '-'}</td>
+                <td>R$ ${guia.valor || '0.00'}</td>
+                <td>${guia.status || '-'}</td>
+                <td>${guia.hospital || '-'}</td>
+                <td>${guia.cooperado || '-'}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+        noDataMessage.style.display = 'none';
+    } else {
+        noDataMessage.style.display = 'block';
+    }
+    
+    // Show the modal
+    modal.style.display = 'block';
+}
+
+// Replace the button with floating action buttons
+document.body.insertAdjacentHTML('beforeend', `
+    <button id="conciliate-fab" onclick="loadConciliationData()" title="Conciliar Dados">
+        <i class="fas fa-sync"></i>
+    </button>
+    <button id="unmatched-guias-fab" onclick="showUnmatchedGuiasModal()" title="Ver Guias Não Encontradas">
+        <i class="fas fa-question-circle"></i>
+    </button>
+`);
+</script>
+
 {% endblock %}

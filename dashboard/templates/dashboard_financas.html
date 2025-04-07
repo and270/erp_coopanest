@@ -117,7 +117,7 @@
                         <span>R$ {{valor_pago|format_currency}} ({{pago_pct|floatformat:0}}%)</span>
                     </div>
                     <div>
-                        <span>Em Andamento</span>
+                        <span>Em Processamento</span>
                         <div class="bar">
                             <div class="filled" style="width: {{pendente_pct|floatformat:0}}%"></div>
                         </div>
@@ -131,9 +131,11 @@
                         <span>R$ {{valor_glosa|format_currency}} ({{glosa_pct|floatformat:0}}%)</span>
                     </div>
                 </div>
+                <!-- Informação desatrivada-
                 <div class="tempo-medio">
                     <span>Tempo Médio de Recebimento: </span><strong>{{ avg_recebimento }}</strong>
                 </div>
+                -->
             </div>
         </div>
 
@@ -171,13 +173,25 @@
                                 <div class="section-value">R$ <span id="anestesistaValue">{{ anestesista_total|format_currency }}</span></div>
                             </div>
                             <select id="anestesistaFilter" class="filter-select">
-                                <option value="">Por Anestesista</option>
-                                {% for anestesista in anestesistas %}
-                                    <option value="{{ anestesista.id }}" 
-                                            {% if selected_anestesista == anestesista.id|stringformat:"i" %}selected{% endif %}>
-                                        {{ anestesista.name }}
-                                    </option>
-                                {% endfor %}
+                                {% if user_type == ANESTESISTA_USER %}
+                                    {# Anesthesiologist View: Only "Todos" and Self #}
+                                    <option value="" {% if not selected_anestesista %}selected{% endif %}>Todos</option>
+                                    {% for anestesista in anestesistas %} {# Should only contain self #}
+                                        <option value="{{ anestesista.id }}"
+                                                {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}> {# Compare as string #}
+                                            {{ anestesista.name }} (Eu)
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    {# Gestor/Admin View: "Por Anestesista" and All Options #}
+                                    <option value="">Por Anestesista</option>
+                                    {% for anestesista in anestesistas %}
+                                        <option value="{{ anestesista.id }}"
+                                                {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}> {# Compare as string #}
+                                            {{ anestesista.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endif %}
                             </select>
                         </div>
                     </div>

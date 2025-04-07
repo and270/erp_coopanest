@@ -5,7 +5,7 @@ from agenda.views import MONTH_NAMES_PT, get_calendar_dates, get_week_dates
 from financas.models import ProcedimentoFinancas
 from registration.models import CustomUser
 from agenda.models import Procedimento
-from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER, STATUS_FINISHED
+from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, STATUS_FINISHED
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils.translation import gettext as _
@@ -96,7 +96,6 @@ def search_qualidade(request):
         'current_month': month,
         'current_week_start': week_start,
         'month_name': MONTH_NAMES_PT[month],
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -216,7 +215,6 @@ def qualidade_view(request):
         'current_month': month,
         'current_week_start': week_start,
         'month_name': MONTH_NAMES_PT[month],
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -285,7 +283,6 @@ def avaliacao_rpa(request, procedimento_id):
     context = {
         'form': form,
         'procedimento': procedimento,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -312,7 +309,7 @@ def finalizar_procedimento_view(request, procedimento_id):
     else:
         initial_data = {
             'tipo_cobranca': financas.tipo_cobranca,
-            'valor_cobranca': financas.valor_cobranca,
+            'valor_faturado': financas.valor_faturado,
             'tipo_pagamento_direto': financas.tipo_pagamento_direto,
         }
         form = ProcedimentoFinalizacaoForm(instance=qualidade, initial=initial_data)
@@ -321,7 +318,6 @@ def finalizar_procedimento_view(request, procedimento_id):
         'form': form,
         'procedimento': procedimento,
         'financas': financas,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,

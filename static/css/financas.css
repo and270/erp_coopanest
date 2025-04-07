@@ -306,8 +306,9 @@
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    max-width: 500px;
+    max-width: 600px;
     position: relative;
+    color: #000000; /* Ensure text in all modals is black */
 }
 
 .modal-content h2 {
@@ -440,4 +441,154 @@
         width: 100%;
         right: 0;
     }
+}
+
+
+.conciliation-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    color: #000000; /* Ensure text in conciliation cards is black */
+}
+
+.comparison {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.system-data, .api-data {
+    flex: 1;
+    padding: 10px;
+    color: #000000; /* Ensure text in data sections is black */
+}
+
+.system-data h3, .api-data h3 {
+    color: #000000; /* Ensure headings are black */
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.conciliate-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.conciliate-btn:hover {
+    background-color: #45a049;
+}
+
+/* Replace the old button style with new FAB style */
+#conciliate-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+#conciliate-fab:hover {
+    background-color: #45a049;
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+#conciliate-fab i {
+    font-size: 20px;
+}
+
+#unmatched-guias-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 100px; /* Positioned to the left of the conciliation FAB */
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #ff9800; /* Orange */
+    color: white;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+#unmatched-guias-fab:hover {
+    background-color: #f57c00;
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+#unmatched-guias-fab i {
+    font-size: 20px;
+}
+
+/* Styles for unmatched-guias-modal */
+#unmatched-guias-list {
+    color: #000000; /* Ensure text in unmatched guias list is black */
+    overflow-x: auto; /* Add horizontal scrolling if needed */
+    max-width: 100%; /* Ensure it doesn't exceed parent width */
+}
+
+#unmatched-guias-list table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Help with sizing columns */
+}
+
+#unmatched-guias-list th,
+#unmatched-guias-list td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    color: #000000; /* Ensure table text is black */
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Show ellipsis for overflowed text */
+}
+
+/* Make specific columns narrower */
+#unmatched-guias-list th:first-child, #unmatched-guias-list td:first-child {
+    width: 12%; /* CPSA ID column */
+}
+
+#unmatched-guias-list th:nth-child(3), #unmatched-guias-list td:nth-child(3) {
+    width: 12%; /* Data column */
+}
+
+#unmatched-guias-list th:nth-child(4), #unmatched-guias-list td:nth-child(4) {
+    width: 12%; /* Valor column */
+}
+
+/* For unmatched-guias-modal specifically, make it wider */
+#unmatched-guias-modal .modal-content {
+    max-width: 800px; /* Wider than the default */
+}
+
+#no-unmatched-guias p,
+#no-matches p {
+    color: #000000; /* Ensure message text is black */
 }

@@ -10,79 +10,29 @@
         <p><strong>Seu Grupo ativo:</strong> {{ user.group }}</p>
     {% endif %}
 
-    {% if user.validado %}
-        <p class="validation-status validated">Acesso validado</p>
-    {% else %}
-        <p class="validation-status not-validated">Acesso completo ainda não validado. Solicite ao administrador do sistema.</p>
-    {% endif %}
 
     <hr>
+    {% if user_memberships|length > 1 %} {# Only show switcher if user belongs to more than one group #}
     <h3>Múltiplos Grupos</h3>
-    
-    <label for="group_id">Escolha o grupo que deseja usar no sistema (os dados que você verá serão referentes a este grupo):</label>
-    <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="switch_active_group" value="1" />
-        <div class="form-row">
-            <select name="group_id" id="group_id" class="form-control">
-                {% for membership in user_memberships %}
-                    <option value="{{ membership.group.id }}"
-                        {% if membership.group == user.group %}selected{% endif %}>
-                        {{ membership.group.name }}
-                        {% if membership.validado %}(validado){% else %}(não validado){% endif %}
-                    </option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-primary">Escolher grupo</button>
-        </div>
-    </form>
-
-    <h4>Entrar em outro grupo ou criar um novo</h4>
-    
-    <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="add_group" value="1" />
-        
-        {% if user.user_type == 'gestor' %}
-            <div class="form-group-inline">
-                <input type="checkbox" name="create_new_group" id="id_create_new_group" />
-                <label for="id_create_new_group">Criar novo grupo</label>
-            </div>
-            
-            <div id="new-group-fields" style="display: none;">
-                <div class="form-group">
-                    <label for="id_new_group">Nome do novo grupo</label>
-                    <input type="text" name="new_group" id="id_new_group" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="id_new_group_email">E-mail do novo grupo</label>
-                    <input type="email" name="new_group_email" id="id_new_group_email" class="form-control" />
-                </div>
-            </div>
-            
-            <div id="existing-group-field">
-                <div class="form-row">
-                    <select name="group" id="id_group" class="form-control">
-                        <option value="">---------</option>
-                        {% for group in add_group_form.fields.group.queryset %}
-                            <option value="{{ group.id }}">{{ group.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn btn-primary">Adicionar grupo</button>
-                </div>
-            </div>
-        {% else %}
+        <label for="group_id">Escolha o grupo que deseja usar no sistema (os dados que você verá serão referentes a este grupo):</label>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="switch_active_group" value="1" />
             <div class="form-row">
-                <select name="group" id="id_group" class="form-control">
-                    <option value="">---------</option>
-                    {% for group in add_group_form.fields.group.queryset %}
-                        <option value="{{ group.id }}">{{ group.name }}</option>
+                <select name="group_id" id="group_id" class="form-control">
+                    {% for membership in user_memberships %}
+                        <option value="{{ membership.group.id }}"
+                            {% if membership.group == user.group %}selected{% endif %}>
+                            {{ membership.group.name }}
+                            {% if membership.validado %}(validado){% else %}(não validado){% endif %}
+                        </option>
                     {% endfor %}
                 </select>
-                <button type="submit" class="btn btn-primary">Adicionar grupo</button>
+                <button type="submit" class="btn btn-primary">Escolher grupo</button>
             </div>
-        {% endif %}
-    </form>
+        </form>
+
+    {% endif %}
 
     <p>Para alterar seu e-mail ou tipo de acesso, contate o administrador do sistema.</p>
 
@@ -92,23 +42,4 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var createNewGroupCheckbox = document.getElementById('id_create_new_group');
-        var newGroupFields = document.getElementById('new-group-fields');
-        var existingGroupField = document.getElementById('existing-group-field');
-        
-        if (createNewGroupCheckbox && newGroupFields && existingGroupField) {
-            createNewGroupCheckbox.addEventListener('change', function() {
-                newGroupFields.style.display = this.checked ? 'block' : 'none';
-                existingGroupField.style.display = this.checked ? 'none' : 'block';
-            });
-            
-            // Initial state
-            newGroupFields.style.display = createNewGroupCheckbox.checked ? 'block' : 'none';
-            existingGroupField.style.display = createNewGroupCheckbox.checked ? 'none' : 'block';
-        }
-    });
-</script>
 {% endblock %}
