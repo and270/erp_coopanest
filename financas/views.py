@@ -428,7 +428,7 @@ def conciliar_financas(request):
             print(f"conexao: {user.connection_key}")
             api_payload = {
                 "conexao": user.connection_key,
-                "periodo_de": (timezone.now() - timedelta(days=DIAS_PARA_CONCILIACAO)).strftime('%Y-%m-%d'),
+                "periodo_de": (timezone.now() - timedelta(days=DIAS_PARA_CONCILIACAO)).strftime('%Y-%m-%d'), #TODO: AQUI VAMOS TER UMA DATA FIXA, COMO 01/04/2025.
                 "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
                 "status": "Listagem Geral" 
             }

@@ -565,12 +565,11 @@
     text-align: left;
     border-bottom: 1px solid #ddd;
     color: #000000; /* Ensure table text is black */
-    white-space: nowrap; /* Prevent text wrapping */
-    overflow: hidden;
-    text-overflow: ellipsis; /* Show ellipsis for overflowed text */
+    word-wrap: break-word; /* Allow long words to break */
+    white-space: normal; /* Allow normal wrapping */
 }
 
-/* Make specific columns narrower */
+/* Keep specific column widths for structure, but content can now wrap */
 #unmatched-guias-list th:first-child, #unmatched-guias-list td:first-child {
     width: 12%; /* CPSA ID column */
 }
