@@ -44,7 +44,7 @@
 
 .header-actions {
     display: flex;
-    gap: 5px;
+    gap: 8px; /* Adjusted gap for more space */
     align-items: center;
     margin-bottom: 24px;
     width: 100%;
@@ -52,7 +52,8 @@
 
 .search-box {
     position: relative;
-    width: 55%;
+    /* width: 55%; */ /* Let it flex */
+    flex-grow: 3; /* Give search more space */
 }
 
 .search-box input {
@@ -75,7 +76,9 @@
 }
 
 .status-filter {
-    width: 15%;
+    /* width: 15%; */ /* Let it flex */
+    flex-grow: 1; /* Give it some space */
+    min-width: 150px; /* Minimum width */
 }
 
 .status-filter select {
@@ -95,7 +98,8 @@
 }
 
 .filter-btn,
-.export-btn {
+.export-btn,
+.header-actions .add-btn { /* Include the add button in header */
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -103,13 +107,17 @@
     border: none;
     border-radius: 6px;
     font-family: Inter;
-    font-size: 16px;
+    font-size: 14px; /* Consistent font size */
     cursor: pointer;
     height: 35px;
+    white-space: nowrap; /* Prevent wrapping */
+    flex-shrink: 0; /* Don't shrink buttons */
 }
 .period-filter {
-    width: 15%;
+    /* width: 15%; */ /* Let it flex */
+    flex-grow: 1; /* Give it some space */
     position: relative;
+    min-width: 160px; /* Minimum width */
 }
 
 .period-dropdown {
@@ -200,21 +208,27 @@
 .filter-btn {
     background: #F3F3F3;
     color: #3D3D3D;
-    width: 100%;
+    width: 100%; /* Fill container */
     justify-content: center;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 14px;
-    min-width: 150px;
+    /* min-width: 150px; */ /* Removed fixed min-width */
 }
 
 .export-btn {
     background: #1A73E8;
     color: white;
-    width: 15%;
+    /* width: 15%; */ /* Let it flex */
     justify-content: center;
 }
+
+.header-actions .add-btn { /* Specific style for add button in header */
+    background: #1A73E8;
+    color: white;
+    justify-content: center;
+}
+
 
 .financas-table {
     background: white;
@@ -274,6 +288,7 @@
     -webkit-text-fill-color: white;
 }
 
+/* Existing .add-btn outside header (for Despesas) */
 .add-btn {
     display: inline-flex;
     align-items: center;
@@ -286,7 +301,7 @@
     font-family: Inter;
     font-size: 14px;
     cursor: pointer;
-    margin-top: 24px;
+    margin-top: 24px; /* Only applies to the one outside header */
 }
 
 /* Modal styles */
@@ -428,7 +443,8 @@
     .search-box,
     .status-filter,
     .period-filter,
-    .export-btn {
+    .export-btn,
+    .header-actions .add-btn { /* Make sure add button is full width on mobile */
         width: 100%;
     }
     
@@ -475,27 +491,22 @@
 }
 
 .conciliate-btn {
-    background-color: #4CAF50;
+    /* background-color: #4CAF50;
     color: white;
     border: none;
     padding: 8px 16px;
     border-radius: 4px;
-    cursor: pointer;
+    cursor: pointer; */
+    display: none; /* Hide the old button if still in HTML */
 }
 
-.conciliate-btn:hover {
-    background-color: #45a049;
-}
-
-/* Replace the old button style with new FAB style */
-#conciliate-fab {
+/* Generic FAB Styles */
+.fab {
     position: fixed;
     bottom: 30px;
-    right: 30px;
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background-color: #4CAF50;
     color: white;
     border: none;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -505,46 +516,29 @@
     cursor: pointer;
     z-index: 1000;
     transition: all 0.3s ease;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.fab i {
+    font-size: 20px;
+}
+
+/* Conciliation FAB */
+#conciliate-fab {
+    right: 30px; /* Position on the far right */
+    background-color: #4CAF50; /* Green */
 }
 
 #conciliate-fab:hover {
     background-color: #45a049;
-    transform: scale(1.1);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
-#conciliate-fab i {
-    font-size: 20px;
-}
+/* Removed #add-financa-fab styles as it no longer exists */
 
-#unmatched-guias-fab {
-    position: fixed;
-    bottom: 30px;
-    right: 100px; /* Positioned to the left of the conciliation FAB */
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: #ff9800; /* Orange */
-    color: white;
-    border: none;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1000;
-    transition: all 0.3s ease;
-}
-
-#unmatched-guias-fab:hover {
-    background-color: #f57c00;
-    transform: scale(1.1);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-#unmatched-guias-fab i {
-    font-size: 20px;
-}
 
 /* Styles for unmatched-guias-modal */
 #unmatched-guias-list {

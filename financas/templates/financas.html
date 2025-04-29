@@ -84,12 +84,6 @@
             <i class="fas fa-file-excel"></i> Exportar {# Added icon #}
         </button>
         
-        {% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %} {# Only show conciliation button to relevant users #}
-        <button id="conciliate-btn" class="conciliate-btn" onclick="runConciliation()">
-            <i class="fas fa-sync"></i> Conciliar {# Added icon #}
-        </button>
-        {% endif %}
-        
     </div>
 
     <div class="financas-table">
@@ -200,9 +194,15 @@
         Inserir despesa ou custo
     </button>
     {% endif %}
+    {% if view_type == 'receitas' %}
+    <button class="add-btn" onclick="openAddReceitaModal()">
+        <i class="fas fa-plus"></i>
+         Inserir Receita / Guia Manualmente
+    </button>
+    {% endif %}
 </div>
 
-{# --- Edit Modal (Receitas part needs adjustment if editing unlinked items) --- #}
+{# --- Edit Modal --- #}
 <div id="edit-finance-modal" class="modal">
     <div class="modal-content">
         <span class="close" data-modal-id="edit-finance-modal">&times;</span>
@@ -221,19 +221,38 @@
                 Paciente (API): <span id="unlinked-paciente"></span><br>
                 Data Cirurgia (API): <span id="unlinked-data"></span>
             </div>
+            
+            {# Add fields for manual creation - Shown only when adding unlinked Receita #}
+             <div id="manual-receita-fields">
+                 <div class="form-group">
+                     <label for="manual_api_paciente_nome">Nome Paciente (Manual)</label>
+                     <input type="text" id="manual_api_paciente_nome" name="api_paciente_nome">
+                 </div>
+                 <div class="form-group">
+                     <label for="manual_api_data_cirurgia">Data Cirurgia (Manual)</label>
+                     <input type="date" id="manual_api_data_cirurgia" name="api_data_cirurgia">
+                 </div>
+                 <div class="form-group">
+                     <label for="manual_api_cooperado_nome">Nome Cooperado (Manual)</label>
+                     <input type="text" id="manual_api_cooperado_nome" name="api_cooperado_nome">
+                 </div>
+                 <div class="form-group">
+                     <label for="manual_api_hospital_nome">Nome Hospital (Manual)</label>
+                     <input type="text" id="manual_api_hospital_nome" name="api_hospital_nome">
+                 </div>
+             </div>
 
-            <!-- Receitas fields -->
+            <!-- Receitas fields (Shared for edit and manual add) -->
             <div id="receitas-fields">
-                 {# Show CPF only if linked #}
+                 {# Show CPF only if linked during EDIT #}
                 <div class="form-group" id="cpf-group">
                     <label for="cpf">CPF do Paciente</label>
-                    <input type="text" id="cpf" name="cpf" readonly> {# Make readonly if unlinked? #}
+                    <input type="text" id="cpf" name="cpf" readonly> {# Always readonly in this modal? #}
                 </div>
                  <div class="form-group">
                     <label for="valor_faturado">Valor Faturado</label>
                     <input type="text" class="money-input form-control" id="valor_faturado" name="valor_faturado">
                 </div>
-                {# ... other value fields ... #}
                  <div class="form-group">
                     <label for="valor_recebido">Valor Recebido</label>
                     <input type="text" class="money-input form-control" id="valor_recebido" name="valor_recebido">
@@ -256,7 +275,6 @@
                         <option value="cancelada">Cancelada</option>
                     </select>
                 </div>
-                 {# Hide fields not applicable to unlinked items? Or make readonly? #}
                 <div class="form-group" id="tipo-cobranca-group">
                     <label for="tipo_cobranca">Tipo de Cobrança</label>
                     <select id="tipo_cobranca" name="tipo_cobranca">
@@ -288,7 +306,6 @@
 
             <!-- Despesas fields -->
             <div id="despesas-fields">
-                {# ... despesas fields remain the same ... #}
                  <div class="form-group">
                     <label for="descricao">Descrição</label>
                     <input type="text" id="descricao" name="descricao" required>
@@ -310,15 +327,21 @@
             </div>
 
             <div class="modal-actions">
-                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                <button type="submit" class="btn btn-primary">Salvar</button> {# Changed text #}
             </div>
         </form>
     </div>
 </div>
 
 
-{# Removed Conciliation Modal and Unmatched Guias Modal/FAB as conciliation is now automatic #}
-{# The results are shown via alerts/messages after clicking the "Conciliar" button #}
+{# Add FABs here, outside the main container typically #}
+{% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %} {# Only show FABs to relevant users #}
+    {# Removed Add Receita FAB - moved to header actions #}
+    <button id="conciliate-fab" class="fab conciliate" onclick="runConciliation()" title="Conciliar Dados da API">
+        <i class="fas fa-sync"></i>
+    </button>
+{% endif %}
+
 
 {# --- SCRIPTS --- #}
 <script src="https://unpkg.com/imask"></script> {# Keep iMask #}
@@ -357,8 +380,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const cpsaGroup = document.getElementById('cpsa-group');
         const tipoPagamentoDiretoGroup = document.getElementById('tipo-pagamento-direto-group');
         const isLinked = document.getElementById('is_linked').value === 'true'; // Check linked status
+        const isNew = document.getElementById('is_new').value === 'true'; // Check if adding new
 
-        // Hide both by default
+        // Hide specific groups by default
         if (cpsaGroup) cpsaGroup.style.display = 'none';
         if (tipoPagamentoDiretoGroup) tipoPagamentoDiretoGroup.style.display = 'none';
         
@@ -371,13 +395,33 @@ document.addEventListener('DOMContentLoaded', function() {
              tipoPagamentoDiretoGroup.style.display = 'block';
         }
         
-        // Show/hide CPF based on linked status
+        // Show/hide CPF group based on linked status (only relevant when editing)
         const cpfGroup = document.getElementById('cpf-group');
         if (cpfGroup) {
-             cpfGroup.style.display = isLinked ? 'block' : 'none';
-             // Maybe make CPF readonly if shown for unlinked?
-             // document.getElementById('cpf').readOnly = !isLinked; 
+             cpfGroup.style.display = isLinked && !isNew ? 'block' : 'none';
         }
+
+        // Show/hide Manual fields based on isNew status (relevant when adding)
+        const manualFieldsDiv = document.getElementById('manual-receita-fields');
+         if (manualFieldsDiv) {
+             manualFieldsDiv.style.display = isNew ? 'block' : 'none';
+             // Set required attribute for manual fields when adding
+             document.getElementById('manual_api_paciente_nome').required = isNew;
+             document.getElementById('manual_api_data_cirurgia').required = isNew;
+             // CPSA might be optional if not cooperativa
+             document.getElementById('cpsa').required = isNew && tipoCobranca === 'cooperativa'; 
+         } else {
+             // If editing, ensure manual fields are not required
+             document.getElementById('manual_api_paciente_nome').required = false;
+             document.getElementById('manual_api_data_cirurgia').required = false;
+             // document.getElementById('cpsa').required = false; // CPSA might still be required based on type
+         }
+
+        // Show/Hide Unlinked Info Panel (only relevant when editing)
+        const unlinkedInfoPanel = document.getElementById('unlinked-info');
+         if(unlinkedInfoPanel){
+             unlinkedInfoPanel.style.display = !isLinked && !isNew ? 'block' : 'none';
+         }
     }
 
     const tipoCobrancaSelect = document.getElementById('tipo_cobranca');
@@ -397,14 +441,13 @@ document.addEventListener('DOMContentLoaded', function() {
          if (!statusSelect || !dataPagamentoGroup || !dataPagamentoInput) return; // Elements might not exist if despesas
 
          const status = statusSelect.value;
-         // Show if 'processo_finalizado' or 'recurso_de_glosa' (assuming glosa implies payment attempt)
          if (status === 'processo_finalizado' || status === 'recurso_de_glosa') { 
              dataPagamentoGroup.style.display = 'block';
              dataPagamentoInput.required = true;
          } else {
              dataPagamentoGroup.style.display = 'none';
              dataPagamentoInput.required = false;
-             dataPagamentoInput.value = ''; // Clear value if hidden
+             dataPagamentoInput.value = ''; 
          }
     }
     
@@ -422,31 +465,36 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const row = this.closest('tr');
             const financeId = row.dataset.id;
-            // Determine view type from the page context (less error-prone)
             const viewType = '{{ view_type }}'; 
             
-            // Reset form and modal state
+            // Reset form and modal state for EDIT
             form.reset();
             document.getElementById('modal-action-type').textContent = 'Editar';
-            document.getElementById('unlinked-info').style.display = 'none'; // Hide unlinked info by default
             document.getElementById('finance_id').value = financeId;
             document.getElementById('finance_type').value = viewType;
-            document.getElementById('is_new').value = 'false';
+            document.getElementById('is_new').value = 'false'; // EDITING
 
-            // Show/hide field sections based on viewType
+            // Show/hide field sections AND set required attributes
             if (viewType === 'receitas') {
+                document.getElementById('manual-receita-fields').style.display = 'none'; // Hide manual fields
                 document.getElementById('receitas-fields').style.display = 'block';
                 document.getElementById('despesas-fields').style.display = 'none';
                 document.getElementById('modal-title-type').textContent = 'Receita';
-                 // Set initial required attributes (might be overridden based on status/type later)
-                 // document.getElementById('valor_faturado').required = true; // Set required dynamically?
+                // Remove required from despesas fields
+                document.getElementById('descricao').required = false;
+                document.getElementById('valor').required = false;
+                document.getElementById('data').required = false;
             } else { // despesas
+                document.getElementById('manual-receita-fields').style.display = 'none';
                 document.getElementById('receitas-fields').style.display = 'none';
                 document.getElementById('despesas-fields').style.display = 'block';
                 document.getElementById('modal-title-type').textContent = 'Despesa';
+                 // Set required for despesas fields
                  document.getElementById('descricao').required = true;
                  document.getElementById('valor').required = true;
                  document.getElementById('data').required = true;
+                 // You might also want to remove required from receita fields here if any were added
+                 // Example: document.getElementById('manual_api_paciente_nome').required = false; 
             }
             
             // Fetch item data
@@ -458,59 +506,51 @@ document.addEventListener('DOMContentLoaded', function() {
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Received data:', data);
-                    document.getElementById('is_linked').value = data.is_linked ? 'true' : 'false';
+                    console.log('Received data for edit:', data);
+                    const isLinked = data.is_linked === true; // Ensure boolean
+                    document.getElementById('is_linked').value = isLinked ? 'true' : 'false';
 
                     if (viewType === 'receitas') {
-                         // Apply mask and set values using maskRef API
+                         // Populate common Receita fields
                          const valorInputs = [
                              { elem: document.getElementById('valor_faturado'), value: data.valor_faturado },
                              { elem: document.getElementById('valor_recebido'), value: data.valor_recebido },
                              { elem: document.getElementById('valor_recuperado'), value: data.valor_recuperado },
                              { elem: document.getElementById('valor_acatado'), value: data.valor_acatado },
                          ];
-                         
                          valorInputs.forEach(({elem, value}) => {
-                             if (elem && elem.maskRef) {
-                                 elem.maskRef.unmaskedValue = String(value || '0');
-                             } else if (elem) {
-                                 // Fallback if maskRef not ready/available (shouldn't happen ideally)
-                                 elem.value = `R$ ${parseFloat(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                             }
+                              if (elem?.maskRef) elem.maskRef.unmaskedValue = String(value || '0');
                          });
-
                          document.getElementById('status_pagamento').value = data.status_pagamento || 'em_processamento';
                          document.getElementById('data_pagamento').value = data.data_pagamento || '';
                          document.getElementById('tipo_cobranca').value = data.tipo_cobranca || 'cooperativa';
                          document.getElementById('cpsa').value = data.cpsa || '';
-                         document.getElementById('cpf').value = data.cpf || ''; // Comes from get_finance_item if linked
+                         document.getElementById('cpf').value = data.cpf || ''; // Populate CPF if available
                          
                          if (data.tipo_pagamento_direto) {
-                             document.getElementById('tipo_pagamento_direto').value = data.tipo_pagamento_direto;
+                              document.getElementById('tipo_pagamento_direto').value = data.tipo_pagamento_direto;
                          } else {
-                             // Ensure a default is selected if null/undefined
-                             document.getElementById('tipo_pagamento_direto').value = 'cartao'; 
+                              document.getElementById('tipo_pagamento_direto').value = 'cartao'; 
                          }
                          
-                         // Show info panel if not linked
-                         if (!data.is_linked) {
-                             document.getElementById('unlinked-info').style.display = 'block';
-                             document.getElementById('unlinked-paciente').textContent = data.paciente_nome || 'N/A';
+                         // Show info panel ONLY if not linked during edit
+                         const unlinkedInfoPanel = document.getElementById('unlinked-info');
+                         if (!isLinked) {
+                             unlinkedInfoPanel.style.display = 'block';
+                             document.getElementById('unlinked-paciente').textContent = data.paciente_nome || 'N/A'; // Uses combined field from view
                              document.getElementById('unlinked-data').textContent = data.data_cirurgia ? new Date(data.data_cirurgia + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
+                         } else {
+                              unlinkedInfoPanel.style.display = 'none';
                          }
 
-                         // Trigger visibility updates based on loaded data
+                         // Trigger visibility updates AFTER populating
                          toggleReceitaFieldsVisibility();
                          toggleDataPagamentoVisibility(); 
 
                     } else { // despesas
                          document.getElementById('descricao').value = data.descricao || '';
                          const valorInput = document.getElementById('valor');
-                         if(valorInput.maskRef){
-                              valorInput.maskRef.unmaskedValue = String(data.valor || '0');
-                         } else {
-                             valorInput.value = `R$ ${parseFloat(data.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                         }
+                         if(valorInput?.maskRef) valorInput.maskRef.unmaskedValue = String(data.valor || '0');
                          document.getElementById('data').value = data.data || '';
                          document.getElementById('pago').checked = data.pago || false;
                     }
@@ -524,7 +564,48 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle form submission
+    // --- Add Receita Modal (now triggered by header button) ---
+     window.openAddReceitaModal = function() {
+         form.reset(); // Clear previous data
+
+         document.getElementById('modal-action-type').textContent = 'Adicionar';
+         document.getElementById('modal-title-type').textContent = 'Receita (Manual)';
+         document.getElementById('finance_type').value = 'receitas';
+         document.getElementById('is_new').value = 'true'; // ADDING NEW
+         document.getElementById('is_linked').value = 'false'; // Manual adds are unlinked
+         document.getElementById('finance_id').value = ''; // No ID for new item
+
+         // Show/Hide sections for ADDING RECEITA
+         document.getElementById('manual-receita-fields').style.display = 'block'; // Show manual fields
+         document.getElementById('receitas-fields').style.display = 'block'; // Show common receita fields
+         document.getElementById('despesas-fields').style.display = 'none';
+         document.getElementById('unlinked-info').style.display = 'none'; // Hide info panel
+        
+         // Remove required from hidden despesas fields
+         document.getElementById('descricao').required = false;
+         document.getElementById('valor').required = false;
+         document.getElementById('data').required = false;
+
+
+          // Clear potentially pre-filled fields from edit mode
+         const valorInputs = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
+         valorInputs.forEach(id => {
+              const elem = document.getElementById(id);
+              if (elem?.maskRef) elem.maskRef.unmaskedValue = '0';
+         });
+         document.getElementById('status_pagamento').value = 'em_processamento'; // Default status
+         document.getElementById('tipo_cobranca').value = 'cooperativa'; // Default type? Or blank?
+         document.getElementById('cpsa').value = ''; 
+         document.getElementById('data_pagamento').value = '';
+
+         // Trigger visibility updates for the default state ('cooperativa')
+         toggleReceitaFieldsVisibility(); 
+         toggleDataPagamentoVisibility(); 
+         
+         editModal.style.display = "block";
+     }
+
+    // Handle form submission (UPDATED)
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -532,59 +613,65 @@ document.addEventListener('DOMContentLoaded', function() {
         const financeType = formData.get('finance_type');
         const isNew = formData.get('is_new') === 'true';
         
-        // --- Data Preparation ---
+        // Data Preparation (money fields)
+        let valueFields = [];
         if (financeType === 'receitas') {
-            // Convert masked money values to raw numbers
-            const valorInputNames = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
-            valorInputNames.forEach(name => {
-                const elem = document.getElementById(name);
-                if (elem && elem.maskRef) {
-                    formData.set(name, elem.maskRef.unmaskedValue || '0');
-                } else if (elem) {
-                     // Fallback conversion (less reliable)
-                     let valor = elem.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
-                     formData.set(name, parseFloat(valor) || '0');
-                }
-            });
-        } else { // Despesas
-             const valorElem = document.getElementById('valor');
-             if (valorElem && valorElem.maskRef) {
-                 formData.set('valor', valorElem.maskRef.unmaskedValue || '0');
-             } else if (valorElem) {
-                 let valor = valorElem.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
-                 formData.set('valor', parseFloat(valor) || '0');
-             }
-             // Ensure 'pago' is sent correctly ('on' or null)
-             if (!formData.has('pago')) {
-                 formData.set('pago', ''); // Explicitly set if unchecked
-             }
+             valueFields = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
+        } else { // despesas
+             valueFields = ['valor'];
         }
+        valueFields.forEach(name => {
+             const elem = document.getElementById(name);
+             if (elem && elem.maskRef) {
+                 formData.set(name, elem.maskRef.unmaskedValue || '0');
+             } else if (elem) { // Fallback
+                 let valor = elem.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+                 formData.set(name, parseFloat(valor) || '0');
+             }
+        });
+         // Handle checkbox for despesas
+         if (financeType === 'despesas' && !formData.has('pago')) {
+             formData.set('pago', ''); 
+         }
         
-        // --- Validation (Example) ---
-        // Add specific validation logic here if needed, e.g., check required fields based on status/type
+        // Validation (simplified example) -> Can be removed if relying solely on native HTML5 validation now
+        /* 
+        let validationError = false;
         if (financeType === 'receitas') {
-            // Example: Check if Data Pagamento is provided when status requires it
              const status = formData.get('status_pagamento');
              const dataPagamento = formData.get('data_pagamento');
              if ((status === 'processo_finalizado' || status === 'recurso_de_glosa') && !dataPagamento) {
                  alert('Data de pagamento é obrigatória para o status selecionado.');
-                 return; // Stop submission
+                 validationError = true;
              }
-        } else { // Despesas validation (already handled by 'required' attribute mostly)
-             if (!formData.get('descricao') || !formData.get('valor') || !formData.get('data')) {
-                 alert('Preencha todos os campos obrigatórios para despesas.');
-                 return;
+             // Add validation for manual fields if isNew
+             if(isNew){
+                  if(!formData.get('api_paciente_nome')) { alert('Nome do Paciente (Manual) é obrigatório.'); validationError = true; }
+                  if(!formData.get('api_data_cirurgia')) { alert('Data da Cirurgia (Manual) é obrigatória.'); validationError = true; }
+                  if(formData.get('tipo_cobranca') === 'cooperativa' && !formData.get('cpsa')){ alert('CPSA é obrigatório para tipo Cooperativa.'); validationError = true; }
              }
+        } else { // Despesas
+             // This check is now handled by the required attribute, can be removed
+             // if (!formData.get('descricao') || !formData.get('valor') || !formData.get('data')) {
+             //     alert('Preencha todos os campos obrigatórios para despesas.');
+             //     validationError = true;
+             // }
+        }
+        // if (validationError) return; // Stop if validation failed
+        */
+        
+        // Determine URL based on type and action
+        let url = '';
+        if (isNew) {
+             if (financeType === 'receitas') {
+                 url = '/financas/create-receita/'; // NEW endpoint for manual receita
+             } else { // despesas
+                 url = '/financas/create-item/'; 
+             }
+        } else { // Editing existing item
+             url = '/financas/update-item/';
         }
         
-        // Determine URL (Create only supported for despesas now)
-        const url = isNew ? '/financas/create-item/' : '/financas/update-item/';
-        if (isNew && financeType === 'receitas') {
-             alert('A criação de receitas é feita automaticamente pela conciliação.');
-             return;
-        }
-        
-        // Disable submit button to prevent multiple submissions
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.textContent = 'Salvando...';
@@ -592,15 +679,13 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(url, {
             method: 'POST',
             body: formData,
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}' // Ensure CSRF token is correct
-            }
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
         })
         .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data })))
         .then(({ ok, status, data }) => {
             if (ok && data.success) {
-                editModal.style.display = "none"; // Close modal on success
-                window.location.reload(); // Reload page to see changes
+                editModal.style.display = "none"; 
+                window.location.reload(); 
             } else {
                 throw new Error(data.error || `Erro ${status} ao salvar`);
             }
@@ -610,28 +695,17 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Erro ao salvar: ' + error.message);
         })
         .finally(() => {
-             // Re-enable submit button
              submitButton.disabled = false;
-             submitButton.textContent = 'Salvar Alterações';
+             submitButton.textContent = 'Salvar'; // Reset button text
         });
     });
 
     // Initialize money masks for all designated inputs
     document.querySelectorAll('.money-input').forEach(element => {
-        if (!element.maskRef) { // Avoid re-initializing if already done
+        if (!element.maskRef) { 
              element.maskRef = IMask(element, {
                  mask: 'R$ num',
-                 blocks: {
-                     num: {
-                         mask: Number,
-                         scale: 2,
-                         thousandsSeparator: '.',
-                         padFractionalZeros: true,
-                         normalizeZeros: true,
-                         radix: ',',
-                         mapToRadix: ['.'],
-                     }
-                 }
+                 blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, normalizeZeros: true, radix: ',', mapToRadix: ['.'], } }
              });
         }
     });
@@ -639,19 +713,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add CPF mask (only if element exists)
     const cpfInput = document.getElementById('cpf');
     if (cpfInput) {
-        IMask(cpfInput, {
-            mask: '000.000.000-00'
-        });
+        IMask(cpfInput, { mask: '000.000.000-00' });
     }
 
-    // --- Filter Functionality ---
+    // --- Filter Functionality (no changes needed here) ---
     const periodFilterBtn = document.getElementById('periodFilterBtn');
     const periodFilter = document.getElementById('periodFilter');
     const customRangeContainer = document.getElementById('customRangeContainer');
     const applyCustomRangeBtn = document.getElementById('applyCustomRangeBtn');
-    const statusFilterSelect = document.getElementById('statusFilterSelect'); // Get status select
+    const statusFilterSelect = document.getElementById('statusFilterSelect'); 
     
-    // Toggle period dropdown
     if(periodFilterBtn && periodFilter){
         periodFilterBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -659,27 +730,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
         if (periodFilter && !periodFilter.contains(e.target) && e.target !== periodFilterBtn) {
             periodFilter.style.display = 'none';
         }
     });
 
-    // Function to build URL and navigate
     function applyFilters() {
          const currentUrl = new URL(window.location.href);
          const params = currentUrl.searchParams;
-
-         // Get filter values
-         const view = params.get('view') || 'receitas'; // Keep current view
+         const view = params.get('view') || 'receitas'; 
          const search = document.getElementById('searchInput').value;
-         const status = statusFilterSelect ? statusFilterSelect.value : ''; // Get status if select exists
+         const status = statusFilterSelect ? statusFilterSelect.value : ''; 
          let period = '';
          let startDate = '';
          let endDate = '';
-         
-         // Determine period from selection or custom inputs
          const selectedOption = periodFilter ? periodFilter.querySelector('.period-option[data-selected]') : null;
          const customOptionSelected = periodFilter ? periodFilter.querySelector('.period-option[data-value="custom"][data-selected]') : null;
 
@@ -687,194 +752,143 @@ document.addEventListener('DOMContentLoaded', function() {
              period = 'custom';
              startDate = document.getElementById('customStart').value;
              endDate = document.getElementById('customEnd').value;
-             if (!startDate || !endDate) {
-                 alert("Selecione as datas de início e fim para o período personalizado.");
-                 return; // Don't navigate if custom range is incomplete
-             }
+             if (!startDate || !endDate) { alert("Selecione as datas de início e fim."); return; }
          } else if (selectedOption) {
              period = selectedOption.dataset.value;
          }
 
-         // Build new query string
          const newParams = new URLSearchParams();
          newParams.set('view', view);
          if (search) newParams.set('search', search);
-         if (status) newParams.set('status', status); // Add status if selected
+         if (status) newParams.set('status', status); 
          if (period) newParams.set('period', period);
          if (period === 'custom' && startDate && endDate) {
              newParams.set('start_date', startDate);
              newParams.set('end_date', endDate);
          }
-         
          window.location.href = `?${newParams.toString()}`;
     }
 
-    // Handle period option clicks
     if(periodFilter){
         periodFilter.querySelectorAll('.period-option').forEach(option => {
             option.addEventListener('click', function() {
-                // Mark as selected visually (optional, can be done via backend context too)
                 periodFilter.querySelectorAll('.period-option').forEach(opt => opt.removeAttribute('data-selected'));
                 this.setAttribute('data-selected', '');
-
                 const value = this.dataset.value;
                 if (value === 'custom') {
                     if(customRangeContainer) customRangeContainer.style.display = 'block';
-                    // Don't navigate yet, wait for apply button or date selection
                 } else {
-                    if(customRangeContainer) customRangeContainer.style.display = 'none'; // Hide custom range
-                    applyFilters(); // Apply filter immediately for predefined periods
+                    if(customRangeContainer) customRangeContainer.style.display = 'none'; 
+                    applyFilters(); 
                 }
-                periodFilter.style.display = 'none'; // Hide dropdown after selection (except for custom)
+                // Keep dropdown open only for custom range selection
+                if (value !== 'custom') {
+                     periodFilter.style.display = 'none';
+                }
             });
         });
     }
     
-    // Handle custom range apply button
     if (applyCustomRangeBtn) {
         applyCustomRangeBtn.addEventListener('click', function() {
-             applyFilters(); // Apply filters using custom dates
+             applyFilters(); 
         });
     }
 
-    // Handle Status filter change
     if (statusFilterSelect) {
          statusFilterSelect.addEventListener('change', applyFilters);
     }
 
-
-    // Add dynamic search with debounce
     const searchInput = document.getElementById('searchInput');
     let searchTimeout;
     if(searchInput){
         searchInput.addEventListener('input', function() {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                applyFilters(); // Apply all filters when search changes
-            }, 500); // Wait 500ms after typing
+            searchTimeout = setTimeout(applyFilters, 500); 
         });
     }
 
-
-    // --- Add Despesa Modal ---
-    function openAddDespesaModal() {
-        form.reset(); // Reset form fields
-        
-        // Setup modal for new despesa
+    // --- Add Despesa Modal Trigger ---
+    window.openAddDespesaModal = function() { // Keep existing Despesa add function
+        form.reset(); 
         document.getElementById('modal-action-type').textContent = 'Adicionar';
         document.getElementById('modal-title-type').textContent = 'Despesa';
         document.getElementById('finance_type').value = 'despesas';
         document.getElementById('is_new').value = 'true';
-        document.getElementById('is_linked').value = 'false'; // Despesas are never 'linked' in this context
-        
-        // Show correct fields
+        document.getElementById('is_linked').value = 'false'; 
+        document.getElementById('manual-receita-fields').style.display = 'none'; 
         document.getElementById('receitas-fields').style.display = 'none';
         document.getElementById('despesas-fields').style.display = 'block';
         document.getElementById('unlinked-info').style.display = 'none'; 
-        
-        // Set today's date as default
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('data').value = today;
-        
-        // Ensure required attributes are set
+        // Ensure required is set for despesas fields
         document.getElementById('descricao').required = true;
         document.getElementById('valor').required = true;
         document.getElementById('data').required = true;
-        
+        // Remove required from hidden receitas fields (optional but good practice)
+        document.getElementById('manual_api_paciente_nome').required = false;
+        document.getElementById('manual_api_data_cirurgia').required = false;
+        // Add others if needed
+
         editModal.style.display = "block";
     }
-    window.openAddDespesaModal = openAddDespesaModal; // Make globally accessible
 
-
-    // --- Delete Buttons ---
+    // --- Delete Buttons (no changes needed) ---
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (confirm('Deseja realmente excluir este item? Esta ação não pode ser desfeita.')) {
+            e.preventDefault(); e.stopPropagation();
+            if (confirm('Deseja realmente excluir este item?')) {
                 const row = this.closest('tr');
                 const financeId = row.dataset.id;
-                const viewType = '{{ view_type }}'; // Get type from context
-                
+                const viewType = '{{ view_type }}'; 
                 const formData = new FormData();
                 formData.append('finance_type', viewType);
                 formData.append('finance_id', financeId);
-                
                 fetch('/financas/delete-item/', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    }
+                    method: 'POST', body: formData, headers: { 'X-CSRFToken': '{{ csrf_token }}' }
                 })
-                .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data })))
-                .then(({ ok, status, data }) => {
-                     if (ok && data.success) {
-                         row.remove(); // Remove the row visually
-                         // Optionally show a success message
-                         // alert('Item excluído com sucesso.'); 
-                     } else {
-                         throw new Error(data.error || `Erro ${status} ao excluir`);
-                     }
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                     if (ok && data.success) { row.remove(); } 
+                     else { throw new Error(data.error || 'Erro ao excluir'); }
                 })
-                .catch(error => {
-                    console.error('Error deleting item:', error);
-                    alert('Erro ao excluir: ' + error.message);
-                });
+                .catch(error => { console.error('Error deleting:', error); alert('Erro: ' + error.message); });
             }
         });
     });
     
     // --- Conciliation Trigger ---
-    // Renamed function to avoid conflicts
     window.runConciliation = function() {
-         const conciliateButton = document.getElementById('conciliate-btn');
+         const conciliateButton = document.getElementById('conciliate-fab'); // Target FAB now
          if (!conciliateButton) return;
-
          conciliateButton.disabled = true;
-         conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conciliando...';
-
-         fetch('/financas/conciliar/') // Endpoint defined in urls.py
-             .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data })))
-             .then(({ ok, status, data }) => {
+         conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Just spinner
+         fetch('/financas/conciliar/') 
+             .then(response => response.json().then(data => ({ ok: response.ok, data })))
+             .then(({ ok, data }) => {
                  if (ok && data.success) {
                      alert(data.message || 'Conciliação concluída.');
-                     window.location.reload(); // Reload to see changes
-                 } else {
-                      throw new Error(data.error || `Erro ${status} durante a conciliação.`);
-                 }
+                     window.location.reload(); 
+                 } else { throw new Error(data.error || 'Erro durante a conciliação.'); }
              })
-             .catch(error => {
-                 console.error('Error running conciliation:', error);
-                 alert('Erro ao executar conciliação: ' + error.message);
-             })
+             .catch(error => { console.error('Error conciliation:', error); alert('Erro: ' + error.message); })
              .finally(() => {
-                 // Re-enable button
                  conciliateButton.disabled = false;
-                 conciliateButton.innerHTML = '<i class="fas fa-sync"></i> Conciliar';
+                 conciliateButton.innerHTML = '<i class="fas fa-sync"></i>'; // Reset icon
              });
     }
 
 }); // End DOMContentLoaded
 
-// --- Export Function ---
+// --- Export Function (no changes needed) ---
 function exportFinances() {
     const currentUrl = new URL(window.location.href);
     const params = currentUrl.searchParams;
-    
-    // Construct the export URL with current filters
     const exportUrl = new URL('{% url "export_finances" %}', window.location.origin);
-    
-    // Append view, status, search, period, start_date, end_date from current params
-    if (params.get('view')) exportUrl.searchParams.append('view', params.get('view'));
-    if (params.get('status')) exportUrl.searchParams.append('status', params.get('status'));
-    if (params.get('search')) exportUrl.searchParams.append('search', params.get('search'));
-    if (params.get('period')) exportUrl.searchParams.append('period', params.get('period'));
-    if (params.get('start_date')) exportUrl.searchParams.append('start_date', params.get('start_date'));
-    if (params.get('end_date')) exportUrl.searchParams.append('end_date', params.get('end_date'));
-
-    // Redirect to trigger download
+    params.forEach((value, key) => { // Copy all current filters
+        exportUrl.searchParams.append(key, value);
+    });
     window.location.href = exportUrl.toString();
 }
 </script>

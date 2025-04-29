@@ -230,7 +230,8 @@ def update_finance_item(request):
         finance_id = data.get('finance_id')
 
         if finance_type == 'receitas':
-            item = ProcedimentoFinancas.objects.select_for_update().get(
+            # Lock only the ProcedimentoFinancas table ('self')
+            item = ProcedimentoFinancas.objects.select_for_update(of=('self',)).get(
                  Q(procedimento__group=user_group) | Q(group=user_group),
                  id=finance_id
             )
