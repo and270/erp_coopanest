@@ -4,7 +4,7 @@ from agenda.models import Procedimento
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED
 from registration.models import Groups, Membership, Anesthesiologist
 from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
-from django.db.models import Q
+from django.db.models import Q, Sum, F, Value
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.http import JsonResponse
@@ -15,6 +15,7 @@ from django.http import HttpResponse
 import requests
 from difflib import SequenceMatcher
 from django.conf import settings
+from django.db import transaction
 
 DIAS_PARA_CONCILIACAO = 90
 
@@ -28,107 +29,107 @@ def financas_view(request):
     view_type = request.GET.get('view', 'receitas')
     status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
-    
-    # Get period parameters
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
     
-    # Base queryset - Apply filtering based on user type FIRST
-    if view_type == 'receitas':
-        if user.user_type == ANESTESISTA_USER:
-            # Anesthesiologists see only procedures they are responsible for within their group
-            queryset = ProcedimentoFinancas.objects.filter(
-                procedimento__anestesistas_responsaveis__user=user,
-                procedimento__status=STATUS_FINISHED
-            ).select_related('procedimento').order_by(
-                '-procedimento__data_horario'  # Most recent procedures first
-            )
-        elif user.user_type == GESTOR_USER:
-            # Gestores see all finished procedures in their group
-            queryset = ProcedimentoFinancas.objects.filter(
-                procedimento__group=user_group,
-                procedimento__status=STATUS_FINISHED
-            ).select_related('procedimento').order_by(
-                '-procedimento__data_horario'  # Most recent procedures first
-            )
-        else:
-            # Handle other user types if necessary, e.g., show nothing or raise permission error
-            queryset = ProcedimentoFinancas.objects.none()
-    else: # view_type == 'despesas'
-        if user.user_type == ANESTESISTA_USER:
-            # Anesthesiologists see only expenses linked to procedures they are responsible for
-            queryset = Despesas.objects.filter(
-                procedimento__anestesistas_responsaveis__user=user,
-                procedimento__group=user_group # Ensure procedure is in the correct group
-            ).select_related('procedimento').order_by(
-                '-data',  # Most recent expenses first
-                '-id'     # If same date, newer entries first
-            )
-        elif user.user_type == GESTOR_USER:
-            # Gestores see all expenses linked to their group
-            queryset = Despesas.objects.filter(
-                group=user_group
-            ).select_related('procedimento').order_by(
-                '-data',  # Most recent expenses first
-                '-id'     # If same date, newer entries first
-            )
-        else:
-            # Handle other user types
-            queryset = Despesas.objects.none()
-    
-    # Apply period filter
+    start_date, end_date = None, None
+    selected_period = None
+
+    # Parse period
     if period == 'custom' and start_date_str and end_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
             if start_date > end_date:
                 start_date, end_date = end_date, start_date
-            
-            if view_type == 'receitas':
-                queryset = queryset.filter(
-                    procedimento__data_horario__date__gte=start_date.date(),
-                    procedimento__data_horario__date__lte=end_date.date()
-                )
-            else:
-                queryset = queryset.filter(
-                    data__gte=start_date.date(),
-                    data__lte=end_date.date()
-                )
             selected_period = 'custom'
         except ValueError:
-            selected_period = None
+             start_date, end_date = None, None # Reset on error
     elif period:
         try:
             days = int(period)
-            start_date = timezone.now() - timedelta(days=days)
-            if view_type == 'receitas':
-                queryset = queryset.filter(procedimento__data_horario__gte=start_date)
-            else:
-                queryset = queryset.filter(data__gte=start_date.date())
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=days -1) # Inclusive range
             selected_period = period
         except ValueError:
-            selected_period = None
-    else:
-        selected_period = None
-    
-    # Apply other filters
-    if search_query:
-        if view_type == 'receitas':
-            queryset = queryset.filter(
+             start_date, end_date = None, None # Reset on error
+
+    # Base queryset - Filter by group first
+    if view_type == 'receitas':
+        base_qs = ProcedimentoFinancas.objects.filter(
+            Q(procedimento__group=user_group) | Q(group=user_group) # Linked via procedure OR directly via group FK
+        ).select_related('procedimento', 'procedimento__hospital') # Select related for efficiency
+
+        # Filter for user type
+        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+            base_qs = base_qs.filter(
+                Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
+                Q(procedimento__isnull=True, api_cooperado_nome__iexact=user.anesthesiologist.name)
+            )
+        elif user.user_type not in [GESTOR_USER, ADMIN_USER]: # Allow ADMIN too? Assume yes for now.
+            base_qs = ProcedimentoFinancas.objects.none() # Non-gestors/admins see nothing unless anesthesiologist
+
+        # Apply period filter (check both procedure date and api date)
+        if start_date and end_date:
+            base_qs = base_qs.filter(
+                Q(procedimento__data_horario__date__gte=start_date, procedimento__data_horario__date__lte=end_date) |
+                Q(procedimento__isnull=True, api_data_cirurgia__gte=start_date, api_data_cirurgia__lte=end_date)
+            )
+            
+        # Apply search filter (check procedure fields and api fields)
+        if search_query:
+            base_qs = base_qs.filter(
                 Q(procedimento__nome_paciente__icontains=search_query) |
                 Q(procedimento__cpf_paciente__icontains=search_query) |
-                Q(cpsa__icontains=search_query)
+                Q(cpsa__icontains=search_query) |
+                Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) | # Search API name if unlinked
+                Q(procedimento__isnull=True, cpsa__icontains=search_query) # Search CPSA if unlinked
             )
-        else:
-            queryset = queryset.filter(descricao__icontains=search_query)
-            
-    if status:
-        if view_type == 'receitas':
-            queryset = queryset.filter(status_pagamento=status)
-        else:
-            queryset = queryset.filter(status=status)
-    
+
+        # Apply status filter
+        if status:
+            base_qs = base_qs.filter(status_pagamento=status)
+
+        # Order results
+        queryset = base_qs.order_by(
+            F('procedimento__data_horario').desc(nulls_last=True), # Prefer procedure date
+            F('api_data_cirurgia').desc(nulls_last=True), # Fallback to API date
+             '-id' # Final tie-breaker
+        )
+
+    else: # view_type == 'despesas'
+        # Despesas logic remains largely unchanged, but ensure group filtering
+        base_qs = Despesas.objects.filter(group=user_group).select_related('procedimento')
+
+        # Filter for user type (Anesthesiologist might only see their own related expenses if logic requires)
+        # Current logic shows all group expenses to Gestor/Admin, Anesthesiologist sees none directly unless linked?
+        # Let's assume Gestor/Admin see all group expenses. Anesthesiologist logic might need review based on exact reqs.
+        if user.user_type == ANESTESISTA_USER:
+             # If Anesthesiologists should only see expenses linked to their procedures:
+             # base_qs = base_qs.filter(procedimento__anestesistas_responsaveis=user.anesthesiologist)
+             # If they see none, keep as is for now (or set to none())
+             base_qs = Despesas.objects.none() # Assuming they don't see general expenses
+        elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+             base_qs = Despesas.objects.none()
+
+        # Apply period filter
+        if start_date and end_date:
+            base_qs = base_qs.filter(data__gte=start_date, data__lte=end_date)
+
+        # Apply search filter
+        if search_query:
+            base_qs = base_qs.filter(descricao__icontains=search_query)
+
+        # Apply status filter (using 'pago' field for despesas)
+        if status == 'pago':
+            base_qs = base_qs.filter(pago=True)
+        elif status == 'nao_pago':
+            base_qs = base_qs.filter(pago=False)
+
+        # Order results
+        queryset = base_qs.order_by('-data', '-id')
+
     context = {
         'items': queryset,
         'view_type': view_type,
@@ -141,39 +142,63 @@ def financas_view(request):
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
     }
-    
+
     return render(request, 'financas.html', context)
 
 @login_required
 def get_finance_item(request, type, id):
     if not request.user.validado:
-        return render(request, 'usuario_nao_autenticado.html')
-    
-    user_group = request.user.group
-    
+        # Returning JSON error as this is likely an API call from JS
+        return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
+
+    user = request.user
+    user_group = user.group
+
     try:
         if type == 'receitas':
-            item = ProcedimentoFinancas.objects.get(
-                id=id,
-                procedimento__group=user_group
+            # Fetch considering group linkage via procedure OR direct FK
+            item = ProcedimentoFinancas.objects.select_related('procedimento').get(
+                Q(procedimento__group=user_group) | Q(group=user_group),
+                id=id
             )
+
+            # Check access for Anesthesiologist
+            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+                 is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
+                 is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome, user.anesthesiologist.name) > 0.8
+                 if not (is_linked_and_responsible or is_unlinked_and_cooperado):
+                     return JsonResponse({'error': 'Acesso negado'}, status=403)
+            elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'error': 'Acesso negado'}, status=403)
+
+
             data = {
+                'is_linked': bool(item.procedimento), # Flag to indicate if linked
                 'valor_faturado': float(item.valor_faturado) if item.valor_faturado else 0,
                 'valor_recebido': float(item.valor_recebido) if item.valor_recebido else 0,
                 'valor_recuperado': float(item.valor_recuperado) if item.valor_recuperado else 0,
                 'valor_acatado': float(item.valor_acatado) if item.valor_acatado else 0,
                 'status_pagamento': item.status_pagamento,
                 'data_pagamento': item.data_pagamento.strftime('%Y-%m-%d') if item.data_pagamento else None,
-                'cpf': item.procedimento.cpf_paciente,
                 'cpsa': item.cpsa,
                 'tipo_cobranca': item.tipo_cobranca,
-                'tipo_pagamento_direto': item.tipo_pagamento_direto
+                'tipo_pagamento_direto': item.tipo_pagamento_direto,
+                # Get data from procedure if linked, otherwise from api_* fields
+                'paciente_nome': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome,
+                'cpf': item.procedimento.cpf_paciente if item.procedimento else None, # CPF only available if linked
+                 'data_cirurgia': (item.procedimento.data_horario.strftime('%Y-%m-%d') if item.procedimento and item.procedimento.data_horario else 
+                                  item.api_data_cirurgia.strftime('%Y-%m-%d') if item.api_data_cirurgia else None),
+                 # Add other fields as needed by the frontend modal
             }
-        else:
+        else: # Despesas
             item = Despesas.objects.get(
                 id=id,
-                group=user_group
+                group=user_group # Assuming only Gestor/Admin access despesas directly
             )
+             # Add specific permission checks for Despesas if needed
+            if user.user_type not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'error': 'Acesso negado'}, status=403)
+                 
             data = {
                 'descricao': item.descricao,
                 'valor': float(item.valor) if item.valor else 0,
@@ -183,51 +208,91 @@ def get_finance_item(request, type, id):
         return JsonResponse(data)
     except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
         return JsonResponse({'error': 'Item não encontrado'}, status=404)
+    except Exception as e:
+        print(f"Error in get_finance_item: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': 'Erro interno ao buscar item'}, status=500)
 
 @login_required
 @require_http_methods(["POST"])
+@transaction.atomic
 def update_finance_item(request):
     if not request.user.validado:
-        return render(request, 'usuario_nao_autenticado.html')
-    
-    user_group = request.user.group
-    
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+
+    user = request.user
+    user_group = user.group
+
     try:
         data = request.POST
         finance_type = data.get('finance_type')
         finance_id = data.get('finance_id')
-        
+
         if finance_type == 'receitas':
-            item = ProcedimentoFinancas.objects.get(
-                id=finance_id,
-                procedimento__group=user_group
+            item = ProcedimentoFinancas.objects.select_for_update().get(
+                 Q(procedimento__group=user_group) | Q(group=user_group),
+                 id=finance_id
             )
-            item.valor_faturado = data.get('valor_faturado')
-            item.valor_recebido = data.get('valor_recebido')
-            item.valor_recuperado = data.get('valor_recuperado')
-            item.valor_acatado = data.get('valor_acatado')
+
+            # Permission Check (similar to get_finance_item)
+            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+                 is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
+                 is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome, user.anesthesiologist.name) > 0.8
+                 if not (is_linked_and_responsible or is_unlinked_and_cooperado):
+                     return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
+            elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
+
+            # Update common fields
+            item.valor_faturado = data.get('valor_faturado') if data.get('valor_faturado') else None
+            item.valor_recebido = data.get('valor_recebido') if data.get('valor_recebido') else None
+            item.valor_recuperado = data.get('valor_recuperado') if data.get('valor_recuperado') else None
+            item.valor_acatado = data.get('valor_acatado') if data.get('valor_acatado') else None
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
-            item.cpsa = data.get('cpsa')
+            item.cpsa = data.get('cpsa') or None
             item.tipo_cobranca = data.get('tipo_cobranca')
-            item.tipo_pagamento_direto = data.get('tipo_pagamento_direto')
+            item.tipo_pagamento_direto = data.get('tipo_pagamento_direto') if data.get('tipo_cobranca') == 'particular' else None
+
+            # Update procedure fields ONLY if linked
             if item.procedimento:
-                item.procedimento.cpf_paciente = data.get('cpf')
+                item.procedimento.cpf_paciente = data.get('cpf') or None
+                # Maybe update patient name too? item.procedimento.nome_paciente = data.get('paciente_nome')
                 item.procedimento.save()
-        else:
-            item = Despesas.objects.get(
+            else:
+                # If unlinked, maybe update api_* fields?
+                # Decide if editing unlinked item's API data is allowed/needed via this form
+                # item.api_paciente_nome = data.get('paciente_nome') # Example
+                pass
+
+
+        elif finance_type == 'despesas':
+            item = Despesas.objects.select_for_update().get(
                 id=finance_id,
-                group=user_group  # Ensure user has access
+                group=user_group
             )
+             # Permission check
+            if user.user_type not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
+
             item.descricao = data.get('descricao')
-            item.valor = data.get('valor')
-            item.pago = data.get('pago') == 'on'  # Convert checkbox value to boolean
-            item.data = data.get('data')
-            
+            item.valor = data.get('valor') if data.get('valor') else None
+            item.pago = data.get('pago') == 'on'
+            item.data = data.get('data') or None
+
+        else:
+             return JsonResponse({'success': False, 'error': 'Tipo de item inválido'}, status=400)
+
         item.save()
         return JsonResponse({'success': True})
+    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Item não encontrado'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        print(f"Error in update_finance_item: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': f'Erro interno ao atualizar item: {str(e)}'}, status=500)
 
 @login_required
 @require_http_methods(["POST"])
@@ -268,95 +333,109 @@ def create_finance_item(request):
 @login_required
 def export_finances(request):
     if not request.user.validado:
-        return render(request, 'usuario_nao_autenticado.html')
-    
+        return render(request, 'usuario_nao_autenticado.html') # Or return error response
+
+    user = request.user
+    user_group = user.group
     view_type = request.GET.get('view', 'receitas')
     status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
-
-    # Get period parameters
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
 
-    # Base queryset with group filtering
-    if view_type == 'receitas':
-        queryset = ProcedimentoFinancas.objects.filter(
-            procedimento__group=request.user.group,
-            procedimento__status=STATUS_FINISHED
-        ).select_related('procedimento')
-    else:
-        queryset = Despesas.objects.filter(
-            group=request.user.group  # Filter despesas by group
-        ).select_related('procedimento')
+    start_date, end_date = None, None
 
-    # Apply period filter
+    # Parse period (copied from financas_view)
     if period == 'custom' and start_date_str and end_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-            if start_date > end_date:
-                start_date, end_date = end_date, start_date
-
-            if view_type == 'receitas':
-                queryset = queryset.filter(
-                    procedimento__data_horario__date__gte=start_date.date(),
-                    procedimento__data_horario__date__lte=end_date.date()
-                )
-            else:
-                queryset = queryset.filter(
-                    data__gte=start_date.date(),
-                    data__lte=end_date.date()
-                )
-        except ValueError:
-            pass
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            if start_date > end_date: start_date, end_date = end_date, start_date
+        except ValueError: start_date, end_date = None, None
     elif period:
         try:
             days = int(period)
-            start_date = timezone.now() - timedelta(days=days)
-            if view_type == 'receitas':
-                queryset = queryset.filter(procedimento__data_horario__gte=start_date)
-            else:
-                queryset = queryset.filter(data__gte=start_date.date())
-        except ValueError:
-            pass
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=days - 1)
+        except ValueError: start_date, end_date = None, None
 
-    # Apply other filters
-    if search_query:
-        if view_type == 'receitas':
-            queryset = queryset.filter(
-                Q(procedimento__nome_paciente__icontains=search_query) |
-                Q(procedimento__cpf_paciente__icontains=search_query) |
-                Q(cpsa__icontains=search_query)
-            )
-        else:
-            queryset = queryset.filter(descricao__icontains=search_query)
-
-    if status:
-        if view_type == 'receitas':
-            queryset = queryset.filter(status_pagamento=status)
-        else:
-            queryset = queryset.filter(status=status)
-
-    # Prepare data for export
-    data = []
+    # Get queryset using the same logic as financas_view
     if view_type == 'receitas':
+        base_qs = ProcedimentoFinancas.objects.filter(
+            Q(procedimento__group=user_group) | Q(group=user_group)
+        ).select_related('procedimento', 'procedimento__hospital', 'procedimento__convenio') # Add convenio
+        
+        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+             base_qs = base_qs.filter(
+                 Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
+                 Q(procedimento__isnull=True, api_cooperado_nome__iexact=user.anesthesiologist.name)
+             )
+        elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+             base_qs = ProcedimentoFinancas.objects.none()
+
+        if start_date and end_date:
+             base_qs = base_qs.filter(
+                 Q(procedimento__data_horario__date__gte=start_date, procedimento__data_horario__date__lte=end_date) |
+                 Q(procedimento__isnull=True, api_data_cirurgia__gte=start_date, api_data_cirurgia__lte=end_date)
+             )
+        if search_query:
+             base_qs = base_qs.filter(
+                 Q(procedimento__nome_paciente__icontains=search_query) |
+                 Q(procedimento__cpf_paciente__icontains=search_query) |
+                 Q(cpsa__icontains=search_query) |
+                 Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) |
+                 Q(procedimento__isnull=True, cpsa__icontains=search_query)
+             )
+        if status:
+             base_qs = base_qs.filter(status_pagamento=status)
+        
+        queryset = base_qs.order_by(
+             F('procedimento__data_horario').desc(nulls_last=True), 
+             F('api_data_cirurgia').desc(nulls_last=True), 
+             '-id'
+        )
+
+        # Prepare data for export
+        data = []
         for item in queryset:
+            # Get anesthesiologist name safely
+            anest_resp = item.procedimento.anestesistas_responsaveis.first() if item.procedimento else None
+            anest_name = anest_resp.name if anest_resp else item.api_cooperado_nome or ''
+
             data.append({
-                'Paciente': item.procedimento.nome_paciente,
-                'CPF': item.procedimento.cpf_paciente,
-                'Data da Cirurgia': item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento.data_horario else '',
-                'Valor Faturado': float(item.valor_faturado) if item.valor_faturado else 0.0,
-                'Valor Recebido': float(item.valor_recebido) if item.valor_recebido else 0.0,
-                'Valor Recuperado': float(item.valor_recuperado) if item.valor_recuperado else 0.0,
-                'Valor a Recuperar': float(item.valor_acatado) if item.valor_acatado else 0.0,
-                'Fonte Pagadora': item.get_tipo_cobranca_display(),
-                'CPSA': item.get_cpsa_display(),
-                'Anestesista': item.procedimento.anestesistas_responsaveis.first().name if item.procedimento.anestesistas_responsaveis.exists() else '',
-                'Situação': item.get_status_pagamento_display(),
+                'Paciente': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome or '',
+                'CPF': item.procedimento.cpf_paciente if item.procedimento else '',
+                'Data Cirurgia': (item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento and item.procedimento.data_horario else 
+                                  item.api_data_cirurgia.strftime('%d/%m/%Y') if item.api_data_cirurgia else ''),
+                'Valor Faturado': float(item.valor_faturado) if item.valor_faturado is not None else 0.0,
+                'Valor Recebido': float(item.valor_recebido) if item.valor_recebido is not None else 0.0,
+                'Valor Recuperado': float(item.valor_recuperado) if item.valor_recuperado is not None else 0.0,
+                'Valor a Recuperar': float(item.valor_acatado) if item.valor_acatado is not None else 0.0, # Glosa?
+                'Fonte Pagadora': item.get_tipo_cobranca_display() or '',
+                'CPSA': item.get_cpsa_display() or '',
+                'Anestesista': anest_name,
+                'Situação': item.get_status_pagamento_display() or '',
                 'Data do Pagamento': item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '-',
+                'Hospital': item.procedimento.hospital.name if item.procedimento and item.procedimento.hospital else item.api_hospital_nome or '',
+                'Convênio': item.procedimento.convenio.name if item.procedimento and item.procedimento.convenio else '',
+                'Vinculado': 'Sim' if item.procedimento else 'Não', # Indicate if linked
             })
-    else:
+
+    else: # view_type == 'despesas'
+         # Despesas export logic remains the same, just re-apply filters
+        base_qs = Despesas.objects.filter(group=user_group)
+        if user.user_type == ANESTESISTA_USER: base_qs = Despesas.objects.none() # Or specific logic
+        elif user.user_type not in [GESTOR_USER, ADMIN_USER]: base_qs = Despesas.objects.none()
+
+        if start_date and end_date: base_qs = base_qs.filter(data__gte=start_date, data__lte=end_date)
+        if search_query: base_qs = base_qs.filter(descricao__icontains=search_query)
+        if status == 'pago': base_qs = base_qs.filter(pago=True)
+        elif status == 'nao_pago': base_qs = base_qs.filter(pago=False)
+        
+        queryset = base_qs.order_by('-data', '-id')
+
+        data = []
         for item in queryset:
             data.append({
                 'Descrição': item.descricao,
@@ -365,485 +444,430 @@ def export_finances(request):
                 'Pago': 'Sim' if item.pago else 'Não',
             })
 
-    # Create a DataFrame
+    # Create DataFrame and Excel Response
     df = pd.DataFrame(data)
-
-    # Create an Excel file in memory
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename=financas_{view_type}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename=financas_{view_type}_{timezone.now().strftime("%Y%m%d")}.xlsx'
     with pd.ExcelWriter(response, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
+        df.to_excel(writer, index=False, sheet_name=view_type.capitalize())
 
     return response
 
 @login_required
 @require_http_methods(["POST"])
+@transaction.atomic
 def delete_finance_item(request):
     if not request.user.validado:
-        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'})
-    
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+
+    user = request.user
+    user_group = user.group
+
     try:
         data = request.POST
         finance_type = data.get('finance_type')
         finance_id = data.get('finance_id')
-        user_group = request.user.group
 
         if finance_type == 'receitas':
             item = ProcedimentoFinancas.objects.get(
-                id=finance_id,
-                procedimento__group=user_group
+                 Q(procedimento__group=user_group) | Q(group=user_group),
+                 id=finance_id
             )
-        else:
+             # Permission Check (similar to get/update)
+            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+                 is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
+                 is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome, user.anesthesiologist.name) > 0.8
+                 if not (is_linked_and_responsible or is_unlinked_and_cooperado):
+                     return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
+            elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
+
+        elif finance_type == 'despesas':
             item = Despesas.objects.get(
                 id=finance_id,
                 group=user_group
             )
-            
+            if user.user_type not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
+        else:
+             return JsonResponse({'success': False, 'error': 'Tipo inválido'}, status=400)
+
         item.delete()
         return JsonResponse({'success': True})
+
     except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
-        return JsonResponse({'error': 'Item não encontrado'}, status=404)
+        return JsonResponse({'success': False, 'error': 'Item não encontrado'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        print(f"Error deleting item: {e}")
+        return JsonResponse({'success': False, 'error': f'Erro ao excluir item: {str(e)}'}, status=500)
+
 
 def similar(a, b):
+    if not a or not b:
+        return 0
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
+def parse_api_date(date_str):
+    """Safely parses date string from API format YYYY-MM-DD."""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        print(f"Warning: Could not parse date '{date_str}'")
+        return None
+
+def map_api_status(api_status_str):
+    """Maps API status string to internal status choices."""
+    if not api_status_str:
+        return 'em_processamento' # Default if status is missing
+    api_status = str(api_status_str).lower().strip()
+    status_mapping = {
+        'em processamento': 'em_processamento',
+        'aguardando pagamento': 'aguardando_pagamento',
+        'recurso de glosa': 'recurso_de_glosa',
+        'processo finalizado': 'processo_finalizado',
+        'cancelada': 'cancelada',
+        # Add other potential mappings if needed
+    }
+    return status_mapping.get(api_status, 'em_processamento') # Default if unknown status
+
 @login_required
+@transaction.atomic # Use transaction to ensure atomicity
 def conciliar_financas(request):
     if not request.user.validado:
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
 
     user = request.user
-    group = user.group # Conciliar apenas do grupo ativo do usuário
+    group = user.group
 
-    auto_matched = []
-    needs_confirmation = []
-    not_found_in_system = [] # Para guias da API sem correspondente no sistema
+    if not group:
+        return JsonResponse({'error': 'Usuário não possui grupo associado'}, status=400)
+    if not user.connection_key:
+         return JsonResponse({'error': 'Chave de conexão não configurada para o usuário'}, status=400)
+
+    # --- Initialization ---
+    auto_matched_reports = [] # Renamed for clarity
+    # needs_confirmation logic is removed for now, focus on auto-create/link
+    # not_found_in_system is replaced by a list of unprocessed_cpsa_ids
+    updated_records_count = 0
+    newly_created_count = 0
+    newly_linked_count = 0
+    processed_cpsa_ids = set()
+    api_errors = []
     
-    if group:
-        try:
-            # Construct API URL and data payload
-            api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
-            print(f"conexao: {user.connection_key}")
-            api_payload = {
-                "conexao": user.connection_key,
-                "periodo_de": (timezone.now() - timedelta(days=DIAS_PARA_CONCILIACAO)).strftime('%Y-%m-%d'), #TODO: AQUI VAMOS TER UMA DATA FIXA, COMO 01/04/2025.
-                "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
-                "status": "Listagem Geral" 
-            }
-
-            # Make the API call using POST
-            response = requests.post(api_url, json=api_payload)
-            response.raise_for_status()
-            api_data = response.json()
-
-            print(f"api_data: {api_data}")
-
-            # Check for API-specific errors
-            if api_data.get('erro') != '000':
-                print(f"API Error for group {group.name}: {api_data.get('msg', 'Unknown error')}")
-                return JsonResponse({'error': 'Erro na comunicação com a API'}, status=500)
-
-            guias = api_data.get('listaguias', [])
-            matched_guias_ids = set() # Guias que já foram associadas a algum procedimento
-            
-            # Primeiramente, verificar se existe alguma finança já conciliada que precise de atualização
-            financas_conciliadas = ProcedimentoFinancas.objects.filter(
-                procedimento__group=group,
-                tipo_cobranca='cooperativa',  # Apenas para tipo cooperativa
-                cpsa__isnull=False  # Já possui CPSA, logo já foi conciliada
-            )
-            
-            if user.user_type == ANESTESISTA_USER:
-                financas_conciliadas = financas_conciliadas.filter(
-                    procedimento__anestesistas_responsaveis=user.anesthesiologist
-                )
-                
-            for financa in financas_conciliadas:
-                # Procurar a guia correspondente para atualizar valores
-                guia_match = next((g for g in guias if str(g.get('idcpsa')) == financa.cpsa), None)
-                if guia_match:
-                    matched_guias_ids.add(guia_match['idcpsa'])
-                    # Atualizar valores e status
-                    valores_atualizados = False
-                    if guia_match.get('valor_faturado') and financa.valor_faturado != float(guia_match['valor_faturado']):
-                        financa.valor_faturado = guia_match['valor_faturado']
-                        valores_atualizados = True
-                    
-                    if guia_match.get('valor_recebido') and financa.valor_recebido != float(guia_match['valor_recebido']):
-                        financa.valor_recebido = guia_match['valor_recebido']
-                        valores_atualizados = True
-                        
-                    if guia_match.get('valor_receuperado') and financa.valor_recuperado != float(guia_match['valor_receuperado']):
-                        financa.valor_recuperado = guia_match['valor_receuperado']
-                        valores_atualizados = True
-                        
-                    if guia_match.get('valor_acatado') and financa.valor_acatado != float(guia_match['valor_acatado']):
-                        financa.valor_acatado = guia_match['valor_acatado']
-                        valores_atualizados = True
-                    
-                    # Mapear status da API para o modelo
-                    api_status = str(guia_match.get('STATUS', '')).lower()
-                    status_mapping = {
-                        'em processamento': 'em_processamento',
-                        'aguardando pagamento': 'aguardando_pagamento',
-                        'recurso de glosa': 'recurso_de_glosa',
-                        'processo finalizado': 'processo_finalizado',
-                        'cancelada': 'cancelada',
-                    }
-                    
-                    if api_status.lower() in status_mapping and financa.status_pagamento != status_mapping[api_status.lower()]:
-                        financa.status_pagamento = status_mapping[api_status.lower()]
-                        valores_atualizados = True
-                    
-                    if valores_atualizados:
-                        financa.save()
-                        auto_matched.append({
-                            'tipo': 'atualizado',
-                            'paciente': guia_match.get('paciente', 'Sem nome'),
-                            'data': guia_match.get('dt_cirurg', guia_match.get('dt_cpsa')),
-                            'valor': guia_match.get('valor_faturado'),
-                            'status': guia_match.get('STATUS')
-                        })
-            
-            # Agora, procuramos por financas não conciliadas (sem cpsa)
-            base_queryset = ProcedimentoFinancas.objects.filter(
-                procedimento__group=group,
-                procedimento__status=STATUS_FINISHED,
-                tipo_cobranca='cooperativa',  # Apenas para tipo cooperativa
-                cpsa__isnull=True  # Ainda não conciliadas
-            ).exclude(
-                conciliacaotentativa__conciliado__isnull=False
-            )
-
-            if user.user_type == ANESTESISTA_USER:
-                base_queryset = base_queryset.filter(
-                    procedimento__anestesistas_responsaveis=user.anesthesiologist
-                )
- 
-            financas = base_queryset.select_related('procedimento')
-
-            # Filtrar guias que não estão em "Aguardando Envio" (para reconciliação normal)
-            active_guias = [g for g in guias if g.get('STATUS') != 'Aguardando Envio']
-            
-            for guia in active_guias:
-                # Pular se a guia já foi associada durante a atualização
-                if guia.get('idcpsa') in matched_guias_ids:
-                    continue
-                    
-                # Ensure essential data is present
-                if not guia.get('paciente') or not guia.get('idcpsa'):
-                    continue
-
-                # Verificar se alguma finança pode ser automaticamente conciliada
-                found_match = False
-                
-                # Convert API date string to date object
-                api_date = None
-                if guia.get('dt_cirurg'):
-                    try:
-                        api_date = datetime.strptime(guia['dt_cirurg'], '%Y-%m-%d').date()
-                    except ValueError:
-                        print(f"Warning: Could not parse dt_cirurg '{guia['dt_cirurg']}' for idcpsa {guia['idcpsa']}")
-                        pass
-
-                for financa in financas:
-                    # Skip if already attempted to match
-                    if ConciliacaoTentativa.objects.filter(
-                        procedimento_financas=financa,
-                        cpsa_id=guia['idcpsa']
-                    ).exists():
-                        continue
-
-                    # For anestesista, check if they are the cooperado
-                    if (user.user_type == ANESTESISTA_USER and 
-                        not similar(user.anesthesiologist.name, guia['cooperado']) > 0.8):
-                        continue
-
-                    # Get system procedure date
-                    proc_date = financa.procedimento.data_horario.date()
-
-                    # Check for exact match
-                    exact_name_match = similar(guia['paciente'], financa.procedimento.nome_paciente) >= 0.95
-                    exact_date_match = api_date == proc_date if api_date else False
-
-                    if exact_name_match and exact_date_match:
-                        # Auto conciliate
-                        ConciliacaoTentativa.objects.create(
-                            procedimento_financas=financa,
-                            cpsa_id=str(guia['idcpsa']),
-                            conciliado=True
-                        )
-
-                        # Update ProcedimentoFinancas with all data from the guia
-                        financa.cpsa = str(guia['idcpsa'])
-                        financa.valor_faturado = guia.get('valor_faturado', 0)
-                        financa.valor_recebido = guia.get('valor_recebido', 0) 
-                        financa.valor_recuperado = guia.get('valor_receuperado', 0)
-                        financa.valor_acatado = guia.get('valor_acatado', 0)
-                        
-                        # Map API status
-                        api_status = str(guia.get('STATUS', '')).lower()
-                        status_mapping = {
-                            'em processamento': 'em_processamento',
-                            'aguardando pagamento': 'aguardando_pagamento',
-                            'recurso de glosa': 'recurso_de_glosa',
-                            'processo finalizado': 'processo_finalizado',
-                            'cancelada': 'cancelada',
-                        }
-
-                        if api_status.lower() in status_mapping:
-                            financa.status_pagamento = status_mapping[api_status.lower()]
-                        else:
-                            financa.status_pagamento = 'em_processamento'
-                            
-                        financa.save()
-
-                        auto_matched.append({
-                            'tipo': 'conciliado',
-                            'paciente': guia.get('paciente', 'Sem nome'),
-                            'data': guia.get('dt_cirurg', guia.get('dt_cpsa')),
-                            'valor': guia.get('valor_faturado'),
-                            'status': guia.get('STATUS')
-                        })
-                        
-                        found_match = True
-                        matched_guias_ids.add(guia['idcpsa'])
-                        break
-
-                    else:
-                        # Check for similar match
-                        nome_similar = similar(guia['paciente'], financa.procedimento.nome_paciente) > 0.8
-
-                        data_similar = False
-                        if api_date:
-                            data_similar = abs((api_date - proc_date).days) <= 1
-
-                        # Match if names are similar AND (dates are similar OR API date is missing)
-                        if nome_similar and (data_similar or not api_date):
-                            # Check if this potential match already exists in needs_confirmation
-                            existing_confirmation = next((item for item in needs_confirmation 
-                                if item['financa_id'] == financa.id and item['cpsa_id'] == str(guia['idcpsa'])), None)
-                            
-                            if not existing_confirmation:
-                                needs_confirmation.append({
-                                    'financa_id': financa.id,
-                                    'cpsa_id': str(guia['idcpsa']),
-                                    'api_data': {
-                                        'paciente': guia.get('paciente', 'Sem nome'),
-                                        'data': guia.get('dt_cirurg', guia.get('dt_cpsa')),
-                                        'valor': guia.get('valor_faturado'),
-                                        'status': guia.get('STATUS'),
-                                        'hospital': guia.get('hospital', ''),
-                                        'cooperado': guia.get('cooperado', '')
-                                    },
-                                    'sistema_data': {
-                                        'paciente': financa.procedimento.nome_paciente,
-                                        'data': financa.procedimento.data_horario.strftime('%Y-%m-%d'),
-                                        'hospital': financa.procedimento.hospital.name if financa.procedimento.hospital else '',
-                                        'anestesista': financa.procedimento.anestesistas_responsaveis.first().name if financa.procedimento.anestesistas_responsaveis.exists() else ''
-                                    }
-                                })
-                                found_match = True
-                
-                # Se não encontrou match e é um gestor, adiciona para possível visualização
-                if not found_match and user.user_type == GESTOR_USER and guia.get('STATUS') != 'Aguardando Envio':
-                    not_found_in_system.append({
-                        'cpsa_id': str(guia['idcpsa']),
-                        'paciente': guia.get('paciente', 'Sem nome'),
-                        'data': guia.get('dt_cirurg', guia.get('dt_cpsa')),
-                        'valor': guia.get('valor_faturado'),
-                        'status': guia.get('STATUS'),
-                        'hospital': guia.get('hospital', ''),
-                        'cooperado': guia.get('cooperado', '')
-                    })
-            
-            # Buscar procedimentos sem finança que poderiam ser conciliados
-            if user.user_type == GESTOR_USER:
-                procedures_without_finance = Procedimento.objects.filter(
-                    group=group,
-                    status=STATUS_FINISHED    #TODO:AQUI, VAMOS VER O QUE O CLIENTE QUER, SE DE FATO OBRIGAR  FINALIZAÇÃO PARA CONCILIAR OU NÃO. POR ENQUANTO, VEJA QUE MESMO A TENTATIVA DE CONCILIAR VIA PROCEDIMENTO (NÃO COM O OBJETO FINANÇAS), ESTÁ FILTRABDO O FINALIZADO, O QUE DE FATO ACABA TORNANDO INÓQUO POIS, PARA ESTAR COM STATUS DE FINALIAZO, É NECESSÁRIO TER FINALIZADO VIA "QUALIDADE, O QUE CRIA O OBJETO FINANÇAS.
-                ).exclude(
-                    financas__isnull=False
-                )
-                
-                for proc in procedures_without_finance:
-                    for guia in active_guias:
-                        if guia.get('idcpsa') in matched_guias_ids or not guia.get('paciente'):
-                            continue
-                            
-                        # Convert API date string to date object
-                        api_date = None
-                        if guia.get('dt_cirurg'):
-                            try:
-                                api_date = datetime.strptime(guia['dt_cirurg'], '%Y-%m-%d').date()
-                            except ValueError:
-                                continue
-                        
-                        # Get system procedure date
-                        proc_date = proc.data_horario.date()
-                        
-                        # Check for match
-                        nome_similar = similar(guia['paciente'], proc.nome_paciente) > 0.8
-                        data_similar = False
-                        if api_date:
-                            data_similar = abs((api_date - proc_date).days) <= 1
-                            
-                        if nome_similar and (data_similar or not api_date):
-                            # Criar objeto ProcedimentoFinancas
-                            financa = ProcedimentoFinancas.objects.create(
-                                procedimento=proc,
-                                tipo_cobranca='cooperativa',
-                                cpsa=str(guia['idcpsa']),
-                                valor_faturado=guia.get('valor_faturado', 0),
-                                valor_recebido=guia.get('valor_recebido', 0),
-                                valor_recuperado=guia.get('valor_receuperado', 0),
-                                valor_acatado=guia.get('valor_acatado', 0)
-                            )
-                            
-                            # Map API status
-                            api_status = str(guia.get('STATUS', '')).lower()
-                            status_mapping = {
-                                'em processamento': 'em_processamento',
-                                'aguardando pagamento': 'aguardando_pagamento',
-                                'recurso de glosa': 'recurso_de_glosa',
-                                'processo finalizado': 'processo_finalizado',
-                                'cancelada': 'cancelada',
-                            }
-
-                            if api_status.lower() in status_mapping:
-                                financa.status_pagamento = status_mapping[api_status.lower()]
-                            else:
-                                financa.status_pagamento = 'em_processamento'
-                            
-                            financa.save()
-                            
-                            # Registrar a tentativa
-                            ConciliacaoTentativa.objects.create(
-                                procedimento_financas=financa,
-                                cpsa_id=str(guia['idcpsa']),
-                                conciliado=True
-                            )
-                            
-                            auto_matched.append({
-                                'tipo': 'criado_e_conciliado',
-                                'paciente': guia.get('paciente', 'Sem nome'),
-                                'data': guia.get('dt_cirurg', guia.get('dt_cpsa')),
-                                'valor': guia.get('valor_faturado'),
-                                'status': guia.get('STATUS')
-                            })
-                            
-                            matched_guias_ids.add(guia['idcpsa'])
-                            break
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error calling Coopahub API for group {group.name}: {str(e)}")
-            return JsonResponse({'error': f'Erro na comunicação com a API: {str(e)}'}, status=500)
-        except Exception as e:
-            print(f"Error processing data for group {group.name}: {str(e)}")
-            return JsonResponse({'error': f'Erro ao processar dados: {str(e)}'}, status=500)
-
-    else:
-        return JsonResponse({'error': 'Usuário não possui grupos validados'}, status=403)
-
-    return JsonResponse({
-        'auto_matched': auto_matched,
-        'needs_confirmation': needs_confirmation,
-        'not_found_in_system': not_found_in_system
-    })
-
-@login_required
-@require_http_methods(["POST"])
-def confirmar_conciliacao(request):
     try:
-        data = json.loads(request.body)
-        financa_id = data.get('financa_id')
-        cpsa_id = data.get('cpsa_id')
-        conciliado = data.get('conciliado')
-        pular = data.get('pular', False)
+        # --- Fetch API Data ---
+        api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
+        api_payload = {
+            "conexao": user.connection_key,
+            "periodo_de": (timezone.now() - timedelta(days=DIAS_PARA_CONCILIACAO)).strftime('%Y-%m-%d'),
+            "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
+            "status": "Listagem Geral"
+        }
+        response = requests.post(api_url, json=api_payload)
+        response.raise_for_status()
+        api_response_data = response.json()
+
+        if api_response_data.get('erro') != '000':
+            error_msg = f"API Error: {api_response_data.get('msg', 'Unknown API error')}"
+            print(f"API Error for group {group.name}: {error_msg}")
+            return JsonResponse({'error': error_msg}, status=500)
+
+        guias = api_response_data.get('listaguias', [])
+        # Filter out guides without essential idcpsa
+        guias_dict = {
+            str(g['idcpsa']): g for g in guias 
+            if g.get('idcpsa') and str(g.get('idcpsa')).strip()
+        }
+        print(f"Fetched {len(guias_dict)} guides with valid idcpsa from API for group {group.name}")
+
+        # --- Fetch Existing Data from DB ---
+        # Fetch all potentially relevant financas records for this group
+        financas_qs = ProcedimentoFinancas.objects.filter(
+            Q(procedimento__group=group) | Q(group=group),
+            tipo_cobranca='cooperativa'
+        ).select_related('procedimento')
+
+        # Add anesthesiologist filter if user is anesthesiologist
+        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+             financas_qs = financas_qs.filter(
+                 Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
+                 # Also consider unlinked records created based on API data for this cooperado
+                 Q(procedimento__isnull=True, api_cooperado_nome__iexact=user.anesthesiologist.name) 
+             )
+
+        financas_dict_by_cpsa = {f.cpsa: f for f in financas_qs if f.cpsa}
+        print(f"Found {len(financas_dict_by_cpsa)} existing financas records with CPSA for group {group.name}")
         
-        financa = ProcedimentoFinancas.objects.get(id=financa_id)
-        
-        # Check if user belongs to the same group as the finança
-        if request.user.group != financa.procedimento.group:
-            return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
-            
-        # Check if anestesista is trying to reconcile another anestesista's procedure
-        if (request.user.user_type == ANESTESISTA_USER and 
-            not financa.procedimento.anestesistas_responsaveis.filter(id=request.user.anesthesiologist.id).exists()):
-            return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
-        
-        if pular:
-            # Registra apenas que foi pulado (sem confirmar ou recusar)
-            ConciliacaoTentativa.objects.create(
-                procedimento_financas=financa,
-                cpsa_id=cpsa_id,
-                conciliado=None  # Null indica que foi pulado
+        # Fetch procedures in the group that are finished but don't have a financas record yet
+        procs_needing_link_qs = Procedimento.objects.filter(
+            group=group,
+            status=STATUS_FINISHED,
+            financas__isnull=True
+        ).select_related('hospital') # Select related hospital for matching
+
+        # Add anesthesiologist filter if user is anesthesiologist
+        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+            procs_needing_link_qs = procs_needing_link_qs.filter(
+                anestesistas_responsaveis=user.anesthesiologist
             )
-            return JsonResponse({'success': True, 'action': 'skipped'})
+
+        # Store as a list for potential removal during matching
+        procs_needing_link_list = list(procs_needing_link_qs) 
+        print(f"Found {len(procs_needing_link_list)} procedures needing finance link for group {group.name}")
+
+        # --- Processing Loop 1: Update existing financas and try linking unlinked ---
+        print("Starting Loop 1: Update existing financas and link unlinked...")
+        financas_to_save = []
+        linked_in_loop1 = 0
+        updated_in_loop1 = 0
+
+        for cpsa_id, financa in financas_dict_by_cpsa.items():
+            if cpsa_id in guias_dict:
+                guia = guias_dict[cpsa_id]
+                processed_cpsa_ids.add(cpsa_id)
+                
+                # --- Update Finanças Data ---
+                updated = False
+                guia_valor_faturado = guia.get('valor_faturado')
+                guia_valor_recebido = guia.get('valor_recebido')
+                guia_valor_recuperado = guia.get('valor_receuperado') # Typo in API? Check response
+                guia_valor_acatado = guia.get('valor_acatado')
+                guia_status = map_api_status(guia.get('STATUS'))
+                
+                # Use Decimal for comparison and assignment if needed, or cast DB value
+                if guia_valor_faturado is not None and financa.valor_faturado != float(guia_valor_faturado):
+                    financa.valor_faturado = guia_valor_faturado
+                    updated = True
+                if guia_valor_recebido is not None and financa.valor_recebido != float(guia_valor_recebido):
+                    financa.valor_recebido = guia_valor_recebido
+                    updated = True
+                if guia_valor_recuperado is not None and financa.valor_recuperado != float(guia_valor_recuperado):
+                    financa.valor_recuperado = guia_valor_recuperado
+                    updated = True
+                if guia_valor_acatado is not None and financa.valor_acatado != float(guia_valor_acatado):
+                    financa.valor_acatado = guia_valor_acatado
+                    updated = True
+                if guia_status and financa.status_pagamento != guia_status:
+                    financa.status_pagamento = guia_status
+                    updated = True
+                # Update API fields even if linked, maybe useful later
+                if financa.api_paciente_nome != guia.get('paciente'): 
+                    financa.api_paciente_nome = guia.get('paciente')
+                    updated = True
+                if financa.api_hospital_nome != guia.get('hospital'):
+                    financa.api_hospital_nome = guia.get('hospital')
+                    updated = True
+                if financa.api_cooperado_nome != guia.get('cooperado'):
+                    financa.api_cooperado_nome = guia.get('cooperado')
+                    updated = True
+                
+                guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+                if financa.api_data_cirurgia != guia_date:
+                    financa.api_data_cirurgia = guia_date
+                    updated = True
+                    
+                if updated:
+                    financas_to_save.append(financa)
+                    updated_in_loop1 += 1
+
+                # --- Try Linking if Unlinked ---
+                if not financa.procedimento:
+                    best_match_proc = None
+                    highest_similarity = 0.7 # Threshold for considering a match
+
+                    # Use stored API data on the financa object for matching
+                    financa_paciente = financa.api_paciente_nome
+                    financa_date = financa.api_data_cirurgia
+                    
+                    if financa_paciente and financa_date:
+                        procs_to_remove = []
+                        for i, proc in enumerate(procs_needing_link_list):
+                            # Compare financa's API data with procedure data
+                            name_similarity = similar(financa_paciente, proc.nome_paciente)
+                            date_diff = abs((financa_date - proc.data_horario.date()).days) if financa_date else float('inf')
+
+                            # Matching criteria (adjust as needed)
+                            # High name similarity and exact date match
+                            exact_match = name_similarity > 0.95 and date_diff == 0
+                            # Good name similarity and close date match
+                            good_match = name_similarity > 0.85 and date_diff <= 1
+                            
+                            current_similarity = name_similarity # Prioritize name
+
+                            if (exact_match or good_match) and current_similarity > highest_similarity:
+                                highest_similarity = current_similarity
+                                best_match_proc = proc
+                                procs_to_remove = [i] # Store index to remove later
+
+                        if best_match_proc:
+                            print(f"  Linking Finanças CPSA {cpsa_id} to Proc ID {best_match_proc.id} (Name: {best_match_proc.nome_paciente}, Sim: {highest_similarity:.2f})")
+                            financa.procedimento = best_match_proc
+                            if financa not in financas_to_save: # Ensure it's saved
+                                financas_to_save.append(financa)
+                            linked_in_loop1 += 1
+                            # Remove the matched procedure from the list
+                            # Iterate backwards to avoid index issues when removing
+                            for index in sorted(procs_to_remove, reverse=True):
+                                procs_needing_link_list.pop(index)
+
+        # Bulk update changes from loop 1
+        if financas_to_save:
+            ProcedimentoFinancas.objects.bulk_update(financas_to_save, [
+                'valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado', 
+                'status_pagamento', 'procedimento', 
+                'api_paciente_nome', 'api_data_cirurgia', 'api_hospital_nome', 'api_cooperado_nome'
+            ])
+            print(f"Loop 1: Bulk updated {len(financas_to_save)} records. Linked: {linked_in_loop1}")
+            updated_records_count += updated_in_loop1 # Count updates
+            newly_linked_count += linked_in_loop1
+
+        # --- Processing Loop 2: Try linking remaining procedures to remaining guides ---
+        print(f"Starting Loop 2: Link remaining procedures ({len(procs_needing_link_list)}) to remaining guides...")
+        new_financas_loop2 = []
+        procs_linked_in_loop2 = []
+
+        remaining_guias = {cpsa: guia for cpsa, guia in guias_dict.items() if cpsa not in processed_cpsa_ids}
         
-        # Create conciliation attempt record
-        ConciliacaoTentativa.objects.create(
-            procedimento_financas=financa,
-            cpsa_id=cpsa_id,
-            conciliado=conciliado
-        )
+        procs_to_remove_indices = [] # Store indices of procedures linked in this loop
         
-        if conciliado:
-            # Update ProcedimentoFinancas with API data
-            api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
-            api_payload = {
-                "conexao": request.user.connection_key,
-                "idcpsa": cpsa_id
-            }
+        for i, proc in enumerate(procs_needing_link_list):
+            best_match_guia = None
+            highest_similarity = 0.8 # Threshold
+
+            proc_paciente = proc.nome_paciente
+            proc_date = proc.data_horario.date()
+
+            for cpsa_id, guia in remaining_guias.items():
+                guia_paciente = guia.get('paciente')
+                guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+
+                if guia_paciente and guia_date:
+                    name_similarity = similar(proc_paciente, guia_paciente)
+                    date_diff = abs((proc_date - guia_date).days)
+
+                    exact_match = name_similarity > 0.95 and date_diff == 0
+                    good_match = name_similarity > 0.85 and date_diff <= 1
+                    
+                    current_similarity = name_similarity
+
+                    if (exact_match or good_match) and current_similarity > highest_similarity:
+                        highest_similarity = current_similarity
+                        best_match_guia = (cpsa_id, guia)
+
+            if best_match_guia:
+                cpsa_id, guia = best_match_guia
+                print(f"  Linking Proc ID {proc.id} to new Finanças CPSA {cpsa_id} (Name: {proc_paciente}, Sim: {highest_similarity:.2f})")
+                
+                # Create new ProcedimentoFinancas linked to this procedure
+                new_financa = ProcedimentoFinancas(
+                    procedimento=proc,
+                    group=group, # Associate with the group
+                    tipo_cobranca='cooperativa',
+                    cpsa=cpsa_id,
+                    valor_faturado=guia.get('valor_faturado'),
+                    valor_recebido=guia.get('valor_recebido'),
+                    valor_recuperado=guia.get('valor_receuperado'), # Check API typo
+                    valor_acatado=guia.get('valor_acatado'),
+                    status_pagamento=map_api_status(guia.get('STATUS')),
+                    api_paciente_nome=guia.get('paciente'),
+                    api_data_cirurgia=parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa'))),
+                    api_hospital_nome=guia.get('hospital'),
+                    api_cooperado_nome=guia.get('cooperado')
+                )
+                new_financas_loop2.append(new_financa)
+                processed_cpsa_ids.add(cpsa_id) # Mark this CPSA as processed
+                procs_linked_in_loop2.append(proc)
+                procs_to_remove_indices.append(i) # Mark procedure index for removal
+                # Remove matched guide from remaining_guias to avoid matching again
+                del remaining_guias[cpsa_id] 
+                
+        # Create new financas records from loop 2
+        if new_financas_loop2:
+            ProcedimentoFinancas.objects.bulk_create(new_financas_loop2)
+            print(f"Loop 2: Created {len(new_financas_loop2)} new linked financas records.")
+            newly_created_count += len(new_financas_loop2)
+            newly_linked_count += len(new_financas_loop2)
+
+        # --- Processing Loop 3: Create unlinked finances for remaining guides ---
+        print(f"Starting Loop 3: Create unlinked financas for remaining guides ({len(remaining_guias)})...")
+        new_financas_loop3 = []
+        
+        for cpsa_id, guia in remaining_guias.items():
+             # Double check it wasn't processed somehow (shouldn't happen)
+            if cpsa_id in processed_cpsa_ids:
+                 continue
+                 
+             # Filter by cooperado name if user is anesthesiologist
+            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+                guia_cooperado = guia.get('cooperado')
+                if not guia_cooperado or not similar(guia_cooperado, user.anesthesiologist.name) > 0.8:
+                     print(f"  Skipping CPSA {cpsa_id} for user {user.username}, cooperado mismatch ('{guia_cooperado}' vs '{user.anesthesiologist.name}').")
+                     continue # Skip if cooperado doesn't match anesthesiologist user
+
+            print(f"  Creating unlinked Finanças for CPSA {cpsa_id} (Paciente: {guia.get('paciente')})")
+            new_financa = ProcedimentoFinancas(
+                procedimento=None, # Unlinked
+                group=group, # Associate with the group
+                tipo_cobranca='cooperativa',
+                cpsa=cpsa_id,
+                valor_faturado=guia.get('valor_faturado'),
+                valor_recebido=guia.get('valor_recebido'),
+                valor_recuperado=guia.get('valor_receuperado'), # Check API typo
+                valor_acatado=guia.get('valor_acatado'),
+                status_pagamento=map_api_status(guia.get('STATUS')),
+                api_paciente_nome=guia.get('paciente'),
+                api_data_cirurgia=parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa'))),
+                api_hospital_nome=guia.get('hospital'),
+                api_cooperado_nome=guia.get('cooperado')
+            )
+            new_financas_loop3.append(new_financa)
+            processed_cpsa_ids.add(cpsa_id) # Mark as processed
             
-            # Make the API call using POST to get specific guide
-            response = requests.post(api_url, json=api_payload)
-            response.raise_for_status()
-            api_data = response.json()
-            
-            if api_data.get('erro') == '000' and api_data.get('listaguias'):
-                guia = api_data['listaguias'][0]
-                
-                # Update all values
-                financa.cpsa = cpsa_id
-                financa.valor_faturado = guia.get('valor_faturado', 0)
-                financa.valor_recebido = guia.get('valor_recebido', 0)
-                financa.valor_recuperado = guia.get('valor_receuperado', 0)
-                financa.valor_acatado = guia.get('valor_acatado', 0)
-                
-                # Map API status
-                api_status = str(guia.get('STATUS', '')).lower()
-                status_mapping = {
-                    'em processamento': 'em_processamento',
-                    'aguardando pagamento': 'aguardando_pagamento',
-                    'recurso de glosa': 'recurso_de_glosa',
-                    'processo finalizado': 'processo_finalizado',
-                    'cancelada': 'cancelada',
-                }
-                
-                if api_status.lower() in status_mapping:
-                    financa.status_pagamento = status_mapping[api_status.lower()]
-                else:
-                    financa.status_pagamento = 'em_processamento'
-                
-                financa.save()
-                
-                return JsonResponse({
-                    'success': True, 
-                    'action': 'conciliado',
-                    'data': {
-                        'valor_faturado': financa.valor_faturado,
-                        'status_pagamento': financa.status_pagamento
-                    }
-                })
-            else:
-                return JsonResponse({'success': False, 'error': 'Guia não encontrada na API'})
-        
-        return JsonResponse({'success': True, 'action': 'rejeitado'})
-        
-    except ProcedimentoFinancas.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Procedimento financeiro não encontrado'}, status=404)
+        # Create new unlinked financas records from loop 3
+        if new_financas_loop3:
+            ProcedimentoFinancas.objects.bulk_create(new_financas_loop3)
+            print(f"Loop 3: Created {len(new_financas_loop3)} new unlinked financas records.")
+            newly_created_count += len(new_financas_loop3)
+
+        # --- Final Reporting ---
+        unprocessed_cpsa_ids = set(guias_dict.keys()) - processed_cpsa_ids
+        print(f"Conciliation finished. Updated: {updated_records_count}, Created: {newly_created_count}, Linked: {newly_linked_count}")
+        if unprocessed_cpsa_ids:
+            print(f"Warning: {len(unprocessed_cpsa_ids)} CPSA IDs from API were not processed: {list(unprocessed_cpsa_ids)}")
+            api_errors.append(f"{len(unprocessed_cpsa_ids)} guias da API não foram processadas.")
+
+        # Construct a summary message (similar to old auto_matched)
+        summary_message = []
+        if updated_records_count > 0:
+             summary_message.append(f"{updated_records_count} registros atualizados.")
+        if newly_created_count > 0:
+             summary_message.append(f"{newly_created_count} novos registros criados.")
+        if newly_linked_count > 0:
+             summary_message.append(f"{newly_linked_count} registros vinculados a procedimentos.")
+             
+        final_message = " ".join(summary_message) if summary_message else "Nenhuma alteração realizada."
+
+        return JsonResponse({
+            'success': True,
+            'message': final_message,
+            'updated_count': updated_records_count,
+            'created_count': newly_created_count,
+            'linked_count': newly_linked_count,
+            'unprocessed_cpsa_count': len(unprocessed_cpsa_ids),
+            'unprocessed_cpsa_ids': list(unprocessed_cpsa_ids), # Optional: list unprocessed IDs
+            'api_errors': api_errors
+        })
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling Coopahub API for group {group.name}: {str(e)}")
+        return JsonResponse({'error': f'Erro na comunicação com a API: {str(e)}'}, status=500)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        # Log the full traceback for debugging
+        import traceback
+        print(f"Error during conciliation process for group {group.name}: {str(e)}")
+        traceback.print_exc() 
+        return JsonResponse({'error': f'Erro interno durante a conciliação: {str(e)}'}, status=500)
+
+

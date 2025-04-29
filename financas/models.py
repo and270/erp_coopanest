@@ -2,6 +2,7 @@ from django.db import models
 from agenda.models import Procedimento
 from django.db.models import Sum, F, Value
 from django.db.models.functions import Coalesce
+from registration.models import Groups
 
 class ProcedimentoFinancas(models.Model):
     COBRANCA_CHOICES = [
@@ -27,7 +28,20 @@ class ProcedimentoFinancas(models.Model):
         ('cancelada', 'Cancelada'),
     ]
 
-    procedimento = models.OneToOneField(Procedimento, on_delete=models.CASCADE, related_name='financas')
+    procedimento = models.OneToOneField(
+        Procedimento, 
+        on_delete=models.SET_NULL, 
+        related_name='financas',
+        null=True,
+        blank=True
+    )
+    group = models.ForeignKey(
+        Groups,
+        on_delete=models.SET_NULL,
+        verbose_name='Grupo',
+        null=True,
+        blank=True
+    )
     tipo_cobranca = models.CharField(
         max_length=20,
         choices=COBRANCA_CHOICES,
@@ -88,13 +102,42 @@ class ProcedimentoFinancas(models.Model):
         blank=True,
         db_index=True
     )
+    
+    api_paciente_nome = models.CharField(
+        max_length=255, 
+        verbose_name='Nome Paciente (API)', 
+        null=True, 
+        blank=True
+    )
+    api_data_cirurgia = models.DateField(
+        verbose_name='Data Cirurgia (API)', 
+        null=True, 
+        blank=True
+    )
+    api_hospital_nome = models.CharField(
+        max_length=255, 
+        verbose_name='Hospital (API)', 
+        null=True, 
+        blank=True
+    )
+    api_cooperado_nome = models.CharField(
+        max_length=255, 
+        verbose_name='Cooperado (API)', 
+        null=True, 
+        blank=True
+    )
 
     class Meta:
         verbose_name = "Financeiro do Procedimento"
         verbose_name_plural = "Financeiro dos Procedimentos"
 
     def __str__(self):
-        return f"Finanças - {self.procedimento}"
+        if self.procedimento:
+            return f"Finanças (Vinculado) - {self.procedimento}"
+        elif self.api_paciente_nome:
+            return f"Finanças (Não Vinculado) - {self.api_paciente_nome} ({self.cpsa or 'Sem CPSA'})"
+        else:
+            return f"Finanças (Não Vinculado) - ID: {self.id}"
 
     def get_cpsa_display(self):
         if self.tipo_cobranca == 'cooperativa':
@@ -107,10 +150,13 @@ class ProcedimentoFinancas(models.Model):
 
     @property
     def valor_em_glosa(self):
-        if self.status_pagamento == 'glosa' and self.valor_faturado is not None:
-            return self.valor_faturado - self.valor_total_recebido
-        elif self.status_pagamento == 'pago' and self.valor_faturado is not None and self.valor_faturado > self.valor_total_recebido:
-            return self.valor_faturado - self.valor_total_recebido
+        is_glosa_status = self.status_pagamento in ['recurso_de_glosa']
+        is_paid_short = self.status_pagamento == 'processo_finalizado' and self.valor_faturado is not None and self.valor_faturado > self.valor_total_recebido
+
+        if (is_glosa_status or is_paid_short) and self.valor_faturado is not None:
+            total_recebido = self.valor_total_recebido or 0
+            glosa = self.valor_faturado - total_recebido
+            return glosa if glosa > 0 else 0
         return 0
 
 class Despesas(models.Model):

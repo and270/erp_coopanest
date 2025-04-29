@@ -24,12 +24,13 @@
     <div class="header-actions">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Buscar guias" value="{{ search_query }}" autocomplete="off">
+            <input type="text" id="searchInput" placeholder="Buscar por paciente, CPF ou CPSA" value="{{ search_query }}" autocomplete="off"> {# Updated placeholder #}
         </div>
         
+        {% if view_type == 'receitas' %} {# Only show status filter for Receitas #}
         <div class="status-filter">
-            <select name="status" class="form-select">
-                <option value="">Todos</option>
+            <select name="status" id="statusFilterSelect" class="form-select"> {# Added ID for JS if needed #}
+                <option value="">Todos Status</option> {# Changed default text #}
                 <option value="em_processamento" {% if selected_status == 'em_processamento' %}selected{% endif %}>Em Processamento</option>
                 <option value="aguardando_pagamento" {% if selected_status == 'aguardando_pagamento' %}selected{% endif %}>Aguardando Pagamento</option>
                 <option value="recurso_de_glosa" {% if selected_status == 'recurso_de_glosa' %}selected{% endif %}>Recurso de Glosa</option>
@@ -37,13 +38,14 @@
                 <option value="cancelada" {% if selected_status == 'cancelada' %}selected{% endif %}>Cancelada</option>
             </select>
         </div>
+        {% endif %}
         
         <div class="period-filter">
             <button class="filter-btn" id="periodFilterBtn">
                 <i class="fas fa-calendar"></i>
                 {% if selected_period %}
                     {% if selected_period == 'custom' %}
-                        Personalizado
+                        Personalizado ({{ custom_start_date|date:"d/m/y" }} - {{ custom_end_date|date:"d/m/y" }}) {# Show range #}
                     {% elif selected_period == '7' %}Últimos 7 dias
                     {% elif selected_period == '14' %}Últimos 14 dias
                     {% elif selected_period == '30' %}Últimos 30 dias
@@ -68,7 +70,7 @@
                 <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
                 <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
 
-                <div id="customRangeContainer" class="custom-range" style="display: none;">
+                <div id="customRangeContainer" class="custom-range" style="{% if selected_period != 'custom' %}display: none;{% endif %}"> {# Show if custom selected #}
                     <label for="customStart">Início:</label>
                     <input type="date" id="customStart" value="{{ custom_start_date }}" />
                     <label for="customEnd">Fim:</label>
@@ -79,8 +81,14 @@
         </div>
         
         <button class="export-btn" onclick="exportFinances()">
-            Exportar
+            <i class="fas fa-file-excel"></i> Exportar {# Added icon #}
         </button>
+        
+        {% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %} {# Only show conciliation button to relevant users #}
+        <button id="conciliate-btn" class="conciliate-btn" onclick="runConciliation()">
+            <i class="fas fa-sync"></i> Conciliar {# Added icon #}
+        </button>
+        {% endif %}
         
     </div>
 
@@ -91,26 +99,23 @@
                     {% if view_type == 'receitas' %}
                         <th>Paciente</th>
                         <th>CPF</th>
-                        <th>Data da Cirurgia</th>
+                        <th>Data Cirurgia</th>
                         <th>Valor Faturado</th>
                         <th>Valor Recebido</th>
                         <th>Valor Recuperado</th>
                         <th>Valor a Recuperar</th>
                         <th>Fonte Pagadora</th>
                         <th>CPSA</th>
-                        <th>Anestesista</th>
+                        <th>Anestesista / Cooperado</th> {# Renamed Header #}
                         <th>Situação</th>
-                        <th>Data do Pagamento</th>
-                        <th>Editar</th>
-                    {% else %}
+                        <th>Data Pagamento</th>
+                        <th>Ações</th> {# Renamed Header #}
+                    {% else %} {# Despesas Headers #}
                         <th>Descrição</th>
                         <th>Data</th>
-                        <th>Valor Faturado</th>
-                        <th>Valor Recebido</th>
-                        <th>Valor Recuperado</th>
-                        <th>Valor a Recuperar</th>
+                        <th>Valor</th>
                         <th>Pago</th>
-                        <th>Editar</th>
+                        <th>Ações</th> {# Renamed Header #}
                     {% endif %}
                 </tr>
             </thead>
@@ -118,44 +123,72 @@
                 {% for item in items %}
                     <tr data-id="{{ item.id }}">
                         {% if view_type == 'receitas' %}
-                            <td>{{ item.procedimento.nome_paciente }}</td>
-                            <td>{{ item.procedimento.cpf_paciente }}</td>
-                            <td>{{ item.procedimento.data_horario|date:"d/m/Y" }}</td>
-                            <td>{% if item.valor_faturado %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.valor_recebido %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.valor_recuperado %}R$ {{ item.valor_recuperado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.valor_acatado %}R$ {{ item.valor_acatado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{{ item.get_tipo_cobranca_display|default:"" }}</td>
-                            <td>{{ item.get_cpsa_display }}</td>
-                            <td>{{ item.procedimento.anestesistas_responsaveis.first.name }}</td>
-                            <td>{{ item.get_status_pagamento_display }}</td>
+                            {# Use procedure data if available, otherwise fallback to API data #}
+                            <td>
+                                {% if item.procedimento %}
+                                    {{ item.procedimento.nome_paciente }}
+                                {% else %}
+                                    {{ item.api_paciente_nome|default:"(Não vinculado)" }}
+                                {% endif %}
+                            </td>
+                            <td>{{ item.procedimento.cpf_paciente|default:"--" }}</td> {# CPF only if linked #}
+                            <td>
+                                {% if item.procedimento and item.procedimento.data_horario %}
+                                    {{ item.procedimento.data_horario|date:"d/m/Y" }}
+                                {% elif item.api_data_cirurgia %}
+                                    {{ item.api_data_cirurgia|date:"d/m/Y" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+                            {# Revert to original formatting #}
+                            <td>{% if item.valor_faturado is not None %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_recebido is not None %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_recuperado is not None %}R$ {{ item.valor_recuperado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.valor_acatado is not None %}R$ {{ item.valor_acatado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{{ item.get_tipo_cobranca_display|default:"--" }}</td>
+                            <td>{{ item.get_cpsa_display|default:"--" }}</td>
+                            <td>
+                                {% if item.procedimento and item.procedimento.anestesistas_responsaveis.exists %}
+                                    {{ item.procedimento.anestesistas_responsaveis.first.name }}
+                                {% else %}
+                                    {{ item.api_cooperado_nome|default:"--" }} {# Show API cooperado if unlinked #}
+                                {% endif %}
+                            </td>
+                            <td>{{ item.get_status_pagamento_display|default:"--" }}</td>
                             <td>{{ item.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
                             <td>
-                                <button type="button" class="edit-btn" title="Editar">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-                                <button type="button" class="cancel-btn" title="Cancelar" style="margin-left: 5px;">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                <div class="action-buttons"> {# Wrap buttons #}
+                                    <button type="button" class="edit-btn action-btn" title="Editar">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button type="button" class="delete-btn action-btn" title="Excluir"> {# Changed from cancel #}
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
-                        {% else %}
+                        {% else %} {# Despesas Row #}
                             <td>{{ item.descricao }}</td>
                             <td>{{ item.data|date:"d/m/Y" }}</td>
-                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.valor %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.pago %}Pago{% else %}Não Pago{% endif %}</td>
+                            {# Revert to original formatting #}
+                            <td>{% if item.valor is not None %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                            <td>{% if item.pago %}Sim{% else %}Não{% endif %}</td>
                             <td>
-                                <button type="button" class="edit-btn" title="Editar">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-                                <button type="button" class="cancel-btn" title="Cancelar" style="margin-left: 5px;">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                <div class="action-buttons">
+                                    <button type="button" class="edit-btn action-btn" title="Editar">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button type="button" class="delete-btn action-btn" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         {% endif %}
                     </tr>
+                {% empty %}
+                 <tr>
+                    <td colspan="{% if view_type == 'receitas' %}13{% else %}5{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                 </tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -169,6 +202,7 @@
     {% endif %}
 </div>
 
+{# --- Edit Modal (Receitas part needs adjustment if editing unlinked items) --- #}
 <div id="edit-finance-modal" class="modal">
     <div class="modal-content">
         <span class="close" data-modal-id="edit-finance-modal">&times;</span>
@@ -179,14 +213,28 @@
             <input type="hidden" id="finance_id" name="finance_id">
             <input type="hidden" id="finance_type" name="finance_type">
             <input type="hidden" id="is_new" name="is_new" value="false">
+            <input type="hidden" id="is_linked" name="is_linked" value="false"> {# Add hidden field for linked status #}
             
+            {# Display basic info for unlinked items #}
+            <div id="unlinked-info" style="display: none; margin-bottom: 15px; padding: 10px; background-color: #f0f0f0; border-radius: 4px;">
+                <strong>Item não vinculado a um procedimento.</strong><br>
+                Paciente (API): <span id="unlinked-paciente"></span><br>
+                Data Cirurgia (API): <span id="unlinked-data"></span>
+            </div>
+
             <!-- Receitas fields -->
             <div id="receitas-fields">
-                <div class="form-group">
+                 {# Show CPF only if linked #}
+                <div class="form-group" id="cpf-group">
+                    <label for="cpf">CPF do Paciente</label>
+                    <input type="text" id="cpf" name="cpf" readonly> {# Make readonly if unlinked? #}
+                </div>
+                 <div class="form-group">
                     <label for="valor_faturado">Valor Faturado</label>
                     <input type="text" class="money-input form-control" id="valor_faturado" name="valor_faturado">
                 </div>
-                <div class="form-group">
+                {# ... other value fields ... #}
+                 <div class="form-group">
                     <label for="valor_recebido">Valor Recebido</label>
                     <input type="text" class="money-input form-control" id="valor_recebido" name="valor_recebido">
                 </div>
@@ -208,7 +256,8 @@
                         <option value="cancelada">Cancelada</option>
                     </select>
                 </div>
-                <div class="form-group">
+                 {# Hide fields not applicable to unlinked items? Or make readonly? #}
+                <div class="form-group" id="tipo-cobranca-group">
                     <label for="tipo_cobranca">Tipo de Cobrança</label>
                     <select id="tipo_cobranca" name="tipo_cobranca">
                         <option value="cooperativa">Cooperativa</option>
@@ -216,20 +265,16 @@
                         <option value="particular">Direta</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="data-pagamento-group">
                     <label for="data_pagamento">Data do Pagamento</label>
                     <input type="date" id="data_pagamento" name="data_pagamento">
-                </div>
-                <div class="form-group">
-                    <label for="cpf">CPF do Paciente</label>
-                    <input type="text" id="cpf" name="cpf">
                 </div>
                 <div class="form-group" id="cpsa-group">
                     <label for="cpsa">CPSA</label>
                     <input type="text" id="cpsa" name="cpsa">
                 </div>
                 <div class="form-group" id="tipo-pagamento-direto-group" style="display: none;">
-                    <label for="tipo_pagamento_direto">Tipo de Pagamento</label>
+                    <label for="tipo_pagamento_direto">Tipo de Pagamento (Direta)</label>
                     <select id="tipo_pagamento_direto" name="tipo_pagamento_direto">
                         <option value="cartao">Cartão</option>
                         <option value="cheque">Cheque</option>
@@ -243,7 +288,8 @@
 
             <!-- Despesas fields -->
             <div id="despesas-fields">
-                <div class="form-group">
+                {# ... despesas fields remain the same ... #}
+                 <div class="form-group">
                     <label for="descricao">Descrição</label>
                     <input type="text" id="descricao" name="descricao" required>
                 </div>
@@ -261,7 +307,6 @@
                         <input type="checkbox" id="pago" name="pago">
                     </label>
                 </div>
-                               
             </div>
 
             <div class="modal-actions">
@@ -271,72 +316,19 @@
     </div>
 </div>
 
-<div id="conciliation-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" data-modal-id="conciliation-modal">&times;</span>
-        <h2>Conciliação de Dados</h2>
-        
-        <div id="conciliation-cards">
-            <!-- Cards will be inserted here -->
-        </div>
-        
-        <div id="no-matches" style="display: none;">
-            <p>Não há dados para conciliar no momento.</p>
-        </div>
-    </div>
-</div>
 
-<!-- New Modal for Unmatched Guides -->
-<div id="unmatched-guias-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" data-modal-id="unmatched-guias-modal">&times;</span>
-        <h2>Guias da API Não Encontradas no Coopahub</h2>
-        <p>Para que os procedimentos a seguir sejam conciliados, eles precisam estar registrados no módulo Agendamento e depois finalizados no módulo de Qualidade</p>
-        <div id="unmatched-guias-list">
-            <!-- Unmatched guides will be listed here -->
-            <table>
-                <thead>
-                    <tr>
-                        <th>CPSA ID</th>
-                        <th>Paciente</th>
-                        <th>Data</th>
-                        <th>Valor</th>
-                        <th>Status</th>
-                        <th>Hospital</th>
-                        <th>Cooperado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Rows will be added dynamically -->
-                </tbody>
-            </table>
-        </div>
-        
-        <div id="no-unmatched-guias" style="display: none;">
-            <p>Não há guias não encontradas para exibir.</p>
-        </div>
-    </div>
-</div>
+{# Removed Conciliation Modal and Unmatched Guias Modal/FAB as conciliation is now automatic #}
+{# The results are shown via alerts/messages after clicking the "Conciliar" button #}
 
-<button id="unmatched-guias-fab" onclick="showUnmatchedGuiasModal()" title="Ver Guias Não Encontradas">
-    <i class="fas fa-question-circle"></i>
-</button>
-
-<script src="https://unpkg.com/imask"></script>
+{# --- SCRIPTS --- #}
+<script src="https://unpkg.com/imask"></script> {# Keep iMask #}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('edit-finance-form');
-    const editModal = document.getElementById('edit-finance-modal'); // Keep reference if needed elsewhere
-
-    // --- REMOVE THIS OLD Specific Close Logic ---
-    // const closeBtn = editModal.querySelector('.close');
-    // closeBtn.onclick = function() {
-    //     editModal.style.display = "none";
-    // }
-    // -------------------------------------------
+    const editModal = document.getElementById('edit-finance-modal'); 
     
-    // --- ADD THIS Generalized Modal Close Logic ---
+    // --- Generalized Modal Close Logic ---
     document.querySelectorAll('.modal .close').forEach(closeBtn => {
         closeBtn.onclick = function() {
             const modalId = this.getAttribute('data-modal-id');
@@ -348,161 +340,186 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    // ----------------------------------------------
 
-    // Close modal when clicking outside (for all modals) - Keep this
+    // Close modal when clicking outside
     window.onclick = function(event) {
         if (event.target.classList.contains('modal')) {
             event.target.style.display = "none";
         }
     }
 
-    function toggleFields() {
+    // Function to toggle fields based on 'Tipo de Cobrança' for Receitas
+    function toggleReceitaFieldsVisibility() {
+        const financeType = document.getElementById('finance_type').value;
+        if (financeType !== 'receitas') return; // Only run for receitas
+
         const tipoCobranca = document.getElementById('tipo_cobranca').value;
         const cpsaGroup = document.getElementById('cpsa-group');
         const tipoPagamentoDiretoGroup = document.getElementById('tipo-pagamento-direto-group');
+        const isLinked = document.getElementById('is_linked').value === 'true'; // Check linked status
 
-        console.log("toggleFields() called. Current tipo_cobranca:", tipoCobranca);
-
-        // Hide both fields by default
-        cpsaGroup.style.display = 'none';
-        tipoPagamentoDiretoGroup.style.display = 'none';
-
-        console.log("Initially hid both #cpsa-group and #tipo-pagamento-direto-group.");
-
-        // Show appropriate fields based on selection
-        if (tipoCobranca === 'cooperativa') {
-            cpsaGroup.style.display = 'block';
-            console.log("tipo_cobranca is cooperativa → showing #cpsa-group.");
-        } else if (tipoCobranca === 'particular') {
-            tipoPagamentoDiretoGroup.style.display = 'block';
-            console.log("tipo_cobranca is particular → showing #tipo-pagamento-direto-group.");
+        // Hide both by default
+        if (cpsaGroup) cpsaGroup.style.display = 'none';
+        if (tipoPagamentoDiretoGroup) tipoPagamentoDiretoGroup.style.display = 'none';
+        
+        // Show CPSA only if 'cooperativa'
+        if (tipoCobranca === 'cooperativa' && cpsaGroup) {
+             cpsaGroup.style.display = 'block';
+        } 
+        // Show Payment Type only if 'particular'
+        else if (tipoCobranca === 'particular' && tipoPagamentoDiretoGroup) {
+             tipoPagamentoDiretoGroup.style.display = 'block';
+        }
+        
+        // Show/hide CPF based on linked status
+        const cpfGroup = document.getElementById('cpf-group');
+        if (cpfGroup) {
+             cpfGroup.style.display = isLinked ? 'block' : 'none';
+             // Maybe make CPF readonly if shown for unlinked?
+             // document.getElementById('cpf').readOnly = !isLinked; 
         }
     }
 
     const tipoCobrancaSelect = document.getElementById('tipo_cobranca');
-    tipoCobrancaSelect.addEventListener('change', toggleFields);
+    if (tipoCobrancaSelect) {
+        tipoCobrancaSelect.addEventListener('change', toggleReceitaFieldsVisibility);
+    }
+    
+    // Function to toggle Data Pagamento visibility based on Status for Receitas
+    function toggleDataPagamentoVisibility() {
+         const financeType = document.getElementById('finance_type').value;
+         if (financeType !== 'receitas') return;
+
+         const statusSelect = document.getElementById('status_pagamento');
+         const dataPagamentoGroup = document.getElementById('data-pagamento-group'); // Use group ID
+         const dataPagamentoInput = document.getElementById('data_pagamento');
+
+         if (!statusSelect || !dataPagamentoGroup || !dataPagamentoInput) return; // Elements might not exist if despesas
+
+         const status = statusSelect.value;
+         // Show if 'processo_finalizado' or 'recurso_de_glosa' (assuming glosa implies payment attempt)
+         if (status === 'processo_finalizado' || status === 'recurso_de_glosa') { 
+             dataPagamentoGroup.style.display = 'block';
+             dataPagamentoInput.required = true;
+         } else {
+             dataPagamentoGroup.style.display = 'none';
+             dataPagamentoInput.required = false;
+             dataPagamentoInput.value = ''; // Clear value if hidden
+         }
+    }
+    
+    const statusPagamentoSelect = document.getElementById('status_pagamento');
+     if (statusPagamentoSelect) {
+         statusPagamentoSelect.addEventListener('change', toggleDataPagamentoVisibility);
+     }
+
 
     // Handle edit button clicks
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            const row = this.closest('tr');
-            const viewType = '{{ view_type }}';
-            const financeId = row.dataset.id;
-            toggleFields();
             
-            // Show appropriate fields and set required attributes
+            const row = this.closest('tr');
+            const financeId = row.dataset.id;
+            // Determine view type from the page context (less error-prone)
+            const viewType = '{{ view_type }}'; 
+            
+            // Reset form and modal state
+            form.reset();
+            document.getElementById('modal-action-type').textContent = 'Editar';
+            document.getElementById('unlinked-info').style.display = 'none'; // Hide unlinked info by default
+            document.getElementById('finance_id').value = financeId;
+            document.getElementById('finance_type').value = viewType;
+            document.getElementById('is_new').value = 'false';
+
+            // Show/hide field sections based on viewType
             if (viewType === 'receitas') {
                 document.getElementById('receitas-fields').style.display = 'block';
                 document.getElementById('despesas-fields').style.display = 'none';
-                
-                // Remove required attribute from despesas fields
-                const despesasFields = document.getElementById('despesas-fields').querySelectorAll('[required]');
-                despesasFields.forEach(field => field.removeAttribute('required'));
-                
-                // Set required for relevant receitas fields
-                document.getElementById('valor_faturado').setAttribute('required', '');
-                document.getElementById('valor_recebido').setAttribute('required', '');
-                document.getElementById('valor_recuperado').setAttribute('required', '');
-                document.getElementById('valor_acatado').setAttribute('required', '');
-                document.getElementById('status_pagamento').setAttribute('required', '');
-            } else {
+                document.getElementById('modal-title-type').textContent = 'Receita';
+                 // Set initial required attributes (might be overridden based on status/type later)
+                 // document.getElementById('valor_faturado').required = true; // Set required dynamically?
+            } else { // despesas
                 document.getElementById('receitas-fields').style.display = 'none';
                 document.getElementById('despesas-fields').style.display = 'block';
-                // Set required for despesas fields
-                document.getElementById('descricao').required = true;
-                document.getElementById('valor').required = true;
-                // Remove required from receitas fields
-                document.getElementById('valor_faturado').required = false;
-                document.getElementById('valor_recebido').required = false;
-                document.getElementById('valor_recuperado').required = false;
-                document.getElementById('valor_acatado').required = false;
-                document.getElementById('status_pagamento').required = false;
-                document.getElementById('data_pagamento').required = false;
+                document.getElementById('modal-title-type').textContent = 'Despesa';
+                 document.getElementById('descricao').required = true;
+                 document.getElementById('valor').required = true;
+                 document.getElementById('data').required = true;
             }
-            
-            document.getElementById('modal-title-type').textContent = viewType === 'receitas' ? 'Receita' : 'Despesa';
             
             // Fetch item data
             fetch(`/financas/get-item/${viewType}/${financeId}/`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Network response was not ok');
+                         return response.json().then(err => { throw new Error(err.error || `Erro ${response.status}`) });
                     }
                     return response.json();
                 })
                 .then(data => {
                     console.log('Received data:', data);
-                    document.getElementById('finance_id').value = financeId;
-                    document.getElementById('finance_type').value = viewType;
-                    
+                    document.getElementById('is_linked').value = data.is_linked ? 'true' : 'false';
+
                     if (viewType === 'receitas') {
-                        // Apply mask to money inputs
-                        const valorInputs = [
-                            document.getElementById('valor_faturado'),
-                            document.getElementById('valor_recebido'),
-                            document.getElementById('valor_recuperado'),
-                            document.getElementById('valor_acatado')
-                        ];
-                        
-                        // Initialize IMask for each valor input if not already initialized
-                        valorInputs.forEach((input, index) => {
-                            const fieldNames = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
-                            const fieldValue = data[fieldNames[index]];
-                            
-                            // Create mask if not already created
-                            if (!input.maskRef) {
-                                input.maskRef = IMask(input, {
-                                    mask: 'R$ num',
-                                    blocks: {
-                                        num: {
-                                            mask: Number,
-                                            thousandsSeparator: '.',
-                                            radix: ',',
-                                            scale: 2,
-                                            padFractionalZeros: true,
-                                            normalizeZeros: true,
-                                            mapToRadix: ['.']
-                                        }
-                                    }
-                                });
-                            }
-                            
-                            // Set the value through the mask
-                            if (fieldValue) {
-                                input.maskRef.unmaskedValue = String(fieldValue);
-                            } else {
-                                input.maskRef.unmaskedValue = '0';
-                            }
-                        });
-                        
-                        document.getElementById('status_pagamento').value = data.status_pagamento;
-                        document.getElementById('data_pagamento').value = data.data_pagamento || '';
-                        document.getElementById('tipo_cobranca').value = data.tipo_cobranca || 'cooperativa';
-                        toggleFields();
-                        document.getElementById('cpf').value = data.cpf || '';
-                        document.getElementById('cpsa').value = data.cpsa || '';
-                        toggleDataPagamento();
-                        if (data.tipo_pagamento_direto) {
-                            document.getElementById('tipo_pagamento_direto').value = data.tipo_pagamento_direto;
-                        }
-                    } else {
-                        document.getElementById('descricao').value = data.descricao;
-                        const valorInput = document.getElementById('valor');
-                        valorInput.value = data.valor ? 
-                            `R$ ${parseFloat(data.valor).toLocaleString('pt-BR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}` : 'R$ 0,00';
+                         // Apply mask and set values using maskRef API
+                         const valorInputs = [
+                             { elem: document.getElementById('valor_faturado'), value: data.valor_faturado },
+                             { elem: document.getElementById('valor_recebido'), value: data.valor_recebido },
+                             { elem: document.getElementById('valor_recuperado'), value: data.valor_recuperado },
+                             { elem: document.getElementById('valor_acatado'), value: data.valor_acatado },
+                         ];
+                         
+                         valorInputs.forEach(({elem, value}) => {
+                             if (elem && elem.maskRef) {
+                                 elem.maskRef.unmaskedValue = String(value || '0');
+                             } else if (elem) {
+                                 // Fallback if maskRef not ready/available (shouldn't happen ideally)
+                                 elem.value = `R$ ${parseFloat(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                             }
+                         });
+
+                         document.getElementById('status_pagamento').value = data.status_pagamento || 'em_processamento';
+                         document.getElementById('data_pagamento').value = data.data_pagamento || '';
+                         document.getElementById('tipo_cobranca').value = data.tipo_cobranca || 'cooperativa';
+                         document.getElementById('cpsa').value = data.cpsa || '';
+                         document.getElementById('cpf').value = data.cpf || ''; // Comes from get_finance_item if linked
+                         
+                         if (data.tipo_pagamento_direto) {
+                             document.getElementById('tipo_pagamento_direto').value = data.tipo_pagamento_direto;
+                         } else {
+                             // Ensure a default is selected if null/undefined
+                             document.getElementById('tipo_pagamento_direto').value = 'cartao'; 
+                         }
+                         
+                         // Show info panel if not linked
+                         if (!data.is_linked) {
+                             document.getElementById('unlinked-info').style.display = 'block';
+                             document.getElementById('unlinked-paciente').textContent = data.paciente_nome || 'N/A';
+                             document.getElementById('unlinked-data').textContent = data.data_cirurgia ? new Date(data.data_cirurgia + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
+                         }
+
+                         // Trigger visibility updates based on loaded data
+                         toggleReceitaFieldsVisibility();
+                         toggleDataPagamentoVisibility(); 
+
+                    } else { // despesas
+                         document.getElementById('descricao').value = data.descricao || '';
+                         const valorInput = document.getElementById('valor');
+                         if(valorInput.maskRef){
+                              valorInput.maskRef.unmaskedValue = String(data.valor || '0');
+                         } else {
+                             valorInput.value = `R$ ${parseFloat(data.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                         }
+                         document.getElementById('data').value = data.data || '';
+                         document.getElementById('pago').checked = data.pago || false;
                     }
                     
                     editModal.style.display = "block";
                 })
                 .catch(error => {
-                    console.error('Error fetching data:', error);
-                    alert('Erro ao carregar os dados');
+                    console.error('Error fetching item data:', error);
+                    alert(`Erro ao carregar os dados: ${error.message}`);
                 });
         });
     });
@@ -512,241 +529,273 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const formData = new FormData(this);
-        const viewType = formData.get('finance_type');
+        const financeType = formData.get('finance_type');
         const isNew = formData.get('is_new') === 'true';
         
-        // Remove required attribute from hidden fields
-        if (viewType === 'receitas') {
-            const despesasFields = document.getElementById('despesas-fields').querySelectorAll('[required]');
-            despesasFields.forEach(field => field.removeAttribute('required'));
-        } else {
-            const receitasFields = document.getElementById('receitas-fields').querySelectorAll('[required]');
-            receitasFields.forEach(field => field.removeAttribute('required'));
-        }
-        
-        // Validate required fields based on view type
-        if (viewType === 'receitas') {
-            if (!formData.get('valor_faturado') || !formData.get('valor_recebido') || !formData.get('valor_recuperado') || !formData.get('valor_acatado') || !formData.get('status_pagamento')) {
-                alert('Por favor, preencha todos os campos obrigatórios');
-                return;
-            }
-            
-            // If status is 'pago' or 'glosa', data_pagamento is required
-            if ((formData.get('status_pagamento') === 'pago' || formData.get('status_pagamento') === 'glosa') 
-                && !formData.get('data_pagamento')) {
-                alert('Data de pagamento é obrigatória para status Pago ou Glosa');
-                return;
-            }
-        } else {
-            // Validate despesas fields
-            if (!formData.get('descricao') || !formData.get('valor') || !formData.get('data')) {
-                alert('Por favor, preencha todos os campos obrigatórios');
-                return;
-            }
-        }
-        
-        // Convert money values from "R$ 1.234,56" to "1234.56"
-        if (viewType === 'receitas') {
-            const valorInputs = [
-                { elem: document.getElementById('valor_faturado'), name: 'valor_faturado' },
-                { elem: document.getElementById('valor_recebido'), name: 'valor_recebido' },
-                { elem: document.getElementById('valor_recuperado'), name: 'valor_recuperado' },
-                { elem: document.getElementById('valor_acatado'), name: 'valor_acatado' }
-            ];
-            
-            valorInputs.forEach(({elem, name}) => {
-                if (elem.maskRef) {
-                    // Get the unmasked value directly from IMask
-                    // Parse it as a float first to ensure it's in correct format
-                    const rawValue = elem.maskRef.unmaskedValue;
-                    // Convert to decimal format with dot as decimal separator
-                    const valor = parseFloat(rawValue).toString();
-                    // Set the value in the FormData
-                    formData.set(name, valor);
-                } else {
-                    // Fallback to manual conversion if maskRef is not available
-                    let valor = elem.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
-                    formData.set(name, valor);
+        // --- Data Preparation ---
+        if (financeType === 'receitas') {
+            // Convert masked money values to raw numbers
+            const valorInputNames = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
+            valorInputNames.forEach(name => {
+                const elem = document.getElementById(name);
+                if (elem && elem.maskRef) {
+                    formData.set(name, elem.maskRef.unmaskedValue || '0');
+                } else if (elem) {
+                     // Fallback conversion (less reliable)
+                     let valor = elem.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+                     formData.set(name, parseFloat(valor) || '0');
                 }
             });
-        } else {
-            // For despesas
-            const valorInput = document.getElementById('valor');
-            if (valorInput && valorInput.maskRef) {
-                const rawValue = valorInput.maskRef.unmaskedValue;
-                const valor = parseFloat(rawValue).toString();
-                formData.set('valor', valor);
-            } else if (valorInput) {
-                const valor = valorInput.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
-                formData.set('valor', valor);
-            }
+        } else { // Despesas
+             const valorElem = document.getElementById('valor');
+             if (valorElem && valorElem.maskRef) {
+                 formData.set('valor', valorElem.maskRef.unmaskedValue || '0');
+             } else if (valorElem) {
+                 let valor = valorElem.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+                 formData.set('valor', parseFloat(valor) || '0');
+             }
+             // Ensure 'pago' is sent correctly ('on' or null)
+             if (!formData.has('pago')) {
+                 formData.set('pago', ''); // Explicitly set if unchecked
+             }
         }
         
-        // Determine if this is a new item or an update
-        const url = isNew ? '/financas/create-item/' : '/financas/update-item/';
+        // --- Validation (Example) ---
+        // Add specific validation logic here if needed, e.g., check required fields based on status/type
+        if (financeType === 'receitas') {
+            // Example: Check if Data Pagamento is provided when status requires it
+             const status = formData.get('status_pagamento');
+             const dataPagamento = formData.get('data_pagamento');
+             if ((status === 'processo_finalizado' || status === 'recurso_de_glosa') && !dataPagamento) {
+                 alert('Data de pagamento é obrigatória para o status selecionado.');
+                 return; // Stop submission
+             }
+        } else { // Despesas validation (already handled by 'required' attribute mostly)
+             if (!formData.get('descricao') || !formData.get('valor') || !formData.get('data')) {
+                 alert('Preencha todos os campos obrigatórios para despesas.');
+                 return;
+             }
+        }
         
+        // Determine URL (Create only supported for despesas now)
+        const url = isNew ? '/financas/create-item/' : '/financas/update-item/';
+        if (isNew && financeType === 'receitas') {
+             alert('A criação de receitas é feita automaticamente pela conciliação.');
+             return;
+        }
+        
+        // Disable submit button to prevent multiple submissions
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Salvando...';
+
         fetch(url, {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
+                'X-CSRFToken': '{{ csrf_token }}' // Ensure CSRF token is correct
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
+        .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data })))
+        .then(({ ok, status, data }) => {
+            if (ok && data.success) {
+                editModal.style.display = "none"; // Close modal on success
+                window.location.reload(); // Reload page to see changes
             } else {
-                alert('Erro ao ' + (isNew ? 'criar' : 'atualizar') + ': ' + (data.error || 'Erro desconhecido'));
+                throw new Error(data.error || `Erro ${status} ao salvar`);
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Erro ao ' + (isNew ? 'criar' : 'atualizar') + ' os dados');
+            console.error('Error submitting form:', error);
+            alert('Erro ao salvar: ' + error.message);
+        })
+        .finally(() => {
+             // Re-enable submit button
+             submitButton.disabled = false;
+             submitButton.textContent = 'Salvar Alterações';
         });
     });
 
-    // Add status change handler for receitas
-    const statusSelect = document.getElementById('status_pagamento');
-    const dataPagamentoGroup = document.getElementById('data_pagamento').closest('.form-group');
-    
-    function toggleDataPagamento() {
-        const status = statusSelect.value;
-        if (status === 'pago' || status === 'glosa') {
-            dataPagamentoGroup.style.display = 'block';
-            document.getElementById('data_pagamento').required = true;
-        } else {
-            dataPagamentoGroup.style.display = 'none';
-            document.getElementById('data_pagamento').required = false;
+    // Initialize money masks for all designated inputs
+    document.querySelectorAll('.money-input').forEach(element => {
+        if (!element.maskRef) { // Avoid re-initializing if already done
+             element.maskRef = IMask(element, {
+                 mask: 'R$ num',
+                 blocks: {
+                     num: {
+                         mask: Number,
+                         scale: 2,
+                         thousandsSeparator: '.',
+                         padFractionalZeros: true,
+                         normalizeZeros: true,
+                         radix: ',',
+                         mapToRadix: ['.'],
+                     }
+                 }
+             });
         }
+    });
+
+    // Add CPF mask (only if element exists)
+    const cpfInput = document.getElementById('cpf');
+    if (cpfInput) {
+        IMask(cpfInput, {
+            mask: '000.000.000-00'
+        });
     }
 
-    statusSelect.addEventListener('change', toggleDataPagamento);
-
-    // Initialize money mask for all money inputs
-    const moneyInputMasks = [];
-    document.querySelectorAll('.money-input').forEach(element => {
-        const mask = IMask(element, {
-            mask: 'R$ num',
-            blocks: {
-                num: {
-                    mask: Number,
-                    thousandsSeparator: '.',
-                    radix: ',',
-                    scale: 2,
-                    padFractionalZeros: true,
-                    normalizeZeros: true,
-                    mapToRadix: ['.']
-                }
-            }
-        });
-        element.maskRef = mask;
-        moneyInputMasks.push(mask);
-    });
-
-    // Add CPF mask
-    const cpfInput = document.getElementById('cpf');
-    IMask(cpfInput, {
-        mask: '000.000.000-00'
-    });
-
-    // Add back the period filter functionality
+    // --- Filter Functionality ---
     const periodFilterBtn = document.getElementById('periodFilterBtn');
     const periodFilter = document.getElementById('periodFilter');
+    const customRangeContainer = document.getElementById('customRangeContainer');
+    const applyCustomRangeBtn = document.getElementById('applyCustomRangeBtn');
+    const statusFilterSelect = document.getElementById('statusFilterSelect'); // Get status select
     
-    // Toggle period filter dropdown
-    periodFilterBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        periodFilter.style.display = periodFilter.style.display === 'none' ? 'block' : 'none';
-    });
-    
+    // Toggle period dropdown
+    if(periodFilterBtn && periodFilter){
+        periodFilterBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            periodFilter.style.display = periodFilter.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
-        if (!periodFilter.contains(e.target) && e.target !== periodFilterBtn) {
+        if (periodFilter && !periodFilter.contains(e.target) && e.target !== periodFilterBtn) {
             periodFilter.style.display = 'none';
         }
     });
-    
+
+    // Function to build URL and navigate
+    function applyFilters() {
+         const currentUrl = new URL(window.location.href);
+         const params = currentUrl.searchParams;
+
+         // Get filter values
+         const view = params.get('view') || 'receitas'; // Keep current view
+         const search = document.getElementById('searchInput').value;
+         const status = statusFilterSelect ? statusFilterSelect.value : ''; // Get status if select exists
+         let period = '';
+         let startDate = '';
+         let endDate = '';
+         
+         // Determine period from selection or custom inputs
+         const selectedOption = periodFilter ? periodFilter.querySelector('.period-option[data-selected]') : null;
+         const customOptionSelected = periodFilter ? periodFilter.querySelector('.period-option[data-value="custom"][data-selected]') : null;
+
+         if (customOptionSelected || (customRangeContainer && customRangeContainer.style.display === 'block')) {
+             period = 'custom';
+             startDate = document.getElementById('customStart').value;
+             endDate = document.getElementById('customEnd').value;
+             if (!startDate || !endDate) {
+                 alert("Selecione as datas de início e fim para o período personalizado.");
+                 return; // Don't navigate if custom range is incomplete
+             }
+         } else if (selectedOption) {
+             period = selectedOption.dataset.value;
+         }
+
+         // Build new query string
+         const newParams = new URLSearchParams();
+         newParams.set('view', view);
+         if (search) newParams.set('search', search);
+         if (status) newParams.set('status', status); // Add status if selected
+         if (period) newParams.set('period', period);
+         if (period === 'custom' && startDate && endDate) {
+             newParams.set('start_date', startDate);
+             newParams.set('end_date', endDate);
+         }
+         
+         window.location.href = `?${newParams.toString()}`;
+    }
+
     // Handle period option clicks
-    document.querySelectorAll('.period-option').forEach(option => {
-        option.addEventListener('click', function() {
-            const value = this.dataset.value;
-            if (value === 'custom') {
-                document.getElementById('customRangeContainer').style.display = 'block';
-            } else {
-                window.location.href = `?view={{ view_type }}&period=${value}`;
-            }
+    if(periodFilter){
+        periodFilter.querySelectorAll('.period-option').forEach(option => {
+            option.addEventListener('click', function() {
+                // Mark as selected visually (optional, can be done via backend context too)
+                periodFilter.querySelectorAll('.period-option').forEach(opt => opt.removeAttribute('data-selected'));
+                this.setAttribute('data-selected', '');
+
+                const value = this.dataset.value;
+                if (value === 'custom') {
+                    if(customRangeContainer) customRangeContainer.style.display = 'block';
+                    // Don't navigate yet, wait for apply button or date selection
+                } else {
+                    if(customRangeContainer) customRangeContainer.style.display = 'none'; // Hide custom range
+                    applyFilters(); // Apply filter immediately for predefined periods
+                }
+                periodFilter.style.display = 'none'; // Hide dropdown after selection (except for custom)
+            });
         });
-    });
+    }
     
-    // Handle custom range
-    const applyCustomRangeBtn = document.getElementById('applyCustomRangeBtn');
+    // Handle custom range apply button
     if (applyCustomRangeBtn) {
         applyCustomRangeBtn.addEventListener('click', function() {
-            const startDate = document.getElementById('customStart').value;
-            const endDate = document.getElementById('customEnd').value;
-            if (startDate && endDate) {
-                window.location.href = `?view={{ view_type }}&period=custom&start=${startDate}&end=${endDate}`;
-            }
+             applyFilters(); // Apply filters using custom dates
         });
     }
 
-    // Add dynamic search functionality
+    // Handle Status filter change
+    if (statusFilterSelect) {
+         statusFilterSelect.addEventListener('change', applyFilters);
+    }
+
+
+    // Add dynamic search with debounce
     const searchInput = document.getElementById('searchInput');
     let searchTimeout;
+    if(searchInput){
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                applyFilters(); // Apply all filters when search changes
+            }, 500); // Wait 500ms after typing
+        });
+    }
 
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        
-        searchTimeout = setTimeout(() => {
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('search', this.value);
-            
-            // Preserve other parameters
-            const view = currentUrl.searchParams.get('view') || 'receitas';
-            const period = currentUrl.searchParams.get('period');
-            const status = currentUrl.searchParams.get('status');
-            
-            // Update URL and reload page
-            window.location.href = currentUrl.toString();
-        }, 500); // Wait 500ms after user stops typing before searching
-    });
 
+    // --- Add Despesa Modal ---
     function openAddDespesaModal() {
-        // Reset form
-        form.reset();
+        form.reset(); // Reset form fields
         
-        // Set up modal for new despesa
+        // Setup modal for new despesa
         document.getElementById('modal-action-type').textContent = 'Adicionar';
         document.getElementById('modal-title-type').textContent = 'Despesa';
         document.getElementById('finance_type').value = 'despesas';
         document.getElementById('is_new').value = 'true';
+        document.getElementById('is_linked').value = 'false'; // Despesas are never 'linked' in this context
         
-        // Show appropriate fields
+        // Show correct fields
         document.getElementById('receitas-fields').style.display = 'none';
         document.getElementById('despesas-fields').style.display = 'block';
+        document.getElementById('unlinked-info').style.display = 'none'; 
         
-        // Set today's date as default for the data field
+        // Set today's date as default
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('data').value = today;
         
-        // Show modal
+        // Ensure required attributes are set
+        document.getElementById('descricao').required = true;
+        document.getElementById('valor').required = true;
+        document.getElementById('data').required = true;
+        
         editModal.style.display = "block";
     }
-    
-    // Make the function available globally
-    window.openAddDespesaModal = openAddDespesaModal;
+    window.openAddDespesaModal = openAddDespesaModal; // Make globally accessible
 
-    // Add event listeners for cancel buttons
-    document.querySelectorAll('.cancel-btn').forEach(btn => {
+
+    // --- Delete Buttons ---
+    document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
-            if (confirm('Deseja realmente cancelar este item?')) {
+            if (confirm('Deseja realmente excluir este item? Esta ação não pode ser desfeita.')) {
                 const row = this.closest('tr');
                 const financeId = row.dataset.id;
-                const viewType = '{{ view_type }}';
+                const viewType = '{{ view_type }}'; // Get type from context
                 
                 const formData = new FormData();
                 formData.append('finance_type', viewType);
@@ -759,279 +808,75 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-CSRFToken': '{{ csrf_token }}'
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Remove the row from the table
-                        row.remove();
-                    } else {
-                        alert('Erro ao cancelar: ' + (data.error || 'Erro desconhecido'));
-                    }
+                .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data })))
+                .then(({ ok, status, data }) => {
+                     if (ok && data.success) {
+                         row.remove(); // Remove the row visually
+                         // Optionally show a success message
+                         // alert('Item excluído com sucesso.'); 
+                     } else {
+                         throw new Error(data.error || `Erro ${status} ao excluir`);
+                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('Erro ao cancelar o item');
+                    console.error('Error deleting item:', error);
+                    alert('Erro ao excluir: ' + error.message);
                 });
             }
         });
     });
-});
-</script>
-<script>
-    function exportFinances() {
-        const view = '{{ view_type }}';
-        const status = '{{ selected_status|default_if_none:"" }}';
-        const searchQuery = '{{ search_query|default_if_none:"" }}';
-        const period = '{{ selected_period|default_if_none:"" }}';
-        const startDate = '{{ custom_start_date|default_if_none:"" }}';
-        const endDate = '{{ custom_end_date|default_if_none:"" }}';
     
-        // Construct the URL with query parameters
-        let url = new URL('{% url "export_finances" %}', window.location.origin);
-        if (view) {
-            url.searchParams.append('view', view);
-        }
-        if (status) {
-            url.searchParams.append('status', status);
-        }
-        if (searchQuery) {
-            url.searchParams.append('search', searchQuery);
-        }
-        if (period) {
-            url.searchParams.append('period', period);
-        }
-        if (startDate) {
-            url.searchParams.append('start_date', startDate);
-        }
-        if (endDate) {
-            url.searchParams.append('end_date', endDate);
-        }
-    
-        // Redirect to the constructed URL
-        window.location.href = url.toString();
+    // --- Conciliation Trigger ---
+    // Renamed function to avoid conflicts
+    window.runConciliation = function() {
+         const conciliateButton = document.getElementById('conciliate-btn');
+         if (!conciliateButton) return;
+
+         conciliateButton.disabled = true;
+         conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conciliando...';
+
+         fetch('/financas/conciliar/') // Endpoint defined in urls.py
+             .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data })))
+             .then(({ ok, status, data }) => {
+                 if (ok && data.success) {
+                     alert(data.message || 'Conciliação concluída.');
+                     window.location.reload(); // Reload to see changes
+                 } else {
+                      throw new Error(data.error || `Erro ${status} durante a conciliação.`);
+                 }
+             })
+             .catch(error => {
+                 console.error('Error running conciliation:', error);
+                 alert('Erro ao executar conciliação: ' + error.message);
+             })
+             .finally(() => {
+                 // Re-enable button
+                 conciliateButton.disabled = false;
+                 conciliateButton.innerHTML = '<i class="fas fa-sync"></i> Conciliar';
+             });
     }
-    </script>
-<script>
-function loadConciliationData() {
-    fetch('/financas/conciliar/')
-        .then(response => response.json())
-        .then(data => {
-            console.log('Conciliation data:', data); // Debug output
-            const container = document.getElementById('conciliation-cards');
-            container.innerHTML = '';
-            
-            let showModal = true;
-            
-            // Show auto-matched count if any
-            if (data.auto_matched && data.auto_matched.length > 0) {
-                alert(`${data.auto_matched.length} guias foram automaticamente conciliadas.`);
-                
-                // If there's only auto_matched items and nothing to manually conciliate,
-                // don't show the empty conciliation modal and refresh the page
-                if (!data.needs_confirmation || data.needs_confirmation.length === 0) {
-                    showModal = false;
-                    // Reload the page after alert is dismissed
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 500);
-                }
-            }
-            
-            // Check for data that needs confirmation
-            if (data.needs_confirmation && data.needs_confirmation.length > 0) {
-                data.needs_confirmation.forEach(match => {
-                    const card = createConciliationCard(match);
-                    container.appendChild(card);
-                });
-                document.getElementById('no-matches').style.display = 'none';
-            } else {
-                document.getElementById('no-matches').style.display = 'block';
-            }
-            
-            // Open the modal only if needed
-            if (showModal) {
-                document.getElementById('conciliation-modal').style.display = 'block';
-            }
-            
-            // Update the unmatched guias button visibility
-            if (data.not_found_in_system && data.not_found_in_system.length > 0) {
-                document.getElementById('unmatched-guias-fab').style.display = 'flex';
-                // Store the data for later use
-                window.unmatchedGuiasData = data.not_found_in_system;
-            } else {
-                document.getElementById('unmatched-guias-fab').style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.error('Error loading conciliation data:', error);
-            alert('Erro ao carregar dados para conciliação');
-        });
-}
 
-function createConciliationCard(match) {
-    const card = document.createElement('div');
-    card.className = 'conciliation-card';
-    card.setAttribute('data-financa-id', match.financa_id);
-    
-    card.innerHTML = `
-        <div class="comparison">
-            <div class="system-data">
-                <h3>Dados do Sistema</h3>
-                <p>Paciente: ${match.sistema_data.paciente}</p>
-                <p>Data: ${match.sistema_data.data}</p>
-                <p>Hospital: ${match.sistema_data.hospital || 'Não informado'}</p>
-                <p>Anestesista: ${match.sistema_data.anestesista || 'Não informado'}</p>
-            </div>
-            <div class="api-data">
-                <h3>Dados da API</h3>
-                <p>Paciente: ${match.api_data.paciente}</p>
-                <p>Data: ${match.api_data.data || 'Não informada'}</p>
-                <p>Valor: R$ ${match.api_data.valor || '0.00'}</p>
-                <p>Status: ${match.api_data.status || 'Não informado'}</p>
-                <p>Hospital: ${match.api_data.hospital || 'Não informado'}</p>
-                <p>Cooperado: ${match.api_data.cooperado || 'Não informado'}</p>
-            </div>
-        </div>
-        <div class="actions">
-            <button onclick="confirmConciliation(${match.financa_id}, '${match.cpsa_id}', true)">
-                Confirmar Match
-            </button>
-            <button onclick="confirmConciliation(${match.financa_id}, '${match.cpsa_id}', false)">
-                Não é o Mesmo
-            </button>
-            <button onclick="skipConciliation(${match.financa_id}, '${match.cpsa_id}')">
-                Pular
-            </button>
-        </div>
-    `;
-    
-    return card;
-}
+}); // End DOMContentLoaded
 
-function confirmConciliation(financaId, cpsaId, conciliado) {
-    fetch('/financas/confirmar-conciliacao/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({
-            financa_id: financaId,
-            cpsa_id: cpsaId,
-            conciliado: conciliado
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Remove the card
-            const card = document.querySelector(`[data-financa-id="${financaId}"]`);
-            if (card) card.remove();
-            
-            // Check if there are more cards
-            if (document.querySelectorAll('.conciliation-card').length === 0) {
-                document.getElementById('no-matches').style.display = 'block';
-            }
-            
-            // Show success message
-            if (data.action === 'conciliado') {
-                alert('Conciliação realizada com sucesso!');
-                // Reload the page after success message is dismissed
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
-            } else if (data.action === 'rejeitado') {
-                alert('Item rejeitado com sucesso.');
-            }
-        } else {
-            alert('Erro ao processar conciliação: ' + (data.error || 'Erro desconhecido'));
-        }
-    })
-    .catch(error => {
-        console.error('Error during conciliation:', error);
-        alert('Erro ao processar conciliação');
-    });
-}
+// --- Export Function ---
+function exportFinances() {
+    const currentUrl = new URL(window.location.href);
+    const params = currentUrl.searchParams;
+    
+    // Construct the export URL with current filters
+    const exportUrl = new URL('{% url "export_finances" %}', window.location.origin);
+    
+    // Append view, status, search, period, start_date, end_date from current params
+    if (params.get('view')) exportUrl.searchParams.append('view', params.get('view'));
+    if (params.get('status')) exportUrl.searchParams.append('status', params.get('status'));
+    if (params.get('search')) exportUrl.searchParams.append('search', params.get('search'));
+    if (params.get('period')) exportUrl.searchParams.append('period', params.get('period'));
+    if (params.get('start_date')) exportUrl.searchParams.append('start_date', params.get('start_date'));
+    if (params.get('end_date')) exportUrl.searchParams.append('end_date', params.get('end_date'));
 
-function skipConciliation(financaId, cpsaId) {
-    fetch('/financas/confirmar-conciliacao/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({
-            financa_id: financaId,
-            cpsa_id: cpsaId,
-            pular: true
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Remove the card
-            const card = document.querySelector(`[data-financa-id="${financaId}"]`);
-            if (card) card.remove();
-            
-            // Check if there are more cards
-            if (document.querySelectorAll('.conciliation-card').length === 0) {
-                document.getElementById('no-matches').style.display = 'block';
-            }
-        } else {
-            alert('Erro ao pular item: ' + (data.error || 'Erro desconhecido'));
-        }
-    })
-    .catch(error => {
-        console.error('Error skipping conciliation:', error);
-        alert('Erro ao pular item');
-    });
+    // Redirect to trigger download
+    window.location.href = exportUrl.toString();
 }
-
-function showUnmatchedGuiasModal() {
-    // Get data from window storage or re-fetch if needed
-    const unmatchedData = window.unmatchedGuiasData || [];
-    
-    // Get the modal and table body
-    const modal = document.getElementById('unmatched-guias-modal');
-    const tableBody = modal.querySelector('tbody');
-    const noDataMessage = document.getElementById('no-unmatched-guias');
-    
-    // Clear the table
-    tableBody.innerHTML = '';
-    
-    // Populate table with data
-    if (unmatchedData.length > 0) {
-        unmatchedData.forEach(guia => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${guia.cpsa_id || '-'}</td>
-                <td>${guia.paciente || '-'}</td>
-                <td>${guia.data || '-'}</td>
-                <td>R$ ${guia.valor || '0.00'}</td>
-                <td>${guia.status || '-'}</td>
-                <td>${guia.hospital || '-'}</td>
-                <td>${guia.cooperado || '-'}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-        noDataMessage.style.display = 'none';
-    } else {
-        noDataMessage.style.display = 'block';
-    }
-    
-    // Show the modal
-    modal.style.display = 'block';
-}
-
-// Replace the button with floating action buttons
-document.body.insertAdjacentHTML('beforeend', `
-    <button id="conciliate-fab" onclick="loadConciliationData()" title="Conciliar Dados">
-        <i class="fas fa-sync"></i>
-    </button>
-    <button id="unmatched-guias-fab" onclick="showUnmatchedGuiasModal()" title="Ver Guias Não Encontradas">
-        <i class="fas fa-question-circle"></i>
-    </button>
-`);
 </script>
 
 {% endblock %}

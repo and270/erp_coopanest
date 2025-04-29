@@ -9,5 +9,4 @@ urlpatterns = [
     path('financas/export/', views.export_finances, name='export_finances'),
     path('financas/delete-item/', views.delete_finance_item, name='delete_finance_item'),
     path('financas/conciliar/', views.conciliar_financas, name='conciliar_financas'),
-    path('financas/confirmar-conciliacao/', views.confirmar_conciliacao, name='confirmar_conciliacao'),
 ]
