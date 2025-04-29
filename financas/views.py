@@ -297,40 +297,120 @@ def update_finance_item(request):
 
 @login_required
 @require_http_methods(["POST"])
-def create_finance_item(request):
+@transaction.atomic # Good practice for creation
+def create_receita_item(request):
     if not request.user.validado:
-        return render(request, 'usuario_nao_autenticado.html')
-    
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+
+    user = request.user
+    user_group = user.group
+    data = request.POST
+
+    try:
+        # Validate required manual fields
+        api_paciente_nome = data.get('api_paciente_nome')
+        api_data_cirurgia_str = data.get('api_data_cirurgia')
+        tipo_cobranca = data.get('tipo_cobranca')
+        cpsa = data.get('cpsa')
+        status_pagamento = data.get('status_pagamento', 'em_processamento') # Default if not provided
+        data_pagamento_str = data.get('data_pagamento')
+
+        if not api_paciente_nome:
+            return JsonResponse({'success': False, 'error': 'Nome do Paciente (Manual) é obrigatório.'}, status=400)
+        if not api_data_cirurgia_str:
+             return JsonResponse({'success': False, 'error': 'Data da Cirurgia (Manual) é obrigatória.'}, status=400)
+        if tipo_cobranca == 'cooperativa' and not cpsa:
+             return JsonResponse({'success': False, 'error': 'CPSA é obrigatório para tipo Cooperativa.'}, status=400)
+        if (status_pagamento == 'processo_finalizado' or status_pagamento == 'recurso_de_glosa') and not data_pagamento_str:
+             return JsonResponse({'success': False, 'error': 'Data de pagamento é obrigatória para o status selecionado.'}, status=400)
+
+
+        # Parse dates
+        try:
+            api_data_cirurgia = datetime.strptime(api_data_cirurgia_str, '%Y-%m-%d').date() if api_data_cirurgia_str else None
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'error': 'Data da Cirurgia (Manual) inválida.'}, status=400)
+            
+        try:
+             data_pagamento = datetime.strptime(data_pagamento_str, '%Y-%m-%d').date() if data_pagamento_str else None
+        except (ValueError, TypeError):
+             return JsonResponse({'success': False, 'error': 'Data de Pagamento inválida.'}, status=400)
+
+
+        # Create the new ProcedimentoFinancas instance (unlinked)
+        new_receita = ProcedimentoFinancas(
+            procedimento=None, # Explicitly unlinked
+            group=user_group,
+            api_paciente_nome=api_paciente_nome,
+            api_data_cirurgia=api_data_cirurgia,
+            api_cooperado_nome=data.get('api_cooperado_nome'), # Optional manual field
+            api_hospital_nome=data.get('api_hospital_nome'),   # Optional manual field
+            valor_faturado=data.get('valor_faturado') or None,
+            valor_recebido=data.get('valor_recebido') or None,
+            valor_recuperado=data.get('valor_recuperado') or None,
+            valor_acatado=data.get('valor_acatado') or None,
+            status_pagamento=status_pagamento,
+            data_pagamento=data_pagamento,
+            cpsa=cpsa or None,
+            tipo_cobranca=tipo_cobranca,
+            tipo_pagamento_direto=data.get('tipo_pagamento_direto') if tipo_cobranca == 'particular' else None
+        )
+        new_receita.save()
+
+        return JsonResponse({'success': True})
+
+    except Exception as e:
+        print(f"Error in create_receita_item: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': f'Erro interno ao criar receita: {str(e)}'}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+def create_finance_item(request): # This view now ONLY handles Despesas
+    if not request.user.validado:
+        # Return JSONResponse for consistency, as JS expects it
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401) 
+        # return render(request, 'usuario_nao_autenticado.html') -> This would cause the JSON error if hit
+
     try:
         data = request.POST
-        finance_type = data.get('finance_type')
+        # REMOVED finance_type check, as this view only does despesas now
         
-        if finance_type == 'despesas':
-            # Parse the date from the form
-            data_str = data.get('data')
-            try:
-                data_despesa = datetime.strptime(data_str, '%Y-%m-%d').date()
-            except (ValueError, TypeError):
-                return JsonResponse({
-                    'success': False, 
-                    'error': 'Data inválida'
-                })
-            
-            item = Despesas(
-                group=request.user.group,
-                descricao=data.get('descricao'),
-                valor=data.get('valor'),
-                pago=data.get('pago') == 'on',  # Convert checkbox value to boolean
-                data=data_despesa
-            )
-            item.save()
-            return JsonResponse({'success': True})
-        else:
-            return JsonResponse({'success': False, 'error': 'Tipo não suportado'})
-            
+        # Parse the date from the form
+        data_str = data.get('data')
+        try:
+            data_despesa = datetime.strptime(data_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Data inválida'
+            }, status=400) # Return 400 for bad request
+        
+        item = Despesas(
+            group=request.user.group,
+            descricao=data.get('descricao'),
+            valor=data.get('valor') or None, # Allow None if empty
+            pago=data.get('pago') == 'on',  # Convert checkbox value to boolean
+            data=data_despesa
+        )
+        # Add basic validation for Despesas
+        if not item.descricao:
+             return JsonResponse({'success': False, 'error': 'Descrição é obrigatória.'}, status=400)
+        if item.valor is None: # Check for None explicitly
+             return JsonResponse({'success': False, 'error': 'Valor é obrigatório.'}, status=400)
+        if not item.data: # Should be caught by date parsing, but double-check
+             return JsonResponse({'success': False, 'error': 'Data é obrigatória.'}, status=400)
+
+        item.save()
+        return JsonResponse({'success': True})
+        
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-    
+        print(f"Error creating despesa: {str(e)}") # Add logging
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': f"Erro interno ao criar despesa: {str(e)}"}, status=500) # Return 500
+
 @login_required
 def export_finances(request):
     if not request.user.validado:
