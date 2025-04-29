@@ -587,16 +587,22 @@ document.addEventListener('DOMContentLoaded', function() {
          document.getElementById('data').required = false;
 
 
-          // Clear potentially pre-filled fields from edit mode
+          // Clear potentially pre-filled fields from edit mode AND explicitly clear money fields
          const valorInputs = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
          valorInputs.forEach(id => {
               const elem = document.getElementById(id);
-              if (elem?.maskRef) elem.maskRef.unmaskedValue = '0';
+              if (elem?.maskRef) {
+                  elem.maskRef.unmaskedValue = ''; // Set unmasked value to empty string
+              } else if (elem) {
+                  elem.value = ''; // Fallback for non-masked or if maskRef is missing
+              }
          });
+         // Also clear non-money receita fields that might persist after reset
          document.getElementById('status_pagamento').value = 'em_processamento'; // Default status
          document.getElementById('tipo_cobranca').value = 'cooperativa'; // Default type? Or blank?
          document.getElementById('cpsa').value = ''; 
          document.getElementById('data_pagamento').value = '';
+         document.getElementById('tipo_pagamento_direto').value = 'cartao'; // Reset direct payment too
 
          // Trigger visibility updates for the default state ('cooperativa')
          toggleReceitaFieldsVisibility(); 
