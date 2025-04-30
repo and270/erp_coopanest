@@ -745,7 +745,7 @@ def conciliar_financas(request):
                     financa.api_hospital_nome = guia.get('hospital'); updated = True
                 if financa.api_cooperado_nome != guia.get('cooperado'):
                     financa.api_cooperado_nome = guia.get('cooperado'); updated = True
-                guia_api_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa'))) # Renamed variable
+                guia_api_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
                 if financa.api_data_cirurgia != guia_api_date:
                     financa.api_data_cirurgia = guia_api_date; updated = True
 
@@ -757,31 +757,28 @@ def conciliar_financas(request):
                 # If this existing finance record is NOT linked, try to link it now
                 if not financa.procedimento:
                      print(f"    Existing Finanças ID {financa.id} is unlinked. Trying to find matching procedure...")
-                     # Try to find a matching PROCEDURE for this guide's data
                      best_match_proc = None
                      highest_similarity = 0.7
                      if guia_paciente and guia_date:
                           for proc in all_procs_list:
-                              if proc.id in processed_proc_ids: continue # Skip procs already handled
-
+                              if proc.id in processed_proc_ids: continue
                               name_similarity = similar(guia_paciente, proc.nome_paciente)
                               proc_date = proc.data_horario.date() if proc.data_horario else None
                               date_diff = abs((guia_date - proc_date).days) if proc_date else float('inf')
-                              # (Optional: Add comparison log here if needed)
-
                               exact_match = name_similarity > 0.95 and date_diff == 0
                               good_match = name_similarity > 0.85 and date_diff <= 1
                               current_similarity = name_similarity
-
                               if (exact_match or good_match) and current_similarity > highest_similarity:
                                   highest_similarity = current_similarity
                                   best_match_proc = proc
-                          
                           if best_match_proc:
-                              # Check if this proc already has a *different* finance linked
-                              if best_match_proc.financas and best_match_proc.financas.id != financa.id:
-                                   print(f"    WARNING: Found match Proc ID {best_match_proc.id}, but it's already linked to Finanças ID {best_match_proc.financas.id}. Skipping link for CPSA {cpsa_id}.")
-                              elif not best_match_proc.financas: # Only link if proc is free
+                              existing_financa_for_proc = None
+                              try: existing_financa_for_proc = best_match_proc.financas
+                              except ProcedimentoFinancas.DoesNotExist: pass
+                              
+                              if existing_financa_for_proc: # Check if this proc already has a *different* finance linked
+                                   print(f"    WARNING: Found match Proc ID {best_match_proc.id}, but it's already linked to Finanças ID {existing_financa_for_proc.id}. Skipping link for CPSA {cpsa_id}.")
+                              else: # Only link if proc is free
                                    print(f"    >>> Linking existing Finanças ID {financa.id} to Proc ID {best_match_proc.id} (Sim: {highest_similarity:.2f})")
                                    financa.procedimento = best_match_proc
                                    processed_proc_ids.add(best_match_proc.id) # Mark proc as handled
@@ -821,52 +818,61 @@ def conciliar_financas(request):
                     # --- SubScenario 2a: Matching Procedure Found ---
                     if best_match_proc:
                         processed_proc_ids.add(best_match_proc.id) # Mark proc as handled
-                        # Check if this procedure ALREADY has a linked finance record
-                        if best_match_proc.financas:
-                             existing_linked_financa = best_match_proc.financas
+                        
+                        # Safely check if this procedure ALREADY has a linked finance record
+                        existing_linked_financa = None
+                        try:
+                            existing_linked_financa = best_match_proc.financas # Safely try to access
+                        except ProcedimentoFinancas.DoesNotExist:
+                            pass # It's expected not to exist sometimes, existing_linked_financa remains None
+
+                        # Case 2a-i: Procedure ALREADY has a linked finance record
+                        if existing_linked_financa: 
                              print(f"    Found matching Proc ID {best_match_proc.id}, which is ALREADY linked to Finanças ID {existing_linked_financa.id}.")
-                             print(f"    >>> Updating existing LINKED Finanças ID {existing_linked_financa.id} with data from Guide CPSA {cpsa_id}.")
-                             
-                             # Update the *existing linked* financa record
-                             updated = False
-                             # ... (Copy update logic again, applied to existing_linked_financa) ...
-                             if existing_linked_financa.cpsa != cpsa_id: # Update CPSA!
-                                 existing_linked_financa.cpsa = cpsa_id; updated = True
-                             guia_valor_faturado = guia.get('valor_faturado')
-                             # ... (rest of the update checks as in Scenario 1, applied to existing_linked_financa) ...
-                             guia_valor_recebido = guia.get('valor_recebido')
-                             guia_valor_recuperado = guia.get('valor_receuperado') # API typo?
-                             guia_valor_acatado = guia.get('valor_acatado')
-                             guia_status = map_api_status(guia.get('STATUS'))
+                             # Check if the existing linked financa has a different CPSA than the current guide
+                             if existing_linked_financa.cpsa and existing_linked_financa.cpsa != cpsa_id:
+                                 print(f"    WARNING: Matched Proc ID {best_match_proc.id} is linked to Finanças ({existing_linked_financa.id}) with different CPSA ({existing_linked_financa.cpsa}). Guide CPSA is {cpsa_id}. Skipping update for this guide.")
+                                 # Optional: Add to a list for manual review?
+                             else:
+                                 # Update the *existing linked* financa record (if CPSA matches or is null)
+                                 print(f"    >>> Updating existing LINKED Finanças ID {existing_linked_financa.id} with data from Guide CPSA {cpsa_id}.")
+                                 updated = False
+                                 if not existing_linked_financa.cpsa: # Fill CPSA if missing
+                                     existing_linked_financa.cpsa = cpsa_id; updated = True
+                                 
+                                 # ... (Rest of the update checks as before, applied to existing_linked_financa) ...
+                                 guia_valor_faturado = guia.get('valor_faturado')
+                                 guia_valor_recebido = guia.get('valor_recebido')
+                                 guia_valor_recuperado = guia.get('valor_receuperado') # API typo?
+                                 guia_valor_acatado = guia.get('valor_acatado')
+                                 guia_status = map_api_status(guia.get('STATUS'))
 
-                             if guia_valor_faturado is not None and (existing_linked_financa.valor_faturado is None or existing_linked_financa.valor_faturado != float(guia_valor_faturado)):
-                                 existing_linked_financa.valor_faturado = guia_valor_faturado; updated = True
-                             if guia_valor_recebido is not None and (existing_linked_financa.valor_recebido is None or existing_linked_financa.valor_recebido != float(guia_valor_recebido)):
-                                 existing_linked_financa.valor_recebido = guia_valor_recebido; updated = True
-                             if guia_valor_recuperado is not None and (existing_linked_financa.valor_recuperado is None or existing_linked_financa.valor_recuperado != float(guia_valor_recuperado)):
-                                 existing_linked_financa.valor_recuperado = guia_valor_recuperado; updated = True
-                             if guia_valor_acatado is not None and (existing_linked_financa.valor_acatado is None or existing_linked_financa.valor_acatado != float(guia_valor_acatado)):
-                                 existing_linked_financa.valor_acatado = guia_valor_acatado; updated = True
-                             if guia_status and existing_linked_financa.status_pagamento != guia_status:
-                                 existing_linked_financa.status_pagamento = guia_status; updated = True
-                             if existing_linked_financa.api_paciente_nome != guia.get('paciente'):
-                                 existing_linked_financa.api_paciente_nome = guia.get('paciente'); updated = True
-                             if existing_linked_financa.api_hospital_nome != guia.get('hospital'):
-                                 existing_linked_financa.api_hospital_nome = guia.get('hospital'); updated = True
-                             if existing_linked_financa.api_cooperado_nome != guia.get('cooperado'):
-                                 existing_linked_financa.api_cooperado_nome = guia.get('cooperado'); updated = True
-                             guia_api_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
-                             if existing_linked_financa.api_data_cirurgia != guia_api_date:
-                                 existing_linked_financa.api_data_cirurgia = guia_api_date; updated = True
+                                 if guia_valor_faturado is not None and (existing_linked_financa.valor_faturado is None or existing_linked_financa.valor_faturado != float(guia_valor_faturado)):
+                                     existing_linked_financa.valor_faturado = guia_valor_faturado; updated = True
+                                 if guia_valor_recebido is not None and (existing_linked_financa.valor_recebido is None or existing_linked_financa.valor_recebido != float(guia_valor_recebido)):
+                                     existing_linked_financa.valor_recebido = guia_valor_recebido; updated = True
+                                 if guia_valor_recuperado is not None and (existing_linked_financa.valor_recuperado is None or existing_linked_financa.valor_recuperado != float(guia_valor_recuperado)):
+                                     existing_linked_financa.valor_recuperado = guia_valor_recuperado; updated = True
+                                 if guia_valor_acatado is not None and (existing_linked_financa.valor_acatado is None or existing_linked_financa.valor_acatado != float(guia_valor_acatado)):
+                                     existing_linked_financa.valor_acatado = guia_valor_acatado; updated = True
+                                 if guia_status and existing_linked_financa.status_pagamento != guia_status:
+                                     existing_linked_financa.status_pagamento = guia_status; updated = True
+                                 if existing_linked_financa.api_paciente_nome != guia.get('paciente'):
+                                     existing_linked_financa.api_paciente_nome = guia.get('paciente'); updated = True
+                                 if existing_linked_financa.api_hospital_nome != guia.get('hospital'):
+                                     existing_linked_financa.api_hospital_nome = guia.get('hospital'); updated = True
+                                 if existing_linked_financa.api_cooperado_nome != guia.get('cooperado'):
+                                     existing_linked_financa.api_cooperado_nome = guia.get('cooperado'); updated = True
+                                 guia_api_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+                                 if existing_linked_financa.api_data_cirurgia != guia_api_date:
+                                     existing_linked_financa.api_data_cirurgia = guia_api_date; updated = True
 
+                                 if updated:
+                                     print(f"      Marked existing LINKED Finanças ID {existing_linked_financa.id} for update.")
+                                     if existing_linked_financa not in financas_to_update: financas_to_update.append(existing_linked_financa)
+                                     updated_records_count += 1 
 
-                             if updated:
-                                 print(f"      Marked existing LINKED Finanças ID {existing_linked_financa.id} for update.")
-                                 if existing_linked_financa not in financas_to_update: financas_to_update.append(existing_linked_financa)
-                                 updated_records_count += 1 # Count as update
-                             # No change to newly_linked_count here, link already existed
-
-                        # Else: Procedure exists but has no finance linked yet
+                        # Case 2a-ii: Procedure exists but has no finance linked yet (existing_linked_financa is None)
                         else:
                             print(f"    Found matching Proc ID {best_match_proc.id} (unlinked).")
                             print(f"    >>> Creating NEW Finanças record for Guide CPSA {cpsa_id} and linking to Proc ID {best_match_proc.id}.")
@@ -894,11 +900,7 @@ def conciliar_financas(request):
                         print(f"    No matching Procedure found for Guide CPSA {cpsa_id}.")
                         print(f"    >>> Creating NEW UNLINKED Finanças record for Guide CPSA {cpsa_id}.")
                         new_financa = ProcedimentoFinancas(
-                             procedimento=None, # Unlinked
-                             group=group,
-                             tipo_cobranca='cooperativa',
-                             cpsa=cpsa_id,
-                             # ... (populate fields from guia as above) ...
+                             procedimento=None, group=group, tipo_cobranca='cooperativa', cpsa=cpsa_id,
                              valor_faturado=guia.get('valor_faturado'),
                              valor_recebido=guia.get('valor_recebido'),
                              valor_recuperado=guia.get('valor_receuperado'),
@@ -913,11 +915,9 @@ def conciliar_financas(request):
                         newly_created_count += 1
                 else:
                      print(f"    Cannot attempt matching Guide CPSA {cpsa_id}: Guide missing patient/date.")
-                     # Create unlinked anyway? Or log as error? Let's create unlinked for now if CPSA exists.
                      print(f"    >>> Creating NEW UNLINKED Finanças record for Guide CPSA {cpsa_id} (due to missing guide date/paciente).")
                      new_financa = ProcedimentoFinancas(
                          procedimento=None, group=group, tipo_cobranca='cooperativa', cpsa=cpsa_id,
-                         #...(populate other fields from guia)...
                          valor_faturado=guia.get('valor_faturado'),
                          valor_recebido=guia.get('valor_recebido'),
                          valor_recuperado=guia.get('valor_receuperado'),
@@ -935,31 +935,20 @@ def conciliar_financas(request):
         # --- Perform DB Operations ---
         if financas_to_update:
              print(f"--- Saving {len(financas_to_update)} updates ---")
-             # Identify fields to update - include 'procedimento' and 'cpsa' as they might change
-             update_fields = [
-                'valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado',
-                'status_pagamento', 'procedimento', 'cpsa',
-                'api_paciente_nome', 'api_data_cirurgia', 'api_hospital_nome', 'api_cooperado_nome'
-             ]
-             # Use bulk_update if possible, otherwise save individually
-             # Note: bulk_update might be tricky if updating relations or unique fields that conflict temporarily
-             # Saving individually might be safer here.
+             # Saving individually for safety with relations/potential conflicts
              for item in financas_to_update:
                   item.save()
-             # ProcedimentoFinancas.objects.bulk_update(financas_to_update, update_fields) # Revisit if performance is an issue
 
         if financas_to_create:
             print(f"--- Creating {len(financas_to_create)} new records ---")
             ProcedimentoFinancas.objects.bulk_create(financas_to_create)
 
         # --- Final Reporting ---
-        unprocessed_api_cpsa_ids = set(guias_dict.keys()) - processed_cpsa_ids # Should be empty now if logic covers all cases
+        unprocessed_api_cpsa_ids = set(guias_dict.keys()) - processed_cpsa_ids 
         print(f"--- Conciliation Finished. Updated: {updated_records_count}, Created: {newly_created_count}, Linked: {newly_linked_count}, Unprocessed API CPSA: {len(unprocessed_api_cpsa_ids)} ---")
-        if unprocessed_api_cpsa_ids: # Should ideally not happen with the revised logic
+        if unprocessed_api_cpsa_ids: 
             print(f"Warning: {len(unprocessed_api_cpsa_ids)} CPSA IDs from API were not processed: {list(unprocessed_api_cpsa_ids)}")
             api_errors.append(f"{len(unprocessed_api_cpsa_ids)} guias da API não foram processadas.")
-
-        # Construct summary message... (same as before)
         summary_message = []
         if updated_records_count > 0: summary_message.append(f"{updated_records_count} registros atualizados.")
         if newly_created_count > 0: summary_message.append(f"{newly_created_count} novos registros criados.")
