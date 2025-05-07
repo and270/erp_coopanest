@@ -40,6 +40,10 @@ class CoopahubAuthBackend(ModelBackend):
         try:
             response = requests.post(login_url, json=login_data)
             data = response.json()
+
+            print("----- API Login Response (_try_authenticate) -----")
+            print(json.dumps(data, indent=2))
+            print("-------------------------------------------------------------")
             
             if 'conexao' in data:
                 # Authentication successful, get connection key
@@ -95,9 +99,9 @@ class CoopahubAuthBackend(ModelBackend):
                 user_data_list = empresas_response.json() # Rename to indicate it's a list
                 
                 # Optional: Print the raw API response if still needed for context
-                # print("----- API User Data Response (_fetch_and_update_user_data) -----")
-                # print(json.dumps(user_data_list, indent=2))
-                # print("-------------------------------------------------------------")
+                print("----- API User Data Response (_fetch_and_update_user_data) -----")
+                print(json.dumps(user_data_list, indent=2))
+                print("-------------------------------------------------------------")
                 
                 # Check if the response is a non-empty list
                 if isinstance(user_data_list, list) and user_data_list:
