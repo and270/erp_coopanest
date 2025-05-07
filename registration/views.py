@@ -407,7 +407,8 @@ def fetch_user_details_from_api(user):
             empresas_data = {
                 "conexao": user.connection_key,
                 "origem": user.origem,
-                "metodo": "empresas"
+                "metodo": "empresas",
+                "coopahub": "S"  # Added parameter
             }
 
             empresas_response = requests.post(empresas_url, json=empresas_data)
