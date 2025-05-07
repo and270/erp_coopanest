@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from django.db.models import Avg, Count, Case, When, F, Q, Sum
-from django.db.models.functions import Coalesce, TruncMonth, TruncDate
+from django.db.models import Avg, Count, Case, When, F, Q, Sum, ExpressionWrapper, DurationField
+from django.db.models.functions import Coalesce, TruncMonth, TruncDate, Cast
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
 from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
@@ -14,7 +14,7 @@ from django.http import HttpResponse
 import xlsxwriter
 from io import BytesIO
 from qualidade.models import AvaliacaoRPA
-from django.db import models
+from django.db import models as db_models
 
 @login_required
 @login_required
@@ -200,11 +200,18 @@ def financas_dashboard_view(request):
     procedimento = request.GET.get('procedimento')
     selected_graph_type = request.GET.get('graph_type', 'ticket')
 
-    # Base queryset
+    # Base queryset with effective_date for filtering
     queryset = (
         ProcedimentoFinancas.objects
-        .select_related('procedimento', 'procedimento__procedimento_principal')
-        .filter(procedimento__group=user_group)
+        .annotate(
+            effective_date_for_filter=Case(
+                When(procedimento__isnull=False, then=Cast('procedimento__data_horario', db_models.DateField())),
+                When(procedimento__isnull=True, then='api_data_cirurgia'),
+                output_field=db_models.DateField()
+            )
+        )
+        .select_related('procedimento', 'procedimento__procedimento_principal', 'group')
+        .filter(group=user_group) # Filter on ProcedimentoFinancas.group itself
     )
 
     # --- Anestesista Filtering Logic ---
@@ -260,10 +267,10 @@ def financas_dashboard_view(request):
             chart_start_date = timezone.make_aware(custom_start)
             chart_end_date = timezone.make_aware(custom_end)
 
-            # Filter the queryset for this custom range
+            # Filter the queryset for this custom range using effective_date_for_filter
             queryset = queryset.filter(
-                procedimento__data_horario__date__gte=custom_start.date(),
-                procedimento__data_horario__date__lte=custom_end.date()
+                effective_date_for_filter__gte=custom_start.date(),
+                effective_date_for_filter__lte=custom_end.date()
             )
 
             selected_period = 'custom'
@@ -273,7 +280,7 @@ def financas_dashboard_view(request):
             selected_period = 180
             chart_end_date = now
             chart_start_date = now - timedelta(days=180)
-            queryset = queryset.filter(procedimento__data_horario__gte=chart_start_date)
+            queryset = queryset.filter(effective_date_for_filter__gte=chart_start_date.date())
 
     else:
         # Not custom or missing date(s). Possibly numeric.
@@ -284,19 +291,22 @@ def financas_dashboard_view(request):
             selected_period = period_days
             chart_end_date = now
             chart_start_date = now - timedelta(days=period_days)
-            queryset = queryset.filter(procedimento__data_horario__gte=chart_start_date)
+            queryset = queryset.filter(effective_date_for_filter__gte=chart_start_date.date())
         except (ValueError, TypeError):
             # fallback
             selected_period = 180
             chart_end_date = now
             chart_start_date = now - timedelta(days=180)
-            queryset = queryset.filter(procedimento__data_horario__gte=chart_start_date)
+            queryset = queryset.filter(effective_date_for_filter__gte=chart_start_date.date())
 
     # If for some reason they are still None, default them
     if not chart_start_date or not chart_end_date:
         chart_end_date = now
-        chart_start_date = now - timedelta(days=180)
+        chart_start_date = now - timedelta(days=180) # This will be a datetime
         selected_period = 180
+        # Ensure queryset is filtered if it fell through
+        if not queryset.query.where: # Simplified check, might need refinement if other filters applied
+             queryset = queryset.filter(effective_date_for_filter__gte=chart_start_date.date())
 
     # -----------------------------------------------------------------------
     # 2) Now we have a final chart_start_date and chart_end_date
@@ -326,7 +336,7 @@ def financas_dashboard_view(request):
     ).aggregate(
         total=Sum(
             Coalesce('valor_recebido', 0) + Coalesce('valor_recuperado', 0),
-            output_field=models.DecimalField()
+            output_field=db_models.DecimalField()
         )
     )['total'] or 0
     
@@ -341,7 +351,7 @@ def financas_dashboard_view(request):
     ).aggregate(
         total=Sum(
             F('valor_faturado') - Coalesce(F('valor_recebido'), 0) - Coalesce(F('valor_recuperado'), 0),
-            output_field=models.DecimalField()
+            output_field=db_models.DecimalField()
         )
     )['total'] or 0
 
@@ -357,17 +367,18 @@ def financas_dashboard_view(request):
 
     # Tempo Médio de Recebimento
     paid_procedures = queryset.filter(
-        status_pagamento='pago',
+        status_pagamento='processo_finalizado', # Assuming 'processo_finalizado' is the target status
         data_pagamento__isnull=False,
-        procedimento__data_horario__isnull=False
+        effective_date_for_filter__isnull=False
     )
     avg_recebimento = None
     if paid_procedures.exists():
-        avg_diff = paid_procedures.annotate(
-            diff=F('data_pagamento') - F('procedimento__data_horario')
-        ).aggregate(Avg('diff'))['diff__avg']
-        if avg_diff:
-            avg_days = avg_diff.days
+        avg_recebimento_diff = paid_procedures.annotate(
+            diff_duration=ExpressionWrapper(F('data_pagamento') - F('effective_date_for_filter'), output_field=DurationField())
+        ).aggregate(avg_diff_duration=Avg('diff_duration'))['avg_diff_duration']
+        
+        if avg_recebimento_diff:
+            avg_days = avg_recebimento_diff.days
             if avg_days >= 30:
                 avg_months = avg_days // 30  # approximate
                 avg_recebimento = f"{avg_months} meses"
@@ -388,19 +399,21 @@ def financas_dashboard_view(request):
         }
 
         daily_data = queryset.annotate(
-            date=TruncDate('procedimento__data_horario')
+            date=TruncDate('effective_date_for_filter')
         ).filter(
-            valor_faturado__isnull=False,
-            status_pagamento__in=['pago', 'pendente']
+            status_pagamento__in=['processo_finalizado', 'recurso_de_glosa'] # Filter for paid/finalized statuses
         ).values('date', 'tipo_cobranca').annotate(
-            total=Sum('valor_faturado')
+            total_recebido_periodo=Sum( # Sum of received and recovered amounts
+                Coalesce(F('valor_recebido'), 0) + Coalesce(F('valor_recuperado'), 0),
+                output_field=db_models.DecimalField()
+            )
         ).order_by('date')
 
         for item in daily_data:
             if item['date'] in date_map and item['tipo_cobranca']:
                 tipo = item['tipo_cobranca']
                 if tipo in ['cooperativa', 'hospital', 'particular']:
-                    date_map[item['date']][tipo] = float(item['total'] or 0)
+                    date_map[item['date']][tipo] = float(item['total_recebido_periodo'] or 0)
 
         sorted_dates = sorted(date_map.keys())
         month_labels = [d.strftime("%d/%m") for d in sorted_dates]  # daily labels
@@ -412,8 +425,8 @@ def financas_dashboard_view(request):
         # Calculate daily tickets and revenues
         daily_tickets = []
         daily_revenues = []
-        for d in sorted_dates:
-            day_procedures = queryset.filter(procedimento__data_horario__date=d)
+        for d_date_obj in sorted_dates: # d is a date object from sorted_dates
+            day_procedures = queryset.filter(effective_date_for_filter=d_date_obj)
             day_total = day_procedures.aggregate(total=Sum('valor_faturado'))['total'] or 0
             day_count = day_procedures.count()
             average_for_day = day_total / day_count if day_count > 0 else 0
@@ -426,8 +439,8 @@ def financas_dashboard_view(request):
     else:
         # Monthly logic
         month_map = {}
-        for m in date_range:
-            key = m.strftime("%Y-%m")  # e.g. "2023-05"
+        for m_datetime_obj in date_range: # m is a datetime object (first day of month)
+            key = m_datetime_obj.strftime("%Y-%m")  # e.g. "2023-05"
             month_map[key] = {
                 'cooperativa': 0,
                 'hospital': 0,
@@ -435,24 +448,27 @@ def financas_dashboard_view(request):
             }
 
         monthly_data = queryset.annotate(
-            month=TruncMonth('procedimento__data_horario')
+            month=TruncMonth('effective_date_for_filter')
         ).filter(
-            valor_faturado__isnull=False,
-            status_pagamento__in=['pago', 'pendente']
+            status_pagamento__in=['processo_finalizado', 'recurso_de_glosa'] # Filter for paid/finalized statuses
         ).values('month', 'tipo_cobranca').annotate(
-            total=Sum('valor_faturado')
+            total_recebido_periodo=Sum( # Sum of received and recovered amounts
+                Coalesce(F('valor_recebido'), 0) + Coalesce(F('valor_recuperado'), 0),
+                output_field=db_models.DecimalField()
+            )
         ).order_by('month')
 
         for item in monthly_data:
             if item['month'] and item['tipo_cobranca']:
                 key = item['month'].strftime("%Y-%m")
                 if key in month_map:
-                    if item['tipo_cobranca'] == 'cooperativa':
-                        month_map[key]['cooperativa'] = float(item['total'] or 0)
-                    elif item['tipo_cobranca'] == 'hospital':
-                        month_map[key]['hospital'] = float(item['total'] or 0)
-                    elif item['tipo_cobranca'] == 'particular':
-                        month_map[key]['particular'] = float(item['total'] or 0)
+                    tipo = item['tipo_cobranca']
+                    if tipo == 'cooperativa':
+                        month_map[key]['cooperativa'] = float(item['total_recebido_periodo'] or 0)
+                    elif tipo == 'hospital':
+                        month_map[key]['hospital'] = float(item['total_recebido_periodo'] or 0)
+                    elif tipo == 'particular':
+                        month_map[key]['particular'] = float(item['total_recebido_periodo'] or 0)
 
         # Sort by actual date
         sorted_months = sorted(date_range)
@@ -471,10 +487,10 @@ def financas_dashboard_view(request):
         # monthly tickets & revenues
         monthly_tickets = []
         monthly_revenues = []
-        for m in sorted_months:
+        for m_datetime_obj in sorted_months: # m is a datetime object
             month_procedures = queryset.filter(
-                procedimento__data_horario__year=m.year,
-                procedimento__data_horario__month=m.month
+                effective_date_for_filter__year=m_datetime_obj.year,
+                effective_date_for_filter__month=m_datetime_obj.month
             )
             month_total = month_procedures.aggregate(total=Sum('valor_faturado'))['total'] or 0
             month_count = month_procedures.count()
@@ -527,12 +543,19 @@ def financas_dashboard_view(request):
          if num_anestesistas > 0:
             # Need to calculate total for the period *without* anesthesiologist filter if GESTOR/ADMIN chose "all"
             # Or if ANESTESISTA chose "all"
-            unfiltered_by_anest_queryset = ProcedimentoFinancas.objects.select_related(
-                'procedimento', 'procedimento__procedimento_principal'
-            ).filter(
-                procedimento__group=user_group,
-                procedimento__data_horario__gte=chart_start_date,
-                procedimento__data_horario__lte=chart_end_date # Use calculated date range
+            # Apply annotation and filters to ProcedimentoFinancas directly
+            _unfiltered_base_qs = ProcedimentoFinancas.objects.annotate(
+                effective_date_for_filter=Case(
+                    When(procedimento__isnull=False, then=Cast('procedimento__data_horario', db_models.DateField())),
+                    When(procedimento__isnull=True, then='api_data_cirurgia'),
+                    output_field=db_models.DateField()
+                )
+            ).select_related('procedimento', 'procedimento__procedimento_principal', 'group')
+            
+            unfiltered_by_anest_queryset = _unfiltered_base_qs.filter(
+                group=user_group, # Filter on ProcedimentoFinancas.group
+                effective_date_for_filter__gte=chart_start_date.date(), # Use .date()
+                effective_date_for_filter__lte=chart_end_date.date()    # Use .date()
             )
             if procedimento: # Apply procedure filter if present
                 unfiltered_by_anest_queryset = unfiltered_by_anest_queryset.filter(procedimento__procedimento_principal__name=procedimento)
@@ -625,12 +648,21 @@ def export_financas_excel(request):
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
     selected_anestesista_id = request.GET.get('anestesista')
-    procedimento = request.GET.get('procedimento')
+    procedimento_filter_name = request.GET.get('procedimento') # Renamed to avoid clash
 
-    queryset = ProcedimentoFinancas.objects.select_related(
-        'procedimento',
-        'procedimento__procedimento_principal'
-    ).filter(procedimento__group=user_group)
+    # Base queryset with annotation
+    queryset = (
+        ProcedimentoFinancas.objects
+        .annotate(
+            effective_date_for_filter=Case(
+                When(procedimento__isnull=False, then=Cast('procedimento__data_horario', db_models.DateField())),
+                When(procedimento__isnull=True, then='api_data_cirurgia'),
+                output_field=db_models.DateField()
+            )
+        )
+        .select_related('procedimento', 'procedimento__procedimento_principal', 'group')
+        .filter(group=user_group) # Filter on ProcedimentoFinancas.group
+    )
 
     # Apply Anestesista Filter based on user type
     if user.user_type == ANESTESISTA_USER:
@@ -647,8 +679,8 @@ def export_financas_excel(request):
             queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id)
 
     # Apply Procedure Filter
-    if procedimento:
-        queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
+    if procedimento_filter_name:
+        queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento_filter_name)
 
     # Apply Date Filter
     now = timezone.now()
@@ -660,11 +692,12 @@ def export_financas_excel(request):
             custom_start = datetime.strptime(start_date_str, '%Y-%m-%d')
             custom_end = datetime.strptime(end_date_str, '%Y-%m-%d')
             if custom_start > custom_end: custom_start, custom_end = custom_end, custom_start
+            
             export_start_date = timezone.make_aware(custom_start)
             export_end_date = timezone.make_aware(custom_end)
             queryset = queryset.filter(
-                procedimento__data_horario__date__gte=export_start_date.date(),
-                procedimento__data_horario__date__lte=export_end_date.date()
+                effective_date_for_filter__gte=export_start_date.date(),
+                effective_date_for_filter__lte=export_end_date.date()
             )
         except ValueError:
              period = 180 # fallback if custom dates are invalid
@@ -675,15 +708,14 @@ def export_financas_excel(request):
         try:
             period_days = int(period)
             export_end_date = now
-            export_start_date = now - timedelta(days=period_days)
-            queryset = queryset.filter(procedimento__data_horario__gte=export_start_date)
+            export_start_date = now - timedelta(days=period_days) # datetime object
+            queryset = queryset.filter(effective_date_for_filter__gte=export_start_date.date())
         except (ValueError, TypeError):
             # Final fallback
-            period_days = 180
+            period_days = 180 # unused, just for consistency
             export_end_date = now
-            export_start_date = now - timedelta(days=180)
-            queryset = queryset.filter(procedimento__data_horario__gte=export_start_date)
-
+            export_start_date = now - timedelta(days=180) # datetime object
+            queryset = queryset.filter(effective_date_for_filter__gte=export_start_date.date())
     # --- End of replicated filtering logic ---
 
     # Write headers
@@ -699,13 +731,20 @@ def export_financas_excel(request):
     # Write data
     row = 1
     # Order by date for clarity in Excel
-    queryset = queryset.order_by('procedimento__data_horario')
+    queryset = queryset.order_by('effective_date_for_filter') # Use annotated date
     for item in queryset:
-        worksheet.write(row, 0, item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento.data_horario else '')
-        worksheet.write(row, 1, item.procedimento.procedimento_principal.name if item.procedimento.procedimento_principal else '')
-        # Handle ManyToMany field for anesthesiologists
-        anestesistas_nomes = ', '.join([a.name for a in item.procedimento.anestesistas_responsaveis.all()])
+        worksheet.write(row, 0, item.effective_date_for_filter.strftime('%d/%m/%Y') if item.effective_date_for_filter else '')
+        
+        proc_principal_name = ''
+        if item.procedimento and item.procedimento.procedimento_principal:
+            proc_principal_name = item.procedimento.procedimento_principal.name
+        worksheet.write(row, 1, proc_principal_name)
+        
+        anestesistas_nomes = ''
+        if item.procedimento:
+            anestesistas_nomes = ', '.join([a.name for a in item.procedimento.anestesistas_responsaveis.all()])
         worksheet.write(row, 2, anestesistas_nomes)
+        
         worksheet.write(row, 3, item.get_tipo_cobranca_display() if item.tipo_cobranca else '') # Use display value
         worksheet.write(row, 4, float(item.valor_faturado or 0), currency_format)
         worksheet.write(row, 5, float(item.valor_recebido or 0), currency_format)
@@ -713,7 +752,9 @@ def export_financas_excel(request):
         worksheet.write(row, 7, float(item.valor_acatado or 0), currency_format)
         worksheet.write(row, 8, item.get_status_pagamento_display())
         worksheet.write(row, 9, item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '')
-        worksheet.write(row, 10, item.procedimento.nome_paciente if item.procedimento else '')
+        
+        paciente_nome = item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome
+        worksheet.write(row, 10, paciente_nome or '')
         row += 1
 
     # --- Summary Sheet ---
@@ -755,7 +796,7 @@ def export_financas_excel(request):
     summary_data = [
         ('Período Analisado', f"{export_start_date.strftime('%d/%m/%Y')} a {export_end_date.strftime('%d/%m/%Y')}" if export_start_date and export_end_date else "N/A"),
         ('Filtro Anestesista', request.GET.get('anestesista_name', 'Todos') if selected_anestesista_id else 'Todos'), # Requires passing name or fetching it
-        ('Filtro Procedimento', procedimento if procedimento else 'Todos'),
+        ('Filtro Procedimento', procedimento_filter_name if procedimento_filter_name else 'Todos'),
         ('Total de Registros Financeiros', total_count),
         ('Total de Anestesias (Distintas)', anestesias_distinct_count),
         ('Valor Total Cobrado (Filtrado)', total_valor),
