@@ -10,18 +10,19 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from registration.models import Anesthesiologist
 from dateutil.relativedelta import relativedelta
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 import xlsxwriter
 from io import BytesIO
 from qualidade.models import AvaliacaoRPA
 from django.db import models as db_models
 
 @login_required
-@login_required
 def dashboard_view(request):
     """Dashboard de Qualidade, com opção de Período Personalizado."""
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
+    if request.user.user_type != GESTOR_USER:
+        return HttpResponseForbidden("Acesso Negado")
 
     user_group = request.user.group
     
@@ -188,6 +189,8 @@ def financas_dashboard_view(request):
 
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
+    if request.user.user_type != GESTOR_USER:
+        return HttpResponseForbidden("Acesso Negado")
 
     user_group = request.user.group
     user = request.user # Get the current user
@@ -219,6 +222,7 @@ def financas_dashboard_view(request):
     anestesistas_for_template = anestesistas_all # Default for GESTOR/ADMIN
     current_user_anesthesiologist = None
 
+    # Apesar de anestesista não terem acesso ao dashboard, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
     if user.user_type == ANESTESISTA_USER:
         try:
             current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)
@@ -623,6 +627,8 @@ def export_financas_excel(request):
     """Handle Excel export for financial dashboard data"""
     if not request.user.validado:
         return HttpResponse('Unauthorized', status=401)
+    if request.user.user_type != GESTOR_USER:
+        return HttpResponse('Acesso Negado', status=403)
 
     # Create output buffer
     output = BytesIO()
@@ -665,6 +671,7 @@ def export_financas_excel(request):
     )
 
     # Apply Anestesista Filter based on user type
+    #Apesar de anestesista não terem acesso ao dashboard, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
     if user.user_type == ANESTESISTA_USER:
         try:
             current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)

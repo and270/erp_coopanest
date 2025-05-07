@@ -7,7 +7,7 @@ from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
 from django.db.models import Q, Sum, F, Value
 from datetime import datetime, timedelta
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods
 import json
 import pandas as pd
@@ -23,6 +23,8 @@ DIAS_PARA_CONCILIACAO = 90
 def financas_view(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
+    if request.user.user_type != GESTOR_USER:
+        return HttpResponseForbidden("Acesso Negado")
     
     user = request.user
     user_group = user.group
@@ -62,6 +64,7 @@ def financas_view(request):
         ).select_related('procedimento', 'procedimento__hospital') # Select related for efficiency
 
         # Filter for user type
+        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
         if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
             base_qs = base_qs.filter(
                 Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
@@ -148,8 +151,9 @@ def financas_view(request):
 @login_required
 def get_finance_item(request, type, id):
     if not request.user.validado:
-        # Returning JSON error as this is likely an API call from JS
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
+    if request.user.user_type != GESTOR_USER:
+        return JsonResponse({'error': 'Acesso negado'}, status=403)
 
     user = request.user
     user_group = user.group
@@ -163,6 +167,7 @@ def get_finance_item(request, type, id):
             )
 
             # Check access for Anesthesiologist
+            #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
             if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                  is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
                  is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome, user.anesthesiologist.name) > 0.8
@@ -193,7 +198,7 @@ def get_finance_item(request, type, id):
         else: # Despesas
             item = Despesas.objects.get(
                 id=id,
-                group=user_group # Assuming only Gestor/Admin access despesas directly
+                group=user_group # Assuming only Gestor access despesas directly
             )
              # Add specific permission checks for Despesas if needed
             if user.user_type not in [GESTOR_USER, ADMIN_USER]:
@@ -220,6 +225,8 @@ def get_finance_item(request, type, id):
 def update_finance_item(request):
     if not request.user.validado:
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+    if request.user.user_type != GESTOR_USER:
+        return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     user = request.user
     user_group = user.group
@@ -237,6 +244,7 @@ def update_finance_item(request):
             )
 
             # Permission Check (similar to get_finance_item)
+            #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
             if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                  is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
                  is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome, user.anesthesiologist.name) > 0.8
@@ -301,6 +309,8 @@ def update_finance_item(request):
 def create_receita_item(request):
     if not request.user.validado:
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+    if request.user.user_type != GESTOR_USER:
+        return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     user = request.user
     user_group = user.group
@@ -369,9 +379,9 @@ def create_receita_item(request):
 @require_http_methods(["POST"])
 def create_finance_item(request): # This view now ONLY handles Despesas
     if not request.user.validado:
-        # Return JSONResponse for consistency, as JS expects it
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401) 
-        # return render(request, 'usuario_nao_autenticado.html') -> This would cause the JSON error if hit
+    if request.user.user_type != GESTOR_USER:
+        return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     try:
         data = request.POST
@@ -415,6 +425,8 @@ def create_finance_item(request): # This view now ONLY handles Despesas
 def export_finances(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html') # Or return error response
+    if request.user.user_type != GESTOR_USER:
+        return HttpResponseForbidden("Acesso Negado")
 
     user = request.user
     user_group = user.group
@@ -447,6 +459,7 @@ def export_finances(request):
             Q(procedimento__group=user_group) | Q(group=user_group)
         ).select_related('procedimento', 'procedimento__hospital', 'procedimento__convenio') # Add convenio
         
+        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
         if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
              base_qs = base_qs.filter(
                  Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
@@ -506,6 +519,7 @@ def export_finances(request):
     else: # view_type == 'despesas'
          # Despesas export logic remains the same, just re-apply filters
         base_qs = Despesas.objects.filter(group=user_group)
+        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
         if user.user_type == ANESTESISTA_USER: base_qs = Despesas.objects.none() # Or specific logic
         elif user.user_type not in [GESTOR_USER, ADMIN_USER]: base_qs = Despesas.objects.none()
 
@@ -540,6 +554,8 @@ def export_finances(request):
 def delete_finance_item(request):
     if not request.user.validado:
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+    if request.user.user_type != GESTOR_USER:
+        return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     user = request.user
     user_group = user.group
@@ -555,6 +571,7 @@ def delete_finance_item(request):
                  id=finance_id
             )
              # Permission Check (similar to get/update)
+            #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
             if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                  is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
                  is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome, user.anesthesiologist.name) > 0.8
@@ -618,6 +635,8 @@ def map_api_status(api_status_str):
 def conciliar_financas(request):
     if not request.user.validado:
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
+    if request.user.user_type != GESTOR_USER:
+        return JsonResponse({'error': 'Acesso negado'}, status=403)
 
     user = request.user
     group = user.group
@@ -674,6 +693,7 @@ def conciliar_financas(request):
         ).select_related('financas', 'hospital') # Select related financas too
 
         # Add anesthesiologist filter if applicable
+        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
         if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
             all_procs_qs = all_procs_qs.filter(anestesistas_responsaveis=user.anesthesiologist)
         
@@ -686,6 +706,7 @@ def conciliar_financas(request):
             tipo_cobranca='cooperativa'
         ).select_related('procedimento') # Keep this select_related
 
+        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
         if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
              financas_qs = financas_qs.filter(
                  Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
@@ -711,6 +732,7 @@ def conciliar_financas(request):
             guia_cooperado = guia.get('cooperado') # For anesthesiologist check
 
             # Anesthesiologist Filter: Skip guide if user is Anesthesiologist and cooperado doesn't match
+            #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
             if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                 if not guia_cooperado or not similar(guia_cooperado, user.anesthesiologist.name) > 0.8:
                     print(f"  Skipping CPSA {cpsa_id}: Cooperado mismatch for user {user.username}.")
