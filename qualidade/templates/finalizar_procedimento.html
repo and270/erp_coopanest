@@ -406,9 +406,37 @@
 <script src="https://unpkg.com/imask"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize money mask for valor_faturado
+    const form = document.getElementById('finalizarProcedimentoForm');
     const valorFaturadoInput = document.getElementById('id_valor_faturado');
+    let moneyMask; // Instance of IMask
+
+    // Declare elements that might be used by various functions
+    let escalaInputs, evaFields, flaccFields, bpsFields, painadBFields;
+    const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]'); // First and only declaration
+
+    if (form) {
+        escalaInputs = form.querySelectorAll('input[name="escala"]');
+    }
+    // These are looked up by ID, so they are fine here
+    evaFields = document.getElementById('eva-fields');
+    flaccFields = document.getElementById('flacc-fields');
+    bpsFields = document.getElementById('bps-fields');
+    painadBFields = document.getElementById('painad-b-fields');
+
     if (valorFaturadoInput) {
+        // --- Debug: Initial value from Django ---
+        console.log('DEBUG: Initial valorFaturadoInput.value (from Django):', valorFaturadoInput.value);
+
+        let initialValueForIMask = valorFaturadoInput.value;
+        if (initialValueForIMask && initialValueForIMask.includes('.') && !initialValueForIMask.includes(',')) {
+            const parts = initialValueForIMask.split('.');
+            if (parts.length === 2 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
+                initialValueForIMask = initialValueForIMask.replace('.', ',');
+                console.log('DEBUG: initialValueForIMask (after replacing . with ,):', initialValueForIMask);
+            }
+        }
+        valorFaturadoInput.value = initialValueForIMask;
+
         const maskOptions = {
             mask: 'R$ num',
             blocks: {
@@ -419,83 +447,100 @@ document.addEventListener('DOMContentLoaded', function() {
                     padFractionalZeros: true,
                     radix: ',',
                     mapToRadix: ['.'],
-                    max: 999999.99
+                    max: 999999.99,
+                    autofix: true
                 }
             }
         };
-        
-        const mask = IMask(valorFaturadoInput, maskOptions);
+        moneyMask = IMask(valorFaturadoInput, maskOptions);
 
-        // Add form submit handler to convert the masked value back to a number
-        const form = document.getElementById('finalizarProcedimentoForm');
-        form.addEventListener('submit', function(e) {
-            // Get the raw value without mask
-            const rawValue = mask.unmaskedValue;
-            // Update the input value with the raw number
-            valorFaturadoInput.value = rawValue;
-        });
+        console.log('DEBUG: IMask after init - moneyMask.value:', moneyMask.value);
+        console.log('DEBUG: IMask after init - moneyMask.unmaskedValue:', moneyMask.unmaskedValue);
+        console.log('DEBUG: IMask after init - moneyMask.typedValue:', moneyMask.typedValue);
+
+        if (form) { // Ensure form exists before adding submit listener
+            form.addEventListener('submit', function(e) {
+                if (valorFaturadoInput && moneyMask) {
+                    console.log('DEBUG: Submit handler - moneyMask.value:', moneyMask.value);
+                    console.log('DEBUG: Submit handler - moneyMask.unmaskedValue:', moneyMask.unmaskedValue);
+                    console.log('DEBUG: Submit handler - moneyMask.typedValue:', moneyMask.typedValue);
+
+                    let finalSubmitValue = '';
+                    if (typeof moneyMask.typedValue === 'number' && !isNaN(moneyMask.typedValue)) {
+                        finalSubmitValue = moneyMask.typedValue.toFixed(maskOptions.blocks.num.scale);
+                        console.log('DEBUG: Submit - Using typedValue, formatted to:', finalSubmitValue);
+                    } else {
+                        const unmasked = moneyMask.unmaskedValue;
+                        if (unmasked && unmasked.trim() !== '') {
+                            finalSubmitValue = unmasked.replace(',', '.');
+                            console.log('DEBUG: Submit - Using unmaskedValue, converted to:', finalSubmitValue);
+                        } else {
+                            console.log('DEBUG: Submit - Input is considered empty.');
+                        }
+                    }
+                    valorFaturadoInput.value = finalSubmitValue;
+                    console.log('DEBUG: Final valorFaturadoInput.value for submission:', valorFaturadoInput.value);
+                }
+            });
+        }
     }
-
-    const form = document.getElementById('finalizarProcedimentoForm');
-
-    const escalaInputs = form.querySelectorAll('input[name="escala"]');
-    const evaFields = document.getElementById('eva-fields');
-    const flaccFields = document.getElementById('flacc-fields');
-    const bpsFields = document.getElementById('bps-fields');
-    const painadBFields = document.getElementById('painad-b-fields');
-    const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]');
-    const valorFaturadoContainer = document.getElementById('valor_faturado_container');
-    const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
 
     function handleTipoCobrancaChange() {
         const selectedValue = document.querySelector('input[name="tipo_cobranca"]:checked')?.value;
-        console.log('Tipo cobrança changed:', selectedValue);
-        
+        // console.log('Tipo cobrança changed:', selectedValue); // Keep for debugging
+
+        const valorFaturadoContainer = document.getElementById('valor_faturado_container');
+        const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
+        const tipoPagamentoDiretoInput = document.getElementById('id_tipo_pagamento_direto');
+
         if (selectedValue === 'cooperativa') {
-            valorFaturadoContainer.style.display = 'none';
-            tipoPagamentoDiretoContainer.style.display = 'none';
-            document.getElementById('id_valor_faturado').value = '';
-            document.getElementById('id_tipo_pagamento_direto').value = '';
+            if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+            // valorFaturadoInput is hidden, its value is managed by IMask & submit handler
         } else {
-            valorFaturadoContainer.style.display = 'block';
-            tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
+            if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'block';
+            if (tipoPagamentoDiretoContainer) {
+                tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
+            }
             if (selectedValue !== 'particular') {
-                document.getElementById('id_tipo_pagamento_direto').value = '';
+                if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
             }
         }
     }
 
-    // Add change event listener to all tipo_cobranca radio buttons
-    tipoCobrancaInputs.forEach(input => {
-        input.addEventListener('change', handleTipoCobrancaChange);
-    });
-    
-    // Run on page load to handle initial state
-    handleTipoCobrancaChange();
+    if (tipoCobrancaInputs && tipoCobrancaInputs.length > 0) {
+        tipoCobrancaInputs.forEach(input => {
+            input.addEventListener('change', handleTipoCobrancaChange);
+        });
+        handleTipoCobrancaChange(); // Initial call to set visibility based on current state
+    }
 
     function showRelevantFields() {
+        if (!form || !escalaInputs || !evaFields || !flaccFields || !bpsFields || !painadBFields) return; // Guard
+
         const selectedScale = form.querySelector('input[name="escala"]:checked');
         const selectedValue = selectedScale ? selectedScale.value : null;
 
-        // If no scale is selected, hide all specific fields
         evaFields.style.display = selectedValue === 'EVA' ? 'block' : 'none';
         flaccFields.style.display = selectedValue === 'FLACC' ? 'block' : 'none';
         bpsFields.style.display = selectedValue === 'BPS' ? 'block' : 'none';
         painadBFields.style.display = selectedValue === 'PAINAD-B' ? 'block' : 'none';
 
-        // Reset total when changing scales
-        if (!selectedValue) {
-            document.getElementById('total-score').textContent = '0';
-            document.getElementById('pain-classification').textContent = '';
+        const totalScoreEl = document.getElementById('total-score');
+        const painClassificationEl = document.getElementById('pain-classification');
+        if (!selectedValue && totalScoreEl && painClassificationEl) {
+            totalScoreEl.textContent = '0';
+            painClassificationEl.textContent = '';
         }
     }
 
-    escalaInputs.forEach(input => {
-        input.addEventListener('change', showRelevantFields);
-    });
-
-    // Show relevant fields on page load
-    showRelevantFields();
+    if (escalaInputs && escalaInputs.length > 0) {
+        escalaInputs.forEach(input => {
+            input.addEventListener('change', showRelevantFields);
+        });
+        showRelevantFields(); // Initial call
+    }
 
     // Pain classification logic
     function getPainClassification(scale, total) {
