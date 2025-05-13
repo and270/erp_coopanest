@@ -8,10 +8,11 @@ from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Group
 import uuid
 
 class ProcedimentoDetalhes(models.Model):
-    name = models.CharField(max_length=500, unique=True)
+    name = models.CharField(max_length=500)
+    codigo_procedimento = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="ID do Procedimento")
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.codigo_procedimento})"
     
 class Convenios(models.Model):
     name = models.CharField(max_length=255, unique=True)
