@@ -49,6 +49,9 @@ class CoopahubAuthBackend(ModelBackend):
                 # Authentication successful, get connection key
                 connection_key = data['conexao']
                 
+                # Extract user name from login response
+                user_full_name = data.get('nome', '')
+                
                 # Check if user exists in our database
                 try:
                     user = User.objects.get(username=username)
@@ -69,6 +72,8 @@ class CoopahubAuthBackend(ModelBackend):
                 user.origem = origem
                 user.last_token_check = timezone.now()
                 user.validado = True  # User is validated through the API
+                # Store the user's full name from login response
+                user.full_name = user_full_name
                 user.save()
                 
                 # Fetch additional user information 
@@ -141,16 +146,37 @@ class CoopahubAuthBackend(ModelBackend):
                         # Check if an Anesthesiologist record already exists for this user
                         if not Anesthesiologist.objects.filter(user=user).exists():
                             print(f"--- Creating Anesthesiologist record for user {user.username} ---")
-                            #TODO VERIFICAR EXEMPLO DE RESPOSTA API E VER SE HÁ ALGUM DESSES CAMPOS / AJUSTAR
-                            api_name = first_item.get('nome_completo', '') or first_item.get('nome', '')
-
-                            Anesthesiologist.objects.create(
-                                user=user,
-                                group=user.group, # Assign to user's active group
-                                name=api_name if api_name else user.username, # Use API name, fallback ONLY to username
-
-                            )
-                            print(f"--- Anesthesiologist record created for {user.username} ---")
+                            
+                            # Try to get the name from different sources, prioritizing the login response name
+                            api_name = getattr(user, 'full_name', '') or first_item.get('nome_completo', '') or first_item.get('nome', '')
+                            print(f"API name: {api_name}")
+                            
+                            # Use API name or fallback to username
+                            anesthesiologist_name = api_name if api_name else user.username
+                            
+                            # Check if an Anesthesiologist with the same name already exists in this group
+                            existing_anesthesiologist = None
+                            if anesthesiologist_name and user.group:
+                                existing_anesthesiologist = Anesthesiologist.objects.filter(
+                                    name=anesthesiologist_name, 
+                                    group=user.group,
+                                    user__isnull=True  # Only consider unlinked records
+                                ).first()
+                            
+                            if existing_anesthesiologist:
+                                # Link existing anesthesiologist to this user
+                                print(f"--- Found existing Anesthesiologist with name '{anesthesiologist_name}' - linking to user {user.username} ---")
+                                existing_anesthesiologist.user = user
+                                existing_anesthesiologist.save()
+                            else:
+                                # Create new anesthesiologist record
+                                print(f"--- No existing Anesthesiologist found with name '{anesthesiologist_name}' - creating new record ---")
+                                Anesthesiologist.objects.create(
+                                    user=user,
+                                    group=user.group,
+                                    name=anesthesiologist_name
+                                )
+                            print(f"--- Anesthesiologist record processed for {user.username} ---")
                         else:
                             print(f"--- Anesthesiologist record already exists for user {user.username} ---")
                     # --- End Automatic Creation ---
