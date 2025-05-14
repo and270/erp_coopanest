@@ -17,7 +17,7 @@ from difflib import SequenceMatcher
 from django.conf import settings
 from django.db import transaction
 
-DIAS_PARA_CONCILIACAO = 90
+DATA_INICIO_PUXAR_GUIAS_API = datetime(2025, 4, 1).date()
 
 @login_required
 def financas_view(request):
@@ -656,11 +656,13 @@ def conciliar_financas(request):
     print(f"--- Starting Conciliation for Group: {group.name}, User: {user.username} ---")
 
     try:
+
+
         # --- Fetch API Data ---
         api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
         api_payload = {
             "conexao": user.connection_key,
-            "periodo_de": (timezone.now() - timedelta(days=DIAS_PARA_CONCILIACAO)).strftime('%Y-%m-%d'),
+            "periodo_de": DATA_INICIO_PUXAR_GUIAS_API.strftime('%Y-%m-%d'),
             "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
             "status": "Listagem Geral"
         }
@@ -686,7 +688,7 @@ def conciliar_financas(request):
         # --- Fetch Existing DB Data ---
         # Fetch ALL relevant procedures for the group (within a reasonable timeframe?)
         # Let's keep fetching recent procedures for matching, but not filter by financas__isnull
-        cutoff_date = timezone.now().date() - timedelta(days=DIAS_PARA_CONCILIACAO + 30) # Look back a bit further for procedures
+        cutoff_date =  DATA_INICIO_PUXAR_GUIAS_API
         all_procs_qs = Procedimento.objects.filter(
             group=group,
             data_horario__date__gte=cutoff_date
