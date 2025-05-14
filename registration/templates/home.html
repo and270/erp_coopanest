@@ -7,21 +7,49 @@
     <h1 class="main-title">Transforme a eficiência e qualidade do seu grupo de anestesia com a Coopahub.</h1>
     <h2 class="sub-title">ENTERPRISE RESOURCE PLANNING PARA PROFISSIONAIS DA SAÚDE</h2>
     <div class="cards">
-        <a href="{% url 'cadastro' %}" class="card cadastro">
-            <span>Cadastro</span>
-        </a>
-        <a href="{% url 'agenda' %}" class="card agenda">
-            <span>Agenda</span>
-        </a>
-        <a href="{% url 'financas' %}" class="card financas">
-            <span>Finanças</span>
-        </a>
-        <a href="{% url 'qualidade' %}" class="card qualidade">
-            <span>Qualidade</span>
-        </a>
-        <a href="{% url 'dashboard' %}" class="card dashboard">
-            <span>Dashboard</span>
-        </a>
+            {% if user.is_authenticated %}
+                {% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
+                    <a href="{% url 'cadastro' %}" class="card cadastro">
+                        <span>Cadastro</span>
+                    </a>
+                {% elif user.user_type == ANESTESISTA_USER %}
+                    <a href="{% url 'members' %}" class="card cadastro">
+                        <span>Meu cadastro</span>
+                    </a>
+                {% endif %}
+                <a href="{% url 'agenda' %}" class="card agenda">
+                    <span>Agenda</span>
+                </a>
+                {% if user.user_type == GESTOR_USER %}
+                    <a href="{% url 'financas' %}" class="card financas">
+                        <span>Finanças</span>
+                    </a>
+                {% endif %}
+                <a href="{% url 'qualidade' %}" class="card qualidade">
+                    <span>Qualidade</span>
+                </a>
+                {% if user.user_type == GESTOR_USER %}
+                    <a href="{% url 'dashboard' %}" class="card dashboard">
+                        <span>Dashboard</span>
+                    </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'login_register' %}" class="card cadastro">
+                    <span>Cadastro</span>
+                </a>
+                <a href="{% url 'login_register' %}" class="card agenda">
+                    <span>Agenda</span>
+                </a>
+                <a href="{% url 'login_register' %}" class="card financas">
+                    <span>Finanças</span>
+                </a>
+                <a href="{% url 'login_register' %}" class="card qualidade">
+                    <span>Qualidade</span>
+                </a>
+                <a href="{% url 'login_register' %}" class="card dashboard">
+                    <span>Dashboard</span>
+                </a>
+            {% endif %}
     </div>
 </div>
 {% endblock %}
