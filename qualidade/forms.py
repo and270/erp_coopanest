@@ -262,6 +262,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
             # Set the default status to em_processamento
             financas.status_pagamento = 'em_processamento'
+            financas.group = qualidade_instance.procedimento.group
             financas.save()
             
             # Update Procedimento status
