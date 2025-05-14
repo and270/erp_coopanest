@@ -34,6 +34,7 @@ class CustomUser(AbstractUser):
     external_id = models.CharField(max_length=50, null=True, blank=True, verbose_name='ID Externo')
     is_admin = models.BooleanField(default=False, verbose_name='Administrador Global')
     last_token_check = models.DateTimeField(null=True, blank=True, verbose_name='Última Verificação de Token')
+    full_name = models.CharField(max_length=255, null=True, blank=True, verbose_name='Nome Completo')
 
     user_type = models.CharField(
         max_length=40,
@@ -43,9 +44,6 @@ class CustomUser(AbstractUser):
     )
     validado = models.BooleanField(default=False, verbose_name='Validado') 
     
-    # New field to track if the gestor anesthesiologist check is complete
-    gestor_anesthesiologist_check_complete = models.BooleanField(default=False, verbose_name='Verificação de Anestesista para Gestor Completa')
-
     # Add to CustomUser class
     terms_agreed = models.BooleanField(default=False, verbose_name='Concordou com os Termos de Serviço')
     privacy_policy_agreed = models.BooleanField(default=False, verbose_name='Concordou com a Política de Privacidade')
@@ -73,7 +71,7 @@ class CustomUser(AbstractUser):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.email
+        return self.full_name if self.full_name else self.email
     
 class Membership(models.Model):
     user = models.ForeignKey('registration.CustomUser', on_delete=models.CASCADE, related_name='memberships')

@@ -448,7 +448,11 @@ class ProcedureAutocomplete(Select2QuerySetView):
         qs = ProcedimentoDetalhes.objects.all()
 
         if self.q:
-            qs = qs.filter(name__icontains=self.q)
+            # Search in both name and codigo_procedimento
+            qs = qs.filter(
+                Q(name__icontains=self.q) | 
+                Q(codigo_procedimento__icontains=self.q)
+            )
 
         return qs.order_by('name')
 

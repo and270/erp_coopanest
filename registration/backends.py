@@ -40,10 +40,17 @@ class CoopahubAuthBackend(ModelBackend):
         try:
             response = requests.post(login_url, json=login_data)
             data = response.json()
+
+            print("----- API Login Response (_try_authenticate) -----")
+            print(json.dumps(data, indent=2))
+            print("-------------------------------------------------------------")
             
             if 'conexao' in data:
                 # Authentication successful, get connection key
                 connection_key = data['conexao']
+                
+                # Extract user name from login response
+                user_full_name = data.get('nome', '')
                 
                 # Check if user exists in our database
                 try:
@@ -65,6 +72,8 @@ class CoopahubAuthBackend(ModelBackend):
                 user.origem = origem
                 user.last_token_check = timezone.now()
                 user.validado = True  # User is validated through the API
+                # Store the user's full name from login response
+                user.full_name = user_full_name
                 user.save()
                 
                 # Fetch additional user information 
@@ -87,7 +96,8 @@ class CoopahubAuthBackend(ModelBackend):
             empresas_data = {
                 "conexao": user.connection_key,
                 "origem": user.origem,
-                "metodo": "empresas"
+                "metodo": "empresas",
+                "coopahub": "S"  # Added parameter
             }
             
             empresas_response = requests.post(empresas_url, json=empresas_data)
@@ -95,9 +105,9 @@ class CoopahubAuthBackend(ModelBackend):
                 user_data_list = empresas_response.json() # Rename to indicate it's a list
                 
                 # Optional: Print the raw API response if still needed for context
-                # print("----- API User Data Response (_fetch_and_update_user_data) -----")
-                # print(json.dumps(user_data_list, indent=2))
-                # print("-------------------------------------------------------------")
+                print("----- API User Data Response (_fetch_and_update_user_data) -----")
+                print(json.dumps(user_data_list, indent=2))
+                print("-------------------------------------------------------------")
                 
                 # Check if the response is a non-empty list
                 if isinstance(user_data_list, list) and user_data_list:
@@ -136,16 +146,37 @@ class CoopahubAuthBackend(ModelBackend):
                         # Check if an Anesthesiologist record already exists for this user
                         if not Anesthesiologist.objects.filter(user=user).exists():
                             print(f"--- Creating Anesthesiologist record for user {user.username} ---")
-                            #TODO VERIFICAR EXEMPLO DE RESPOSTA API E VER SE HÁ ALGUM DESSES CAMPOS / AJUSTAR
-                            api_name = first_item.get('nome_completo', '') or first_item.get('nome', '')
-
-                            Anesthesiologist.objects.create(
-                                user=user,
-                                group=user.group, # Assign to user's active group
-                                name=api_name if api_name else user.username, # Use API name, fallback ONLY to username
-
-                            )
-                            print(f"--- Anesthesiologist record created for {user.username} ---")
+                            
+                            # Try to get the name from different sources, prioritizing the login response name
+                            api_name = getattr(user, 'full_name', '') or first_item.get('nome_completo', '') or first_item.get('nome', '')
+                            print(f"API name: {api_name}")
+                            
+                            # Use API name or fallback to username
+                            anesthesiologist_name = api_name if api_name else user.username
+                            
+                            # Check if an Anesthesiologist with the same name already exists in this group
+                            existing_anesthesiologist = None
+                            if anesthesiologist_name and user.group:
+                                existing_anesthesiologist = Anesthesiologist.objects.filter(
+                                    name=anesthesiologist_name, 
+                                    group=user.group,
+                                    user__isnull=True  # Only consider unlinked records
+                                ).first()
+                            
+                            if existing_anesthesiologist:
+                                # Link existing anesthesiologist to this user
+                                print(f"--- Found existing Anesthesiologist with name '{anesthesiologist_name}' - linking to user {user.username} ---")
+                                existing_anesthesiologist.user = user
+                                existing_anesthesiologist.save()
+                            else:
+                                # Create new anesthesiologist record
+                                print(f"--- No existing Anesthesiologist found with name '{anesthesiologist_name}' - creating new record ---")
+                                Anesthesiologist.objects.create(
+                                    user=user,
+                                    group=user.group,
+                                    name=anesthesiologist_name
+                                )
+                            print(f"--- Anesthesiologist record processed for {user.username} ---")
                         else:
                             print(f"--- Anesthesiologist record already exists for user {user.username} ---")
                     # --- End Automatic Creation ---

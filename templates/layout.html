@@ -43,16 +43,30 @@
                     {% endif %}
                 {% endif %}
                 <li><a href="{% url 'agenda' %}" {% if request.resolver_match.url_name == 'agenda' %}class="active"{% endif %}>Agenda</a></li>
+                {% if user.user_type == GESTOR_USER %}
                 <li><a href="{% url 'financas' %}" {% if request.resolver_match.url_name == 'financas' %}class="active"{% endif %}>Finanças</a></li>
+                {% endif %}
                 <li><a href="{% url 'qualidade' %}" {% if request.resolver_match.url_name == 'qualidade' %}class="active"{% endif %}>Qualidade</a></li>
+                {% if user.user_type == GESTOR_USER %}
                 <li><a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
+                {% endif %}
                 {% if user.is_authenticated %}
                     <li>
                         <a href="{% url 'profile' %}" class="user-account-link">
                             <span class="user-account-icon" aria-label="Minha conta">
-                                {{ user.email|first|upper }}
+                                {% if user.full_name %}
+                                    {{ user.full_name|first|upper }}
+                                {% else %}
+                                    {{ user.email|first|upper }}
+                                {% endif %}
                             </span>
-                            <span class="user-account-text">Minha Conta</span>
+                            <span class="user-account-text">
+                                {% if user.full_name %}
+                                    {{ user.full_name }}
+                                {% else %}
+                                    Minha Conta
+                                {% endif %}
+                            </span>
                         </a>
                     </li>
                 {% else %}
