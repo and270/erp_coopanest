@@ -1,4 +1,5 @@
 from django import forms
+from datetime import timedelta # Import timedelta
 
 from constants import STATUS_FINISHED
 from .models import BPS_DESCRIPTIONS, EVA_DESCRIPTIONS, FLACC_DESCRIPTIONS, PAINAD_B_DESCRIPTIONS, AvaliacaoRPA, ProcedimentoQualidade
@@ -315,25 +316,36 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         if cleaned_data.get('reacao_alergica_grave') and not cleaned_data.get('reacao_alergica_grave_desc'):
             self.add_error('reacao_alergica_grave_desc', 'Este campo é obrigatório quando há reação alérgica grave.')
 
-        if not escala:
-            self.add_error('escala', 'É necessário selecionar uma escala')
-
-        if escala:
-            if escala == 'EVA':
-                if cleaned_data.get('eva_score') is None:
-                    self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
-            elif escala == 'FLACC':
-                for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
-                    if cleaned_data.get(field) is None:
-                        self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
-            elif escala == 'BPS':
-                for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
-                    if cleaned_data.get(field) is None:
-                        self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
-            elif escala == 'PAINAD-B':
-                for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
-                    if cleaned_data.get(field) is None:
-                        self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+        if dor_pos_operatoria is True:  # Only validate pain scale if dor_pos_operatoria is True
+            if not escala:
+                self.add_error('escala', 'É necessário selecionar uma escala')
+            else:
+                if escala == 'EVA':
+                    if cleaned_data.get('eva_score') is None:
+                        self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
+                elif escala == 'FLACC':
+                    for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
+                        if cleaned_data.get(field) is None:
+                            self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
+                elif escala == 'BPS':
+                    for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
+                        if cleaned_data.get(field) is None:
+                            self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
+                elif escala == 'PAINAD-B':
+                    for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
+                        if cleaned_data.get(field) is None:
+                            self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+        elif dor_pos_operatoria is False:
+            # Clear any errors for pain scale fields if dor_pos_operatoria is False
+            pain_scale_fields = [
+                'escala', 'eva_score', 'face', 'pernas', 'atividade', 'choro', 'consolabilidade',
+                'expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador',
+                'respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal',
+                'consolabilidade_painad'
+            ]
+            for field in pain_scale_fields:
+                if field in self.errors:
+                    del self.errors[field]
 
         if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_faturado'):
             self.add_error('valor_faturado', 'Este campo é obrigatório para este tipo de cobrança.')
@@ -343,5 +355,15 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
 
         if tipo_cobranca == 'particular' and not tipo_pagamento_direto:
             self.add_error('tipo_pagamento_direto', 'Este campo é obrigatório para pagamento direto.')
+
+        # Validations for effective start and end times
+        if inicio and fim: # Ensure both fields are present and valid so far
+            # Ensure end time is strictly after start time
+            if fim <= inicio:
+                self.add_error('data_horario_fim_efetivo', "O horário de término deve ser posterior ao horário de início.")
+            
+            # Ensure duration does not exceed 24 hours
+            if (fim - inicio) > timedelta(hours=24):
+                self.add_error('data_horario_fim_efetivo', "A duração entre o início e o fim é maior que 24 horas. Tem certeza que estes horários estão corretos?")
 
         return cleaned_data
