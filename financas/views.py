@@ -2,10 +2,10 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from agenda.models import Procedimento, Convenios
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, CIRURGIA_PROCEDIMENTO, STATUS_PENDING
-from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic
+from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic, Surgeon
 from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
 from django.db.models import Q, Sum, F, Value
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods
@@ -630,6 +630,127 @@ def map_api_status(api_status_str):
     }
     return status_mapping.get(api_status, 'em_processamento') # Default if unknown status
 
+def parse_api_time(time_str):
+    """Safely parses time string from API format HH:MM."""
+    if not time_str:
+        return None
+    try:
+        # Handle various time formats (HH:MM, H:MM, etc.)
+        time_str = str(time_str).strip()
+        if ':' in time_str:
+            parts = time_str.split(':')
+            hour = int(parts[0])
+            minute = int(parts[1]) if len(parts) > 1 else 0
+            return time(hour=hour, minute=minute)
+        else:
+            # Handle cases where only hour is provided
+            hour = int(time_str)
+            return time(hour=hour, minute=0)
+    except (ValueError, TypeError):
+        print(f"Warning: Could not parse time '{time_str}'")
+        return None
+
+def find_or_create_surgeon(group, surgeon_name, surgeon_crm=None):
+    """Find existing surgeon or create new one based on name and CRM."""
+    if not surgeon_name or not surgeon_name.strip():
+        return None
+    
+    surgeon_name = surgeon_name.strip()
+    surgeon_crm = surgeon_crm.strip() if surgeon_crm else None
+    
+    # Try to find existing surgeon by CRM first (if provided)
+    if surgeon_crm:
+        try:
+            surgeon = Surgeon.objects.get(group=group, crm=surgeon_crm)
+            print(f"        Found existing Surgeon by CRM: {surgeon.name} (CRM: {surgeon.crm})")
+            return surgeon
+        except Surgeon.DoesNotExist:
+            pass
+    
+    # Try to find by name similarity
+    surgeons_in_group = Surgeon.objects.filter(group=group)
+    best_match_surgeon = None
+    highest_sim = 0.7
+    
+    for surgeon in surgeons_in_group:
+        if surgeon.name:
+            sim_score = similar(surgeon_name, surgeon.name)
+            if sim_score > highest_sim:
+                highest_sim = sim_score
+                best_match_surgeon = surgeon
+    
+    if best_match_surgeon:
+        print(f"        Found matching Surgeon by name: {best_match_surgeon.name} (Sim: {highest_sim:.2f})")
+        return best_match_surgeon
+    
+    # Create new surgeon
+    new_surgeon = Surgeon.objects.create(
+        name=surgeon_name,
+        crm=surgeon_crm,
+        group=group
+    )
+    print(f"        Created new Surgeon: {new_surgeon.name} (CRM: {new_surgeon.crm or 'N/A'})")
+    return new_surgeon
+
+def update_procedimento_with_api_data(procedimento, guia, group):
+    """Update existing Procedimento with API data if it's more complete."""
+    updated = False
+    
+    # Update times if API has them and they're more precise
+    guia_hora_inicial = parse_api_time(guia.get('hora_inicial'))
+    guia_hora_final = parse_api_time(guia.get('hora_final'))
+    guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+    
+    if guia_date and guia_hora_inicial:
+        new_data_horario = datetime.combine(guia_date, guia_hora_inicial)
+        new_data_horario = timezone.make_aware(new_data_horario) if timezone.is_naive(new_data_horario) else new_data_horario
+        
+        # Only update if current time is just a date (midnight) or if API time is different
+        current_time = procedimento.data_horario.time() if procedimento.data_horario else None
+        if not current_time or current_time == time(0, 0) or current_time != guia_hora_inicial:
+            procedimento.data_horario = new_data_horario
+            updated = True
+            print(f"        Updated Procedimento data_horario to {new_data_horario}")
+    
+    if guia_date and guia_hora_final:
+        new_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
+        new_data_horario_fim = timezone.make_aware(new_data_horario_fim) if timezone.is_naive(new_data_horario_fim) else new_data_horario_fim
+        
+        # Only update if end time is not set or is different
+        if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
+            procedimento.data_horario_fim = new_data_horario_fim
+            updated = True
+            print(f"        Updated Procedimento data_horario_fim to {new_data_horario_fim}")
+    
+    # Update surgeon if API has surgeon info and procedure doesn't have one or it's different
+    api_surgeon_name = guia.get('cirurgiao')
+    api_surgeon_crm = guia.get('crm_cirurgiao')
+    
+    if api_surgeon_name and api_surgeon_name.strip():
+        api_surgeon = find_or_create_surgeon(group, api_surgeon_name, api_surgeon_crm)
+        if api_surgeon and (not procedimento.cirurgiao or procedimento.cirurgiao.id != api_surgeon.id):
+            procedimento.cirurgiao = api_surgeon
+            updated = True
+            print(f"        Updated Procedimento surgeon to {api_surgeon.name}")
+    
+    # Update hospital if API has hospital info and it's different
+    api_hospital_name = guia.get('hospital')
+    if api_hospital_name and api_hospital_name.strip():
+        hospital_obj, created = HospitalClinic.objects.get_or_create(
+            name__iexact=api_hospital_name.strip(),
+            defaults={'name': api_hospital_name.strip(), 'group': group}
+        )
+        if not procedimento.hospital or procedimento.hospital.id != hospital_obj.id:
+            procedimento.hospital = hospital_obj
+            updated = True
+            print(f"        Updated Procedimento hospital to {hospital_obj.name}")
+    
+    if updated:
+        procedimento.save()
+        print(f"        Saved updates to Procedimento ID {procedimento.id}")
+    
+    return updated
+
 @login_required
 @transaction.atomic # Use transaction to ensure atomicity
 def conciliar_financas(request):
@@ -801,10 +922,14 @@ def conciliar_financas(request):
                                    print(f"    WARNING: Found match Proc ID {best_match_proc.id}, but it's already linked to a DIFFERENT Finanças ID {existing_financa_for_proc.id}. Skipping link for CPSA {cpsa_id}.")
                               else: 
                                    print(f"    >>> Linking existing Finanças ID {financa.id} to Proc ID {best_match_proc.id} (Sim: {highest_similarity:.2f})")
+                                   
+                                   # Update the procedure with API data before linking
+                                   update_procedimento_with_api_data(best_match_proc, guia, group)
+                                   
                                    financa.procedimento = best_match_proc
                                    processed_proc_ids.add(best_match_proc.id)
                                    newly_linked_count += 1 
-                                   if financa not in financas_to_update: financas_to_update.append(financa) 
+                                   if financa not in financas_to_update: financas_to_update.append(financa)
                           else:
                                print(f"    No suitable UNLINKED procedure found to link Finanças ID {financa.id} to.")
                      else:
@@ -851,10 +976,15 @@ def conciliar_financas(request):
                             print(f"    WARNING: Matched Proc ID {best_match_proc.id} is linked to Finanças ({existing_linked_financa.id}) with different CPSA ({existing_linked_financa.cpsa}). Guide CPSA is {cpsa_id}. Skipping update for this guide.")
                         else:
                             print(f"    >>> Updating existing LINKED Finanças ID {existing_linked_financa.id} with data from Guide CPSA {cpsa_id}.")
+                            
+                            # Update the linked procedure with API data
+                            if best_match_proc:
+                                update_procedimento_with_api_data(best_match_proc, guia, group)
+                            
                             updated = False
                             if not existing_linked_financa.cpsa:
                                 existing_linked_financa.cpsa = cpsa_id; updated = True
-                            
+
                             # ... (Rest of the update checks as before, applied to existing_linked_financa) ...
                             guia_valor_faturado = guia.get('valor_faturado')
                             guia_valor_recebido = guia.get('valor_recebido')
@@ -888,6 +1018,10 @@ def conciliar_financas(request):
                                 updated_records_count += 1
                     else: # Procedure exists but has no finance linked yet
                         print(f"    Found matching Proc ID {best_match_proc.id} (unlinked).")
+                        
+                        # Update the matched procedure with API data
+                        update_procedimento_with_api_data(best_match_proc, guia, group)
+                        
                         print(f"    >>> Creating NEW Finanças record for Guide CPSA {cpsa_id} and linking to Proc ID {best_match_proc.id}.")
                         new_financa = ProcedimentoFinancas(
                             procedimento=best_match_proc,
@@ -910,14 +1044,29 @@ def conciliar_financas(request):
                 else: # No matching procedure found OR guide data was insufficient to search
                     if guia_paciente and guia_date:
                         print(f"    No matching Procedure found for Guide CPSA {cpsa_id} after search.")
-                    
+                        
                         print(f"    Attempting to create NEW Procedimento and link to new Finanças for Guide CPSA {cpsa_id}.")
                         newly_created_procedimento = None
                         try:
+                            # Parse API time information
+                            guia_hora_inicial = parse_api_time(guia.get('hora_inicial'))
+                            guia_hora_final = parse_api_time(guia.get('hora_final'))
+                            
+                            # Create datetime with time if available, otherwise use midnight
                             proc_data_horario = None
-                            if guia_date: # guia_date is already parsed
-                                proc_data_horario = datetime.combine(guia_date, datetime.min.time())
+                            proc_data_horario_fim = None
+                            
+                            if guia_date:
+                                start_time = guia_hora_inicial if guia_hora_inicial else time(8, 0)  # Default to 8:00 AM
+                                proc_data_horario = datetime.combine(guia_date, start_time)
                                 proc_data_horario = timezone.make_aware(proc_data_horario) if timezone.is_naive(proc_data_horario) else proc_data_horario
+                                
+                                if guia_hora_final:
+                                    proc_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
+                                    proc_data_horario_fim = timezone.make_aware(proc_data_horario_fim) if timezone.is_naive(proc_data_horario_fim) else proc_data_horario_fim
+                                else:
+                                    # Default end time to start time + 2 hours
+                                    proc_data_horario_fim = proc_data_horario + timedelta(hours=2)
                             
                             hospital_obj = None
                             api_hospital_name = guia.get('hospital')
@@ -935,6 +1084,13 @@ def conciliar_financas(request):
                                     defaults={'name': api_convenio_name.strip()}
                                 )
 
+                            # Find or create surgeon
+                            surgeon_obj = None
+                            api_surgeon_name = guia.get('cirurgiao')
+                            api_surgeon_crm = guia.get('crm_cirurgiao')
+                            if api_surgeon_name and api_surgeon_name.strip():
+                                surgeon_obj = find_or_create_surgeon(group, api_surgeon_name, api_surgeon_crm)
+
                             paciente_nome_para_proc = guia_paciente
                             if not paciente_nome_para_proc:
                                 paciente_nome_para_proc = f"Paciente Guia {cpsa_id}"
@@ -944,13 +1100,16 @@ def conciliar_financas(request):
                                 group=group,
                                 nome_paciente=paciente_nome_para_proc,
                                 data_horario=proc_data_horario,
+                                data_horario_fim=proc_data_horario_fim,
                                 hospital=hospital_obj,
                                 convenio=convenio_obj,
+                                cirurgiao=surgeon_obj,
                                 procedimento_type=CIRURGIA_PROCEDIMENTO,
                                 status=STATUS_PENDING
                             )
                             print(f"      Created new Procedimento ID {newly_created_procedimento.id} for patient '{newly_created_procedimento.nome_paciente}' from guide CPSA {cpsa_id}")
 
+                            # Handle anesthesiologist
                             if guia_cooperado:
                                 anest_user_qs = Anesthesiologist.objects.filter(group=group)
                                 best_match_anest = None
