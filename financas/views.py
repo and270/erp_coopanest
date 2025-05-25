@@ -763,76 +763,137 @@ def find_comprehensive_procedure_match(all_procs_list, guia, group):
     guia_hospital = guia.get('hospital')
     guia_cirurgiao = guia.get('cirurgiao')
     
+    print(f"    🔍 COMPREHENSIVE MATCH DEBUG for CPSA {guia.get('idcpsa')}:")
+    print(f"      API Guide Data:")
+    print(f"        - Patient: '{guia_paciente}'")
+    print(f"        - Date: {guia_date}")
+    print(f"        - Time: {guia_hora_inicial}")
+    print(f"        - Cooperado: '{guia_cooperado}'")
+    print(f"        - Hospital: '{guia_hospital}'")
+    print(f"        - Surgeon: '{guia_cirurgiao}'")
+    
     if not guia_paciente or not guia_date:
+        print(f"      ❌ SKIPPING: Missing essential data (patient: {bool(guia_paciente)}, date: {bool(guia_date)})")
         return None
     
     best_match_proc = None
     highest_score = 0.0
     
-    for proc in all_procs_list:
+    print(f"      📋 Checking {len(all_procs_list)} existing procedures...")
+    
+    for i, proc in enumerate(all_procs_list):
+        print(f"      [{i+1}/{len(all_procs_list)}] Checking Proc ID {proc.id}:")
+        print(f"        - Patient: '{proc.nome_paciente}'")
+        print(f"        - DateTime: {proc.data_horario}")
+        print(f"        - Hospital: {proc.hospital.name if proc.hospital else 'None'}")
+        
         score = 0.0
         total_factors = 0
         
         # 1. Patient name similarity (most important) - CASE INSENSITIVE
         if proc.nome_paciente:
             name_sim = similar(guia_paciente.lower(), proc.nome_paciente.lower())
+            print(f"        - Name similarity: {name_sim:.3f}")
             if name_sim < 0.8:  # Skip if name similarity is too low
+                print(f"        ❌ SKIPPED: Name similarity too low ({name_sim:.3f} < 0.8)")
                 continue
             score += name_sim * 0.4  # 40% weight
             total_factors += 0.4
+            print(f"        ✅ Name match: {name_sim:.3f} * 0.4 = {name_sim * 0.4:.3f}")
         
         # 2. Date match (essential)
         proc_date = proc.data_horario.date() if proc.data_horario else None
         if proc_date:
             date_diff = abs((guia_date - proc_date).days)
+            print(f"        - Date comparison: API {guia_date} vs Proc {proc_date} (diff: {date_diff} days)")
             if date_diff > 1:  # Skip if date difference is more than 1 day
+                print(f"        ❌ SKIPPED: Date difference too large ({date_diff} > 1 day)")
                 continue
             date_score = 1.0 if date_diff == 0 else 0.7  # Exact date match gets full score
             score += date_score * 0.25  # 25% weight
             total_factors += 0.25
+            print(f"        ✅ Date match: {date_score} * 0.25 = {date_score * 0.25:.3f}")
         
         # 3. Time match (if available)
         if guia_hora_inicial and proc.data_horario:
-            proc_time = proc.data_horario.time()
-            if proc_time != time(0, 0):  # Only compare if procedure has a real time (not midnight default)
+            # Convert procedure's UTC time to local time for comparison
+            proc_local_time = timezone.localtime(proc.data_horario).time()
+            print(f"        - Time comparison: API {guia_hora_inicial} vs Proc {proc_local_time} (converted from UTC)")
+            if proc_local_time != time(0, 0):  # Only compare if procedure has a real time (not midnight default)
                 time_diff_minutes = abs(
                     (guia_hora_inicial.hour * 60 + guia_hora_inicial.minute) - 
-                    (proc_time.hour * 60 + proc_time.minute)
+                    (proc_local_time.hour * 60 + proc_local_time.minute)
                 )
+                print(f"        - Time difference: {time_diff_minutes} minutes")
                 if time_diff_minutes <= 30:  # Within 30 minutes
                     time_score = 1.0 if time_diff_minutes == 0 else 0.8
                     score += time_score * 0.15  # 15% weight
                     total_factors += 0.15
-                elif time_diff_minutes > 120:  # More than 2 hours difference
+                    print(f"        ✅ Time match: {time_score} * 0.15 = {time_score * 0.15:.3f}")
+                elif time_diff_minutes > 240:  # More than 4 hours difference
+                    print(f"        ❌ SKIPPED: Time difference too large ({time_diff_minutes} > 240 minutes)")
                     continue  # Skip this procedure
+                else:
+                    print(f"        ⚠️ Time difference acceptable but not scored ({time_diff_minutes} minutes)")
+            else:
+                print(f"        ⚠️ Procedure has default midnight time, skipping time comparison")
+        else:
+            print(f"        ⚠️ No time comparison possible (API time: {guia_hora_inicial}, Proc time: {proc.data_horario})")
         
         # 4. Hospital match (if available) - CASE INSENSITIVE
         if guia_hospital and proc.hospital:
             hospital_sim = similar(guia_hospital.lower(), proc.hospital.name.lower())
+            print(f"        - Hospital similarity: {hospital_sim:.3f}")
             if hospital_sim > 0.7:
                 score += hospital_sim * 0.1  # 10% weight
                 total_factors += 0.1
+                print(f"        ✅ Hospital match: {hospital_sim:.3f} * 0.1 = {hospital_sim * 0.1:.3f}")
+            else:
+                print(f"        ⚠️ Hospital similarity too low ({hospital_sim:.3f} <= 0.7)")
+        else:
+            print(f"        ⚠️ No hospital comparison possible")
         
         # 5. Anesthesiologist match (if available) - CASE INSENSITIVE
         if guia_cooperado and proc.anestesistas_responsaveis.exists():
             anest_match = False
+            anest_names = [anest.name for anest in proc.anestesistas_responsaveis.all() if anest.name]
+            print(f"        - Anesthesiologist comparison: API '{guia_cooperado}' vs Proc {anest_names}")
             for anest in proc.anestesistas_responsaveis.all():
                 if anest.name and similar(guia_cooperado.lower(), anest.name.lower()) > 0.8:
                     anest_match = True
+                    print(f"        ✅ Anesthesiologist match found: {anest.name}")
                     break
             if anest_match:
                 score += 0.1  # 10% weight
                 total_factors += 0.1
+                print(f"        ✅ Anesthesiologist match: 0.1")
+            else:
+                print(f"        ⚠️ No anesthesiologist match found")
+        else:
+            print(f"        ⚠️ No anesthesiologist comparison possible")
         
         # Calculate final score as percentage
         if total_factors > 0:
             final_score = score / total_factors
+            print(f"        📊 Final score: {score:.3f} / {total_factors:.3f} = {final_score:.3f}")
             
             # Require minimum combined score for match
             if final_score > 0.85 and final_score > highest_score:
                 highest_score = final_score
                 best_match_proc = proc
-                print(f"      Comprehensive match found: Proc ID {proc.id}, Score: {final_score:.3f}")
+                print(f"        🎯 NEW BEST MATCH! Score: {final_score:.3f}")
+            elif final_score > 0.85:
+                print(f"        ✅ Good match but not better than current best ({highest_score:.3f})")
+            else:
+                print(f"        ❌ Score too low ({final_score:.3f} <= 0.85)")
+        else:
+            print(f"        ❌ No factors to compare (total_factors = 0)")
+        print(f"        ---")
+    
+    if best_match_proc:
+        print(f"      🎯 FINAL RESULT: Found match - Proc ID {best_match_proc.id} with score {highest_score:.3f}")
+    else:
+        print(f"      ❌ FINAL RESULT: No comprehensive match found")
     
     return best_match_proc
 
@@ -1056,13 +1117,13 @@ def conciliar_financas(request):
                         api_cooperado_nome=guia.get('cooperado')
                     )
                     financas_to_create.append(new_financa)
-                    newly_created_count += 1
+                    newly_created_count += 1 # For ProcedimentoFinancas
                     newly_linked_count += 1
                 else: # No matching procedure found OR guide data was insufficient to search
                     if guia_paciente and guia_date:
                         print(f"    No matching Procedure found for Guide CPSA {cpsa_id} after search.")
                         
-                        print(f"    Attempting to create NEW Procedimento and link to new Finanças for Guide CPSA {cpsa_id}.")
+                        print(f"    🚨 CREATING NEW PROCEDIMENTO for Guide CPSA {cpsa_id} (Patient: {guia_paciente}, Date: {guia_date}).")
                         newly_created_procedimento = None
                         try:
                             # Parse API time information
