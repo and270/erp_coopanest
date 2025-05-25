@@ -713,14 +713,20 @@ def update_procedimento_with_api_data(procedimento, guia, group):
             print(f"        Updated Procedimento data_horario to {new_data_horario}")
     
     if guia_date and guia_hora_final:
-        new_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
-        new_data_horario_fim = timezone.make_aware(new_data_horario_fim) if timezone.is_naive(new_data_horario_fim) else new_data_horario_fim
-        
-        # Only update if end time is not set or is different
-        if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
-            procedimento.data_horario_fim = new_data_horario_fim
-            updated = True
-            print(f"        Updated Procedimento data_horario_fim to {new_data_horario_fim}")
+        # Only update end time if it's different from start time (avoid overwriting with incomplete API data)
+        if guia_hora_final != guia_hora_inicial:
+            new_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
+            new_data_horario_fim = timezone.make_aware(new_data_horario_fim) if timezone.is_naive(new_data_horario_fim) else new_data_horario_fim
+            
+            # Only update if end time is not set or is different
+            if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
+                procedimento.data_horario_fim = new_data_horario_fim
+                updated = True
+                print(f"        Updated Procedimento data_horario_fim to {new_data_horario_fim}")
+        else:
+            print(f"        Skipping data_horario_fim update: API start and end times are the same ({guia_hora_inicial})")
+    elif guia_date and guia_hora_inicial and not guia_hora_final:
+        print(f"        API has no hora_final, keeping existing data_horario_fim")
     
     # Update surgeon if API has surgeon info and procedure doesn't have one or it's different
     api_surgeon_name = guia.get('cirurgiao')
