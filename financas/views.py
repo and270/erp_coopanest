@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from agenda.models import Procedimento, Convenios
+from agenda.models import Procedimento, Convenios, ProcedimentoDetalhes
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, CIRURGIA_PROCEDIMENTO, STATUS_PENDING
 from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic, Surgeon
 from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
@@ -705,7 +705,6 @@ def update_procedimento_with_api_data(procedimento, guia, group):
         new_data_horario = datetime.combine(guia_date, guia_hora_inicial)
         new_data_horario = timezone.make_aware(new_data_horario) if timezone.is_naive(new_data_horario) else new_data_horario
         
-        # Only update if current time is just a date (midnight) or if API time is different
         current_time = procedimento.data_horario.time() if procedimento.data_horario else None
         if not current_time or current_time == time(0, 0) or current_time != guia_hora_inicial:
             procedimento.data_horario = new_data_horario
@@ -713,12 +712,10 @@ def update_procedimento_with_api_data(procedimento, guia, group):
             print(f"        Updated Procedimento data_horario to {new_data_horario}")
     
     if guia_date and guia_hora_final:
-        # Only update end time if it's different from start time (avoid overwriting with incomplete API data)
         if guia_hora_final != guia_hora_inicial:
             new_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
             new_data_horario_fim = timezone.make_aware(new_data_horario_fim) if timezone.is_naive(new_data_horario_fim) else new_data_horario_fim
             
-            # Only update if end time is not set or is different
             if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
                 procedimento.data_horario_fim = new_data_horario_fim
                 updated = True
@@ -728,7 +725,6 @@ def update_procedimento_with_api_data(procedimento, guia, group):
     elif guia_date and guia_hora_inicial and not guia_hora_final:
         print(f"        API has no hora_final, keeping existing data_horario_fim")
     
-    # Update surgeon if API has surgeon info and procedure doesn't have one or it's different
     api_surgeon_name = guia.get('cirurgiao')
     api_surgeon_crm = guia.get('crm_cirurgiao')
     
@@ -739,7 +735,6 @@ def update_procedimento_with_api_data(procedimento, guia, group):
             updated = True
             print(f"        Updated Procedimento surgeon to {api_surgeon.name}")
     
-    # Update hospital if API has hospital info and it's different
     api_hospital_name = guia.get('hospital')
     if api_hospital_name and api_hospital_name.strip():
         hospital_obj, created = HospitalClinic.objects.get_or_create(
@@ -750,6 +745,34 @@ def update_procedimento_with_api_data(procedimento, guia, group):
             procedimento.hospital = hospital_obj
             updated = True
             print(f"        Updated Procedimento hospital to {hospital_obj.name}")
+
+    # Update ProcedimentoDetalhes (procedimento_principal)
+    api_procedimentos = guia.get('procedimentos')
+    if api_procedimentos and isinstance(api_procedimentos, list) and len(api_procedimentos) > 0:
+        principal_proc_data = api_procedimentos[0] # Taking the first procedure as the principal
+        api_codigo = principal_proc_data.get('codigo')
+        api_descricao = principal_proc_data.get('descricao')
+
+        if api_codigo and api_descricao:
+            proc_detalhe, created = ProcedimentoDetalhes.objects.get_or_create(
+                codigo_procedimento=api_codigo,
+                defaults={'name': api_descricao}
+            )
+            if created:
+                print(f"        Created new ProcedimentoDetalhes: {proc_detalhe.name} ({proc_detalhe.codigo_procedimento})")
+            else:
+                # Optionally update name if it differs, though codigo_procedimento is unique
+                if proc_detalhe.name != api_descricao:
+                    proc_detalhe.name = api_descricao
+                    # proc_detalhe.save() # Decide if overriding name is desired
+                    print(f"        Found existing ProcedimentoDetalhes, name updated if different: {proc_detalhe.name}")
+                else:
+                    print(f"        Found existing ProcedimentoDetalhes: {proc_detalhe.name}")
+
+            if procedimento.procedimento_principal != proc_detalhe:
+                procedimento.procedimento_principal = proc_detalhe
+                updated = True
+                print(f"        Updated Procedimento.procedimento_principal to {proc_detalhe.name}")
     
     if updated:
         procedimento.save()
@@ -933,11 +956,13 @@ def conciliar_financas(request):
 
         # --- Fetch API Data ---
         api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
+        #api_url = "https://aplicacao.coopanestrio.dev.br/portal/guias/ajaxGuias.php"  #TODO : endpoint dev para testes na parteb de procedimnto principal
         api_payload = {
             "conexao": user.connection_key,
             "periodo_de": DATA_INICIO_PUXAR_GUIAS_API.strftime('%Y-%m-%d'),
             "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
-            "status": "Listagem Geral"
+            "status": "Listagem Geral",
+            "coopahub": "S"
         }
         response = requests.post(api_url, json=api_payload)
         response.raise_for_status()
@@ -1180,6 +1205,28 @@ def conciliar_financas(request):
                                 paciente_nome_para_proc = f"Paciente Guia {cpsa_id}"
                                 print(f"      Guia CPSA {cpsa_id} has no paciente name, using fallback: {paciente_nome_para_proc}")
 
+                            # Handle ProcedimentoDetalhes (procedimento_principal)
+                            procedimento_principal_obj = None
+                            api_procedimentos = guia.get('procedimentos')
+                            if api_procedimentos and isinstance(api_procedimentos, list) and len(api_procedimentos) > 0:
+                                principal_proc_data = api_procedimentos[0]
+                                api_codigo = principal_proc_data.get('codigo')
+                                api_descricao = principal_proc_data.get('descricao')
+                                if api_codigo and api_descricao:
+                                    procedimento_principal_obj, created = ProcedimentoDetalhes.objects.get_or_create(
+                                        codigo_procedimento=api_codigo,
+                                        defaults={'name': api_descricao}
+                                    )
+                                    if created:
+                                        print(f"        Created new ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name} ({procedimento_principal_obj.codigo_procedimento})")
+                                    else:
+                                        if procedimento_principal_obj.name != api_descricao:
+                                            procedimento_principal_obj.name = api_descricao
+                                            # procedimento_principal_obj.save() # Decide if overriding name is desired
+                                            print(f"        Found existing ProcedimentoDetalhes for new Proc, name updated if different: {procedimento_principal_obj.name}")
+                                        else:
+                                            print(f"        Found existing ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name}")
+
                             newly_created_procedimento = Procedimento.objects.create(
                                 group=group,
                                 nome_paciente=paciente_nome_para_proc,
@@ -1188,6 +1235,7 @@ def conciliar_financas(request):
                                 hospital=hospital_obj,
                                 convenio=convenio_obj,
                                 cirurgiao=surgeon_obj,
+                                procedimento_principal=procedimento_principal_obj, # Assign here
                                 procedimento_type=CIRURGIA_PROCEDIMENTO,
                                 status=STATUS_PENDING
                             )
