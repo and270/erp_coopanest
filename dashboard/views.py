@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.db.models import Avg, Count, Case, When, F, Q, Sum, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, TruncMonth, TruncDate, Cast
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+# import numpy as np # No longer needed here, it's in utils
+from .utils import calculate_iqr_filtered_average_seconds # Import the function
 from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
 from agenda.models import ProcedimentoDetalhes, Procedimento
@@ -58,6 +60,9 @@ def dashboard_view(request):
     if procedimento:
         queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
         rpa_queryset = rpa_queryset.filter(procedimento__procedimento_principal__name=procedimento)
+
+    # Helper function is now in dashboard/utils.py
+    # def calculate_iqr_filtered_average_seconds(data_seconds_list): ...
 
     # -----------------------------------------------------------------------
     # 1) Handle custom date range if 'period=custom' + both start/end are given
@@ -132,23 +137,51 @@ def dashboard_view(request):
                     else queryset.filter(evento_adverso_evitavel=True).count())
     evento_total = rpa_total_count if evento_view == 'rpa' else total_count
 
-    # Atraso médio
-    avg_delay = queryset.aggregate(
-        avg_delay=Avg(F('data_horario_inicio_efetivo') - F('procedimento__data_horario'))
-    )['avg_delay']
+    # Atraso médio (avg_delay) calculation with IQR
+    delays_seconds = []
+    if total_count > 0:
+        for pq_item in queryset: # Renamed to avoid conflict with outer 'procedimento' variable
+            if pq_item.data_horario_inicio_efetivo and pq_item.procedimento and pq_item.procedimento.data_horario:
+                delay = pq_item.data_horario_inicio_efetivo - pq_item.procedimento.data_horario
+                if delay.total_seconds() >= 0: # Consider only non-negative delays
+                    delays_seconds.append(delay.total_seconds())
+    
+    avg_delay_seconds_filtered = calculate_iqr_filtered_average_seconds(delays_seconds)
+    atraso_medio_formatted = None
+    if avg_delay_seconds_filtered is not None:
+        avg_delay_td = timedelta(seconds=avg_delay_seconds_filtered)
+        days = avg_delay_td.days
+        hours, remainder = divmod(avg_delay_td.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        if days > 0:
+            atraso_medio_formatted = f"{days} dias, {int(hours):02d}:{int(minutes):02d}"
+        else:
+            atraso_medio_formatted = f"{int(hours):02d}:{int(minutes):02d}"
+
+    # Duração média (avg_duration) calculation with IQR
+    durations_seconds = []
+    if total_count > 0:
+        for pq_item in queryset: # Renamed
+            if pq_item.data_horario_fim_efetivo and pq_item.data_horario_inicio_efetivo:
+                duration = pq_item.data_horario_fim_efetivo - pq_item.data_horario_inicio_efetivo
+                if duration.total_seconds() >= 0: # Consider only non-negative durations
+                     durations_seconds.append(duration.total_seconds())
+
+    avg_duration_seconds_filtered = calculate_iqr_filtered_average_seconds(durations_seconds)
+    duracao_media_formatted = None
+    if avg_duration_seconds_filtered is not None:
+        avg_duration_td = timedelta(seconds=avg_duration_seconds_filtered)
+        # Ensure total_seconds() is used for durations that might exceed 24 hours before divmod
+        total_seconds_for_duration = avg_duration_td.total_seconds()
+        hours, remainder = divmod(total_seconds_for_duration, 3600)
+        minutes, _ = divmod(remainder, 60)
+        duracao_media_formatted = f"{int(hours):02d}:{int(minutes):02d}"
 
     # Monta o dicionário de métricas
     metrics = {
         'eventos_adversos': queryset.filter(eventos_adversos_graves=True).count() / total_count * 100 if total_count > 0 else None,
-        'atraso_medio': (
-            f"{avg_delay.days} dias, {int((avg_delay.seconds // 3600)):02d}:{int((avg_delay.seconds % 3600) // 60):02d}"
-            if avg_delay and avg_delay.days > 0 
-            else f"{int(avg_delay.seconds // 3600):02d}:{int((avg_delay.seconds % 3600) // 60):02d}" 
-            if avg_delay else None
-        ),
-        'duracao_media': str(queryset.aggregate(
-            avg_duration=Avg(F('data_horario_fim_efetivo') - F('data_horario_inicio_efetivo'))
-        )['avg_duration']).split('.')[0].rsplit(':', 1)[0] if total_count > 0 else None,
+        'atraso_medio': atraso_medio_formatted,
+        'duracao_media': duracao_media_formatted,
         'reacoes_alergicas': queryset.filter(reacao_alergica_grave=True).count() / total_count * 100 if total_count > 0 else None,
         'encaminhamentos_uti': queryset.filter(encaminhamento_uti=True).count() / total_count * 100 if total_count > 0 else None,
         'ponv': (ponv_count / ponv_total * 100) if ponv_total > 0 else None,

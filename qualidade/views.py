@@ -19,6 +19,7 @@ from .models import AvaliacaoRPA, ProcedimentoQualidade
 from django.views.decorators.http import require_POST
 from .forms import ProcedimentoFinalizacaoForm
 from django.contrib import messages
+import pytz
 
 @login_required
 def search_qualidade(request):
@@ -312,6 +313,32 @@ def finalizar_procedimento_view(request, procedimento_id):
             'valor_faturado': financas.valor_faturado,
             'tipo_pagamento_direto': financas.tipo_pagamento_direto,
         }
+        
+        # Pre-fill effective start and end times from the Procedimento object
+        # if they are not already set in the ProcedimentoQualidade instance.
+        # The form's __init__ method handles formatting for existing instance values.
+        # Here, we are providing initial values from the parent 'procedimento' object.
+
+        local_tz = pytz.timezone('America/Sao_Paulo')
+
+        # Only pre-fill if the 'qualidade' instance doesn't already have these times.
+        # If 'qualidade.data_horario_inicio_efetivo' is None, try to use 'procedimento.data_horario'.
+        if not qualidade.data_horario_inicio_efetivo and procedimento.data_horario:
+            # Ensure 'procedimento.data_horario' is timezone-aware (assuming UTC if naive)
+            dt_inicio = procedimento.data_horario
+            if timezone.is_naive(dt_inicio):
+                dt_inicio = timezone.make_aware(dt_inicio, pytz.utc)
+            local_inicio = dt_inicio.astimezone(local_tz)
+            initial_data['data_horario_inicio_efetivo'] = local_inicio.strftime('%Y-%m-%dT%H:%M')
+
+        # Similarly for the end time.
+        if not qualidade.data_horario_fim_efetivo and procedimento.data_horario_fim:
+            dt_fim = procedimento.data_horario_fim
+            if timezone.is_naive(dt_fim):
+                dt_fim = timezone.make_aware(dt_fim, pytz.utc)
+            local_fim = dt_fim.astimezone(local_tz)
+            initial_data['data_horario_fim_efetivo'] = local_fim.strftime('%Y-%m-%dT%H:%M')
+            
         form = ProcedimentoFinalizacaoForm(instance=qualidade, initial=initial_data)
     
     context = {

@@ -28,10 +28,10 @@ class ProcedimentoFinancas(models.Model):
         ('cancelada', 'Cancelada'),
     ]
 
-    procedimento = models.OneToOneField(
+    procedimento = models.ForeignKey(
         Procedimento, 
         on_delete=models.SET_NULL, 
-        related_name='financas',
+        related_name='financas_records',
         null=True,
         blank=True
     )
@@ -130,10 +130,17 @@ class ProcedimentoFinancas(models.Model):
     class Meta:
         verbose_name = "Financeiro do Procedimento"
         verbose_name_plural = "Financeiro dos Procedimentos"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['procedimento', 'cpsa'], 
+                name='unique_cpsa_per_procedure',
+                condition=models.Q(procedimento__isnull=False, cpsa__isnull=False)
+            )
+        ]
 
     def __str__(self):
         if self.procedimento:
-            return f"Finanças (Vinculado) - {self.procedimento}"
+            return f"Finanças (Vinculado) - {self.procedimento} - CPSA: {self.cpsa or 'N/A'}"
         elif self.api_paciente_nome:
             return f"Finanças (Não Vinculado) - {self.api_paciente_nome} ({self.cpsa or 'Sem CPSA'})"
         else:

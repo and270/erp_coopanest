@@ -411,8 +411,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let moneyMask; // Instance of IMask
 
     // Declare elements that might be used by various functions
-    let escalaInputs, evaFields, flaccFields, bpsFields, painadBFields;
+    let escalaInputs, evaFields, flaccFields, bpsFields, painadBFields, painScaleSectionElements;
     const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]'); // First and only declaration
+    const dorPosOperatoriaInputs = document.querySelectorAll('input[name="dor_pos_operatoria"]');
 
     if (form) {
         escalaInputs = form.querySelectorAll('input[name="escala"]');
@@ -422,10 +423,24 @@ document.addEventListener('DOMContentLoaded', function() {
     flaccFields = document.getElementById('flacc-fields');
     bpsFields = document.getElementById('bps-fields');
     painadBFields = document.getElementById('painad-b-fields');
+    
+    // Define pain scale section elements
+    // This includes the 'escala' radio group, all specific scale field divs, and the total-container.
+    // The 'escala' field is within a div with class 'radio-group scale-container'.
+    // Other scale fields are in divs with IDs like 'eva-fields'.
+    // The total score is in a div with class 'total-container'.
+    painScaleSectionElements = [
+        document.querySelector('input[name="escala"]').closest('.radio-group.scale-container'), // Escala radio buttons
+        evaFields,
+        flaccFields,
+        bpsFields,
+        painadBFields,
+        document.getElementById('total-score').closest('.total-container') // Total score display
+    ].filter(el => el != null); // Filter out any null elements if some IDs don't exist
 
     if (valorFaturadoInput) {
         // --- Debug: Initial value from Django ---
-        console.log('DEBUG: Initial valorFaturadoInput.value (from Django):', valorFaturadoInput.value);
+        // console.log('DEBUG: Initial valorFaturadoInput.value (from Django):', valorFaturadoInput.value);
 
         let initialValueForIMask = valorFaturadoInput.value;
         if (initialValueForIMask && initialValueForIMask.includes('.') && !initialValueForIMask.includes(',')) {
@@ -516,16 +531,42 @@ document.addEventListener('DOMContentLoaded', function() {
         handleTipoCobrancaChange(); // Initial call to set visibility based on current state
     }
 
-    function showRelevantFields() {
+    function togglePainScaleSectionVisibility() {
+        const dorPosOperatoriaSelectedValue = document.querySelector('input[name="dor_pos_operatoria"]:checked')?.value;
+        const showPainScale = dorPosOperatoriaSelectedValue === 'True';
+
+        painScaleSectionElements.forEach(el => {
+            if (el) el.style.display = showPainScale ? 'block' : 'none';
+        });
+
+        // If pain scale is hidden, also hide specific scale fields
+        if (!showPainScale) {
+            if (evaFields) evaFields.style.display = 'none';
+            if (flaccFields) flaccFields.style.display = 'none';
+            if (bpsFields) bpsFields.style.display = 'none';
+            if (painadBFields) painadBFields.style.display = 'none';
+        } else {
+            // If pain scale is shown, trigger the logic to show the relevant specific scale
+            showRelevantScaleFields();
+        }
+    }
+
+    function showRelevantScaleFields() {
         if (!form || !escalaInputs || !evaFields || !flaccFields || !bpsFields || !painadBFields) return; // Guard
+
+        const dorPosOperatoriaSelectedValue = document.querySelector('input[name="dor_pos_operatoria"]:checked')?.value;
+        // Only proceed if "Sim" is selected for post-operative pain
+        if (dorPosOperatoriaSelectedValue !== 'True') {
+            return;
+        }
 
         const selectedScale = form.querySelector('input[name="escala"]:checked');
         const selectedValue = selectedScale ? selectedScale.value : null;
 
-        evaFields.style.display = selectedValue === 'EVA' ? 'block' : 'none';
-        flaccFields.style.display = selectedValue === 'FLACC' ? 'block' : 'none';
-        bpsFields.style.display = selectedValue === 'BPS' ? 'block' : 'none';
-        painadBFields.style.display = selectedValue === 'PAINAD-B' ? 'block' : 'none';
+        if (evaFields) evaFields.style.display = selectedValue === 'EVA' ? 'block' : 'none';
+        if (flaccFields) flaccFields.style.display = selectedValue === 'FLACC' ? 'block' : 'none';
+        if (bpsFields) bpsFields.style.display = selectedValue === 'BPS' ? 'block' : 'none';
+        if (painadBFields) painadBFields.style.display = selectedValue === 'PAINAD-B' ? 'block' : 'none';
 
         const totalScoreEl = document.getElementById('total-score');
         const painClassificationEl = document.getElementById('pain-classification');
@@ -534,12 +575,21 @@ document.addEventListener('DOMContentLoaded', function() {
             painClassificationEl.textContent = '';
         }
     }
+    
+    if (dorPosOperatoriaInputs && dorPosOperatoriaInputs.length > 0) {
+        dorPosOperatoriaInputs.forEach(input => {
+            input.addEventListener('change', togglePainScaleSectionVisibility);
+        });
+        // Initial call to set visibility on page load
+        togglePainScaleSectionVisibility();
+    }
 
     if (escalaInputs && escalaInputs.length > 0) {
         escalaInputs.forEach(input => {
-            input.addEventListener('change', showRelevantFields);
+            input.addEventListener('change', showRelevantScaleFields);
         });
-        showRelevantFields(); // Initial call
+        // Initial call, but it will be controlled by togglePainScaleSectionVisibility's call to showRelevantScaleFields
+        // showRelevantScaleFields(); 
     }
 
     // Pain classification logic
@@ -661,6 +711,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initialReacaoAlergica) {
         handleReacaoAlergicaGraveChange({ target: initialReacaoAlergica });
     }
+
+    // Ensure initial state of pain scale section is correct based on dor_pos_operatoria
+    togglePainScaleSectionVisibility();
+    // Then, ensure the correct specific scale fields are shown if the section itself is visible.
+    showRelevantScaleFields(); 
 });
 </script>
 {% endblock %}
