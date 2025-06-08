@@ -61,7 +61,7 @@ def financas_view(request):
     if view_type == 'receitas':
         base_qs = ProcedimentoFinancas.objects.filter(
             Q(procedimento__group=user_group) | Q(group=user_group) # Linked via procedure OR directly via group FK
-        ).select_related('procedimento', 'procedimento__hospital') # Select related for efficiency
+        ).select_related('procedimento', 'procedimento__hospital').prefetch_related('procedimento__anestesistas_responsaveis')
 
         # Filter for user type
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
@@ -457,7 +457,7 @@ def export_finances(request):
     if view_type == 'receitas':
         base_qs = ProcedimentoFinancas.objects.filter(
             Q(procedimento__group=user_group) | Q(group=user_group)
-        ).select_related('procedimento', 'procedimento__hospital', 'procedimento__convenio') # Add convenio
+        ).select_related('procedimento', 'procedimento__hospital', 'procedimento__convenio').prefetch_related('procedimento__anestesistas_responsaveis')
         
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
         if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
@@ -494,8 +494,11 @@ def export_finances(request):
         data = []
         for item in queryset:
             # Get anesthesiologist name safely
-            anest_resp = item.procedimento.anestesistas_responsaveis.first() if item.procedimento else None
-            anest_name = anest_resp.name if anest_resp else item.api_cooperado_nome or ''
+            anest_name_list = []
+            if item.procedimento and item.procedimento.anestesistas_responsaveis.exists():
+                anest_name_list = [anest.name for anest in item.procedimento.anestesistas_responsaveis.all() if anest.name]
+            
+            anest_name = ", ".join(anest_name_list) if anest_name_list else (item.api_cooperado_nome or '')
 
             data.append({
                 'Paciente': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome or '',
