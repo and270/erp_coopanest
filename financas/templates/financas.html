@@ -100,7 +100,7 @@
                         <th>Valor a Recuperar</th>
                         <th>Fonte Pagadora</th>
                         <th>CPSA</th>
-                        <th>Anestesista / Cooperado</th> {# Renamed Header #}
+                        <th>Anestesistas</th>
                         <th>Situação</th>
                         <th>Data Pagamento</th>
                         <th>Ações</th> {# Renamed Header #}
@@ -144,7 +144,9 @@
                             <td>{{ item.get_cpsa_display|default:"--" }}</td>
                             <td>
                                 {% if item.procedimento and item.procedimento.anestesistas_responsaveis.exists %}
-                                    {{ item.procedimento.anestesistas_responsaveis.first.name }}
+                                    {% for anest in item.procedimento.anestesistas_responsaveis.all %}
+                                        {{ anest.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
                                 {% else %}
                                     {{ item.api_cooperado_nome|default:"--" }} {# Show API cooperado if unlinked #}
                                 {% endif %}
@@ -247,7 +249,7 @@
                  {# Show CPF only if linked during EDIT #}
                 <div class="form-group" id="cpf-group">
                     <label for="cpf">CPF do Paciente</label>
-                    <input type="text" id="cpf" name="cpf" readonly> {# Always readonly in this modal? #}
+                    <input type="text" id="cpf" name="cpf">
                 </div>
                  <div class="form-group">
                     <label for="valor_faturado">Valor Faturado</label>
