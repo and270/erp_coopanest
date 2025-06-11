@@ -254,10 +254,19 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         if commit:
             qualidade_instance.save()
             
-            # Create or update ProcedimentoFinancas
-            financas, _ = ProcedimentoFinancas.objects.get_or_create(
-                procedimento=qualidade_instance.procedimento
-            )
+            # Handle multiple ProcedimentoFinancas records that might exist from conciliation
+            try:
+                financas = ProcedimentoFinancas.objects.get(procedimento=qualidade_instance.procedimento)
+            except ProcedimentoFinancas.DoesNotExist:
+                # Create a new financial record if none exists
+                financas = ProcedimentoFinancas.objects.create(
+                    procedimento=qualidade_instance.procedimento,
+                    group=qualidade_instance.procedimento.group
+                )
+            except ProcedimentoFinancas.MultipleObjectsReturned:
+                # If multiple financial records exist, get the first one
+                # This can happen when conciliation creates multiple CPSAs for the same procedure
+                financas = ProcedimentoFinancas.objects.filter(procedimento=qualidade_instance.procedimento).first()
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
             financas.valor_faturado = self.cleaned_data['valor_faturado']
             financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']

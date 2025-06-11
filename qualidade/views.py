@@ -299,7 +299,20 @@ def finalizar_procedimento_view(request, procedimento_id):
     
     # Get or create related models
     qualidade, _ = ProcedimentoQualidade.objects.get_or_create(procedimento=procedimento)
-    financas, _ = ProcedimentoFinancas.objects.get_or_create(procedimento=procedimento)
+    
+    # Handle multiple ProcedimentoFinancas records that might exist from conciliation
+    try:
+        financas = ProcedimentoFinancas.objects.get(procedimento=procedimento)
+    except ProcedimentoFinancas.DoesNotExist:
+        # Create a new financial record if none exists
+        financas = ProcedimentoFinancas.objects.create(
+            procedimento=procedimento,
+            group=procedimento.group
+        )
+    except ProcedimentoFinancas.MultipleObjectsReturned:
+        # If multiple financial records exist, get the first one
+        # This can happen when conciliation creates multiple CPSAs for the same procedure
+        financas = ProcedimentoFinancas.objects.filter(procedimento=procedimento).first()
     
     if request.method == 'POST':
         form = ProcedimentoFinalizacaoForm(request.POST, instance=qualidade)
