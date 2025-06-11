@@ -942,7 +942,6 @@ def find_comprehensive_procedure_match(all_procs_list, guia, group):
     return best_match_proc
 
 @login_required
-@transaction.atomic # Use transaction to ensure atomicity
 def conciliar_financas(request):
     if not request.user.validado:
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
@@ -967,8 +966,6 @@ def conciliar_financas(request):
     print(f"--- Starting Conciliation for Group: {group.name}, User: {user.username} ---")
 
     try:
-
-
         # --- Fetch API Data ---
         api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
         #api_url = "https://aplicacao.coopanestrio.dev.br/portal/guias/ajaxGuias.php"  #TODO : endpoint dev para testes na parteb de procedimnto principal
@@ -1036,6 +1033,9 @@ def conciliar_financas(request):
         financas_to_create = []
         processed_cpsa_ids = set()
         
+        # Define batch size for processing
+        BATCH_SIZE = 50
+        
         # print("--- Processing API Guides ---")
         for cpsa_id, guia in guias_dict.items():
             # print(f"Processing Guide CPSA {cpsa_id} (Paciente: {guia.get('paciente')})")
@@ -1086,7 +1086,6 @@ def conciliar_financas(request):
                 if updated:
                     # print(f"    Marked Finanças ID {financa.id} for update.")
                     if financa not in financas_to_update: financas_to_update.append(financa)
-                    updated_records_count += 1
                 
                 if not financa.procedimento:
                      # print(f"    Existing Finanças ID {financa.id} is unlinked. Trying to find matching procedure...")
@@ -1174,124 +1173,13 @@ def conciliar_financas(request):
                     if guia_paciente and guia_date:
                         # print(f"    No matching Procedure found for Guide CPSA {cpsa_id} after search.")
                         
-                        # print(f"    🚨 CREATING NEW PROCEDIMENTO for Guide CPSA {cpsa_id} (Patient: {guia_paciente}, Date: {guia_date}).")
-                        newly_created_procedimento = None
+                        # Create new procedures in individual transactions
                         try:
-                            # Parse API time information
-                            guia_hora_inicial = parse_api_time(guia.get('hora_inicial'))
-                            guia_hora_final = parse_api_time(guia.get('hora_final'))
-                            
-                            # Create datetime with time if available, otherwise use midnight
-                            proc_data_horario = None
-                            proc_data_horario_fim = None
-                            
-                            if guia_date:
-                                start_time = guia_hora_inicial if guia_hora_inicial else time(8, 0)  # Default to 8:00 AM
-                                proc_data_horario = datetime.combine(guia_date, start_time)
-                                proc_data_horario = timezone.make_aware(proc_data_horario) if timezone.is_naive(proc_data_horario) else proc_data_horario
-                                
-                                if guia_hora_final:
-                                    proc_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
-                                    proc_data_horario_fim = timezone.make_aware(proc_data_horario_fim) if timezone.is_naive(proc_data_horario_fim) else proc_data_horario_fim
-                                else:
-                                    # Default end time to start time + 2 hours
-                                    proc_data_horario_fim = proc_data_horario + timedelta(hours=2)
-                            
-                            hospital_obj = None
-                            api_hospital_name = guia.get('hospital')
-                            if api_hospital_name and api_hospital_name.strip():
-                                hospital_obj, _ = HospitalClinic.objects.get_or_create(
-                                    name__iexact=api_hospital_name.strip(),
-                                    defaults={'name': api_hospital_name.strip(), 'group': group}
-                                )
-                            
-                            convenio_obj = None
-                            api_convenio_name = guia.get('convenio')
-                            if api_convenio_name and api_convenio_name.strip():
-                                convenio_obj, _ = Convenios.objects.get_or_create(
-                                    name__iexact=api_convenio_name.strip(),
-                                    defaults={'name': api_convenio_name.strip()}
-                                )
-
-                            # Find or create surgeon
-                            surgeon_obj = None
-                            api_surgeon_name = guia.get('cirurgiao')
-                            api_surgeon_crm = guia.get('crm_cirurgiao')
-                            if api_surgeon_name and api_surgeon_name.strip():
-                                surgeon_obj = find_or_create_surgeon(group, api_surgeon_name, api_surgeon_crm)
-
-                            paciente_nome_para_proc = guia_paciente
-                            if not paciente_nome_para_proc:
-                                paciente_nome_para_proc = f"Paciente Guia {cpsa_id}"
-                                # print(f"      Guia CPSA {cpsa_id} has no paciente name, using fallback: {paciente_nome_para_proc}")
-
-                            # Handle ProcedimentoDetalhes (procedimento_principal)
-                            procedimento_principal_obj = None
-                            api_procedimentos = guia.get('procedimentos')
-                            if api_procedimentos and isinstance(api_procedimentos, list) and len(api_procedimentos) > 0:
-                                principal_proc_data = api_procedimentos[0]
-                                api_codigo = principal_proc_data.get('codigo')
-                                api_descricao = principal_proc_data.get('descricao')
-                                if api_codigo and api_descricao:
-                                    procedimento_principal_obj, created = ProcedimentoDetalhes.objects.get_or_create(
-                                        codigo_procedimento=api_codigo,
-                                        defaults={'name': api_descricao}
-                                    )
-                                    if created:
-                                        print(f"        Created new ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name} ({procedimento_principal_obj.codigo_procedimento})")
-                                    else:
-                                        if procedimento_principal_obj.name != api_descricao:
-                                            procedimento_principal_obj.name = api_descricao
-                                            # procedimento_principal_obj.save() # Decide if overriding name is desired
-                                            print(f"        Found existing ProcedimentoDetalhes for new Proc, name updated if different: {procedimento_principal_obj.name}")
-                                        else:
-                                            print(f"        Found existing ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name}")
-
-                            newly_created_procedimento = Procedimento.objects.create(
-                                group=group,
-                                nome_paciente=paciente_nome_para_proc,
-                                data_horario=proc_data_horario,
-                                data_horario_fim=proc_data_horario_fim,
-                                hospital=hospital_obj,
-                                convenio=convenio_obj,
-                                cirurgiao=surgeon_obj,
-                                procedimento_principal=procedimento_principal_obj, # Assign here
-                                procedimento_type=CIRURGIA_PROCEDIMENTO,
-                                status=STATUS_PENDING
-                            )
-                            print(f"      Created new Procedimento ID {newly_created_procedimento.id} for patient '{newly_created_procedimento.nome_paciente}' from guide CPSA {cpsa_id}")
-
-                            # Add the newly created procedure to the list so it can be found by subsequent guides
-                            all_procs_list.append(newly_created_procedimento)
-                            print(f"      Added new Procedimento ID {newly_created_procedimento.id} to search list for future matching.")
-
-                            # Handle anesthesiologist
-                            if guia_cooperado:
-                                anest_user_qs = Anesthesiologist.objects.filter(group=group)
-                                best_match_anest = None
-                                highest_sim = 0.7
-                                for an_in_group in anest_user_qs:
-                                    if an_in_group.name: # Ensure name is not empty for comparison
-                                        sim_score = similar(guia_cooperado.lower(), an_in_group.name.lower())
-                                        if sim_score > highest_sim:
-                                            highest_sim = sim_score
-                                            best_match_anest = an_in_group
-                                
-                                anest_final = None
-                                if best_match_anest:
-                                    anest_final = best_match_anest
-                                    print(f"        Found matching Anesthesiologist ID {anest_final.id} ({anest_final.name}) for cooperado '{guia_cooperado}'.")
-                                else:
-                                    anest_final = Anesthesiologist.objects.create(
-                                        name=guia_cooperado,
-                                        group=group
-                                    )
-                                    print(f"        Created new Anesthesiologist ID {anest_final.id} ({anest_final.name}) for cooperado '{guia_cooperado}'.")
-                                
-                                if anest_final:
-                                    newly_created_procedimento.anestesistas_responsaveis.add(anest_final)
-                                    print(f"        Linked Anesthesiologist {anest_final.name} to new Procedimento {newly_created_procedimento.id}.")
-
+                            with transaction.atomic():
+                                newly_created_procedimento = create_new_procedimento_from_guia(guia, cpsa_id, group)
+                                if newly_created_procedimento:
+                                    all_procs_list.append(newly_created_procedimento)
+                                    print(f"      Added new Procedimento ID {newly_created_procedimento.id} to search list for future matching.")
                         except Exception as e_proc_create:
                             print(f"    !!! Error creating new Procedimento for Guide CPSA {cpsa_id}: {str(e_proc_create)}")
                             import traceback
@@ -1299,7 +1187,7 @@ def conciliar_financas(request):
                             api_errors.append(f"Erro ao criar procedimento para guia {cpsa_id}: {str(e_proc_create)}")
                             newly_created_procedimento = None
                         
-                        print(f"    >>> Creating Finanças record for Guide CPSA {cpsa_id} (Linked to New Proc: {newly_created_procedimento.id if newly_created_procedimento else 'None'}).")
+                        # print(f"    >>> Creating Finanças record for Guide CPSA {cpsa_id} (Linked to New Proc: {newly_created_procedimento.id if newly_created_procedimento else 'None'}).")
                         new_financa = ProcedimentoFinancas(
                              procedimento=newly_created_procedimento,
                              group=group,
@@ -1320,18 +1208,36 @@ def conciliar_financas(request):
                         if newly_created_procedimento:
                             newly_linked_count += 1
 
+            # Process updates in batches to prevent large transactions
+            if len(financas_to_update) >= BATCH_SIZE:
+                with transaction.atomic():
+                    for item_to_update in financas_to_update:
+                        item_to_update.save()
+                    updated_records_count += len(financas_to_update)
+                    print(f"--- Saved batch of {len(financas_to_update)} updates ---")
+                financas_to_update = []
 
-        # --- Perform DB Operations ---
+            # Process creates in batches to prevent large transactions
+            if len(financas_to_create) >= BATCH_SIZE:
+                with transaction.atomic():
+                    ProcedimentoFinancas.objects.bulk_create(financas_to_create)
+                    print(f"--- Created batch of {len(financas_to_create)} new records ---")
+                financas_to_create = []
+
+        # --- Perform Final DB Operations ---
+        # Save any remaining updates
         if financas_to_update:
-             print(f"--- Saving {len(financas_to_update)} updates ---")
-             for item_to_update in financas_to_update: # Use a different loop variable name
-                  item_to_update.save()
-                  updated_records_count+=1 # Increment here after successful save
+            with transaction.atomic():
+                for item_to_update in financas_to_update:
+                    item_to_update.save()
+                updated_records_count += len(financas_to_update)
+                print(f"--- Saved final batch of {len(financas_to_update)} updates ---")
 
-
+        # Save any remaining creates
         if financas_to_create:
-            print(f"--- Creating {len(financas_to_create)} new records ---")
-            ProcedimentoFinancas.objects.bulk_create(financas_to_create)
+            with transaction.atomic():
+                ProcedimentoFinancas.objects.bulk_create(financas_to_create)
+                print(f"--- Created final batch of {len(financas_to_create)} new records ---")
 
         # --- Final Reporting ---
         unprocessed_api_cpsa_ids = set(guias_dict.keys()) - processed_cpsa_ids 
@@ -1367,5 +1273,130 @@ def conciliar_financas(request):
         print(f"!!! Conciliation Exception: {str(e)}")
         traceback.print_exc()
         return JsonResponse({'error': f'Erro interno durante a conciliação: {str(e)}'}, status=500)
+
+
+def create_new_procedimento_from_guia(guia, cpsa_id, group):
+    """
+    Helper function to create a new Procedimento from API guide data.
+    This is separated to allow individual transaction handling.
+    """
+    # print(f"    🚨 CREATING NEW PROCEDIMENTO for Guide CPSA {cpsa_id} (Patient: {guia.get('paciente')}, Date: {parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))}).")
+    
+    guia_paciente = guia.get('paciente')
+    guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+    
+    # Parse API time information
+    guia_hora_inicial = parse_api_time(guia.get('hora_inicial'))
+    guia_hora_final = parse_api_time(guia.get('hora_final'))
+    
+    # Create datetime with time if available, otherwise use midnight
+    proc_data_horario = None
+    proc_data_horario_fim = None
+    
+    if guia_date:
+        start_time = guia_hora_inicial if guia_hora_inicial else time(8, 0)  # Default to 8:00 AM
+        proc_data_horario = datetime.combine(guia_date, start_time)
+        proc_data_horario = timezone.make_aware(proc_data_horario) if timezone.is_naive(proc_data_horario) else proc_data_horario
+        
+        if guia_hora_final:
+            proc_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
+            proc_data_horario_fim = timezone.make_aware(proc_data_horario_fim) if timezone.is_naive(proc_data_horario_fim) else proc_data_horario_fim
+        else:
+            # Default end time to start time + 2 hours
+            proc_data_horario_fim = proc_data_horario + timedelta(hours=2)
+    
+    hospital_obj = None
+    api_hospital_name = guia.get('hospital')
+    if api_hospital_name and api_hospital_name.strip():
+        hospital_obj, _ = HospitalClinic.objects.get_or_create(
+            name__iexact=api_hospital_name.strip(),
+            defaults={'name': api_hospital_name.strip(), 'group': group}
+        )
+    
+    convenio_obj = None
+    api_convenio_name = guia.get('convenio')
+    if api_convenio_name and api_convenio_name.strip():
+        convenio_obj, _ = Convenios.objects.get_or_create(
+            name__iexact=api_convenio_name.strip(),
+            defaults={'name': api_convenio_name.strip()}
+        )
+
+    # Find or create surgeon
+    surgeon_obj = None
+    api_surgeon_name = guia.get('cirurgiao')
+    api_surgeon_crm = guia.get('crm_cirurgiao')
+    if api_surgeon_name and api_surgeon_name.strip():
+        surgeon_obj = find_or_create_surgeon(group, api_surgeon_name, api_surgeon_crm)
+
+    paciente_nome_para_proc = guia_paciente
+    if not paciente_nome_para_proc:
+        paciente_nome_para_proc = f"Paciente Guia {cpsa_id}"
+        # print(f"      Guia CPSA {cpsa_id} has no paciente name, using fallback: {paciente_nome_para_proc}")
+
+    # Handle ProcedimentoDetalhes (procedimento_principal)
+    procedimento_principal_obj = None
+    api_procedimentos = guia.get('procedimentos')
+    if api_procedimentos and isinstance(api_procedimentos, list) and len(api_procedimentos) > 0:
+        principal_proc_data = api_procedimentos[0]
+        api_codigo = principal_proc_data.get('codigo')
+        api_descricao = principal_proc_data.get('descricao')
+        if api_codigo and api_descricao:
+            procedimento_principal_obj, created = ProcedimentoDetalhes.objects.get_or_create(
+                codigo_procedimento=api_codigo,
+                defaults={'name': api_descricao}
+            )
+            if created:
+                print(f"        Created new ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name} ({procedimento_principal_obj.codigo_procedimento})")
+            else:
+                if procedimento_principal_obj.name != api_descricao:
+                    procedimento_principal_obj.name = api_descricao
+                    # procedimento_principal_obj.save() # Decide if overriding name is desired
+                    print(f"        Found existing ProcedimentoDetalhes for new Proc, name updated if different: {procedimento_principal_obj.name}")
+                else:
+                    print(f"        Found existing ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name}")
+
+    newly_created_procedimento = Procedimento.objects.create(
+        group=group,
+        nome_paciente=paciente_nome_para_proc,
+        data_horario=proc_data_horario,
+        data_horario_fim=proc_data_horario_fim,
+        hospital=hospital_obj,
+        convenio=convenio_obj,
+        cirurgiao=surgeon_obj,
+        procedimento_principal=procedimento_principal_obj, # Assign here
+        procedimento_type=CIRURGIA_PROCEDIMENTO,
+        status=STATUS_PENDING
+    )
+    print(f"      Created new Procedimento ID {newly_created_procedimento.id} for patient '{newly_created_procedimento.nome_paciente}' from guide CPSA {cpsa_id}")
+
+    # Handle anesthesiologist
+    guia_cooperado = guia.get('cooperado')
+    if guia_cooperado:
+        anest_user_qs = Anesthesiologist.objects.filter(group=group)
+        best_match_anest = None
+        highest_sim = 0.7
+        for an_in_group in anest_user_qs:
+            if an_in_group.name: # Ensure name is not empty for comparison
+                sim_score = similar(guia_cooperado.lower(), an_in_group.name.lower())
+                if sim_score > highest_sim:
+                    highest_sim = sim_score
+                    best_match_anest = an_in_group
+        
+        anest_final = None
+        if best_match_anest:
+            anest_final = best_match_anest
+            print(f"        Found matching Anesthesiologist ID {anest_final.id} ({anest_final.name}) for cooperado '{guia_cooperado}'.")
+        else:
+            anest_final = Anesthesiologist.objects.create(
+                name=guia_cooperado,
+                group=group
+            )
+            print(f"        Created new Anesthesiologist ID {anest_final.id} ({anest_final.name}) for cooperado '{guia_cooperado}'.")
+        
+        if anest_final:
+            newly_created_procedimento.anestesistas_responsaveis.add(anest_final)
+            print(f"        Linked Anesthesiologist {anest_final.name} to new Procedimento {newly_created_procedimento.id}.")
+
+    return newly_created_procedimento
 
 
