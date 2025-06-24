@@ -393,6 +393,20 @@
                 </div>
             </div>
 
+            <div class="radio-group" id="data_pagamento_container" style="display: none;">
+                <label for="{{ form.data_pagamento.id_for_label }}">{{ form.data_pagamento.label }}</label>
+                <div class="input-width-280">
+                    {{ form.data_pagamento }}
+                    {% if form.data_pagamento.errors %}
+                    <div class="error-message">
+                        {% for error in form.data_pagamento.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="button-container">
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </div>
@@ -507,19 +521,25 @@ document.addEventListener('DOMContentLoaded', function() {
         const valorFaturadoContainer = document.getElementById('valor_faturado_container');
         const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
         const tipoPagamentoDiretoInput = document.getElementById('id_tipo_pagamento_direto');
+        const dataPagamentoContainer = document.getElementById('data_pagamento_container');
+        const dataPagamentoInput = document.getElementById('id_data_pagamento');
 
         if (selectedValue === 'cooperativa') {
             if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
             if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
             if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+            if (dataPagamentoInput) dataPagamentoInput.value = ''; // Clear data_pagamento if cooperativa
             // valorFaturadoInput is hidden, its value is managed by IMask & submit handler
-        } else {
+        } else { // hospital or particular
             if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'block';
+            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'block'; // Show for hospital & particular
+
             if (tipoPagamentoDiretoContainer) {
                 tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
             }
-            if (selectedValue !== 'particular') {
-                if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+            if (selectedValue !== 'particular') { // If hospital
+                if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = ''; // Clear tipo_pagamento_direto
             }
         }
     }

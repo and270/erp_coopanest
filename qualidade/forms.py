@@ -110,7 +110,14 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
     tipo_pagamento_direto = forms.ChoiceField(
         choices=ProcedimentoFinancas.DIRECT_PAYMENT_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Forma de Pagamento (Direto)'
+    )
+
+    data_pagamento = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'dd/mm/aaaa'}),
+        required=False,
+        label='Data do Pagamento (Hospital/Direto)'
     )
 
     def __init__(self, *args, **kwargs):
@@ -156,7 +163,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'reacao_alergica_grave', 'reacao_alergica_grave_desc',
             'encaminhamento_uti', 'evento_adverso_evitavel',
             'adesao_checklist', 'uso_tecnicas_assepticas',
-            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia'
+            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia',
+            # Financial fields that are part of this form
+            'tipo_cobranca', 'valor_faturado', 'tipo_pagamento_direto', 'data_pagamento'
         ]
         widgets = {
             'data_horario_inicio_efetivo': forms.DateTimeInput(
@@ -270,8 +279,15 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
             financas.valor_faturado = self.cleaned_data['valor_faturado']
             financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
-            # Set the default status to em_processamento
-            financas.status_pagamento = 'em_processamento'
+            data_pagamento = self.cleaned_data.get('data_pagamento')
+            financas.data_pagamento = data_pagamento
+
+            if data_pagamento:
+                financas.status_pagamento = 'processo_finalizado'
+                financas.valor_recebido = financas.valor_faturado
+            elif not financas.status_pagamento or financas.status_pagamento == 'em_processamento':
+                financas.status_pagamento = 'em_processamento'
+
             financas.group = qualidade_instance.procedimento.group
             financas.save()
             
@@ -293,6 +309,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         eventos_adversos_graves_desc = cleaned_data.get('eventos_adversos_graves_desc')
         tipo_cobranca = cleaned_data.get('tipo_cobranca')
         tipo_pagamento_direto = cleaned_data.get('tipo_pagamento_direto')
+        data_pagamento = cleaned_data.get('data_pagamento')
 
         if inicio:
             # Convert to UTC, then back to Sao Paulo to preserve the exact time

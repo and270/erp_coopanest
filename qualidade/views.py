@@ -325,6 +325,7 @@ def finalizar_procedimento_view(request, procedimento_id):
             'tipo_cobranca': financas.tipo_cobranca,
             'valor_faturado': financas.valor_faturado,
             'tipo_pagamento_direto': financas.tipo_pagamento_direto,
+            'data_pagamento': financas.data_pagamento, # Add this line
         }
         
         # Pre-fill effective start and end times from the Procedimento object
