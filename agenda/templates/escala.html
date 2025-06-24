@@ -365,6 +365,172 @@
             const month = currentStartDate.getMonth() + 1;
             window.location.href = `?start_date=${year}-${month.toString().padStart(2, '0')}-01`;
         });
+
+        // Drag and Drop functionality
+        interact('.escala-item').draggable({
+            listeners: {
+                start (event) {
+                    const item = event.target;
+                    item.classList.add('dragging');
+                },
+                move (event) {
+                    const item = event.target;
+                    const x = (parseFloat(item.getAttribute('data-x')) || 0) + event.dx;
+                    const y = (parseFloat(item.getAttribute('data-y')) || 0) + event.dy;
+                    item.style.transform = `translate(${x}px, ${y}px)`;
+                    item.setAttribute('data-x', x);
+                    item.setAttribute('data-y', y);
+                },
+                end (event) {
+                    const item = event.target;
+                    item.classList.remove('dragging');
+                    item.style.transform = 'none';
+                    item.removeAttribute('data-x');
+                    item.removeAttribute('data-y');
+                }
+            }
+        });
+
+        interact('.escala-day-cell').dropzone({
+            accept: '.escala-item',
+            ondrop: function (event) {
+                const item = event.relatedTarget;
+                const dropzone = event.target;
+                const newDate = dropzone.dataset.date;
+                const escalaId = item.dataset.id;
+                
+                const csrfToken = $('input[name=csrfmiddlewaretoken]').val();
+
+                $.ajax({
+                    url: `/update-escala-date/${escalaId}/`,
+                    type: 'POST',
+                    data: {
+                        'new_date': newDate,
+                        'csrfmiddlewaretoken': csrfToken
+                    },
+                    success: function(data) {
+                        if (data.success) {
+                            dropzone.appendChild(item);
+                            item.dataset.originalDate = newDate;
+                            showCustomAlert('Escala atualizada com sucesso!', 'success');
+                        } else {
+                            showCustomAlert(data.message || 'Erro ao atualizar escala.', 'error');
+                        }
+                    },
+                    error: function() {
+                        showCustomAlert('Ocorreu um erro no servidor.', 'error');
+                    }
+                });
+            }
+        });
+        
+        let currentEscalaId = null;
+
+        // Open details modal
+        $('.escala-item').on('click', function() {
+            currentEscalaId = $(this).data('id');
+            const url = `/get-escala/${currentEscalaId}/`;
+            $.get(url, function(data) {
+                $('#modal-anestesiologista').text(data.anestesiologista_name);
+                $('#modal-data').text(new Date(data.data + 'T00:00:00').toLocaleDateString('pt-BR'));
+                $('#modal-hora-inicio').text(data.hora_inicio);
+                $('#modal-hora-fim').text(data.hora_fim);
+                $('#modal-observacoes').text(data.observacoes || 'N/A');
+                
+                const escalaTypeMap = {
+                    '{{ PLANTONISTA_ESCALA }}': 'Plantonista',
+                    '{{ SUBSTITUTO_ESCALA }}': 'Substituto',
+                    '{{ FERIAS_ESCALA }}': 'Férias/Licença'
+                };
+                $('#modal-escala-type').text(escalaTypeMap[data.escala_type] || 'N/A');
+                $('#escala-details-modal').show();
+            });
+        });
+
+        // Close details modal
+        $('#escala-details-modal .close').on('click', function() {
+            $('#escala-details-modal').hide();
+        });
+
+        // Open edit modal from details
+        $('.edit-escala').on('click', function() {
+            $('#escala-details-modal').hide();
+            const url = `/get-escala/${currentEscalaId}/`;
+            $.get(url, function(data) {
+                $('#edit_escala_id').val(data.id);
+                $('#edit_escala_type').val(data.escala_type);
+                
+                const anestesiologistaSelect = $('#edit_anestesiologista');
+                anestesiologistaSelect.empty();
+                data.anesthesiologists.forEach(function(anest) {
+                    anestesiologistaSelect.append(new Option(anest.name, anest.id, false, anest.id === data.anestesiologista));
+                });
+
+                $('#edit_data').val(data.data);
+                $('#edit_hora_inicio').val(data.hora_inicio);
+                $('#edit_hora_fim').val(data.hora_fim);
+                $('#edit_observacoes').val(data.observacoes);
+
+                $('#edit-escala-modal').show();
+            });
+        });
+
+        // Close edit modal
+        $('#edit-escala-modal .close').on('click', function() {
+            $('#edit-escala-modal').hide();
+        });
+
+        // Submit edit form
+        $('#edit-escala-form').on('submit', function(e) {
+            e.preventDefault();
+            const escalaId = $('#edit_escala_id').val();
+            const url = `/edit-single-day-escala/${escalaId}/`;
+            const formData = $(this).serialize();
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                success: function(data) {
+                    if(data.success) {
+                        $('#edit-escala-modal').hide();
+                        showCustomAlert(data.message || 'Escala atualizada com sucesso!', 'success');
+                        setTimeout(function() { location.reload(); }, 1500);
+                    } else {
+                        showCustomAlert(data.message || 'Erro ao atualizar escala.', 'error');
+                    }
+                },
+                error: function() {
+                    showCustomAlert('Ocorreu um erro no servidor.', 'error');
+                }
+            });
+        });
+        
+        // Delete escala
+        $('.delete-escala').on('click', function() {
+            if (confirm('Tem certeza que deseja excluir esta escala?')) {
+                const url = `/delete-escala/${currentEscalaId}/`;
+                const csrfToken = $('input[name=csrfmiddlewaretoken]').val();
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: {'csrfmiddlewaretoken': csrfToken},
+                    success: function(data) {
+                        if(data.success) {
+                            $('#escala-details-modal').hide();
+                            $(`.escala-item[data-id="${currentEscalaId}"]`).remove();
+                            showCustomAlert('Escala excluída com sucesso!', 'success');
+                        } else {
+                            showCustomAlert('Erro ao excluir escala.', 'error');
+                        }
+                    },
+                    error: function() {
+                        showCustomAlert('Ocorreu um erro no servidor.', 'error');
+                    }
+                });
+            }
+        });
     });
 </script>
 
