@@ -367,29 +367,50 @@
         });
 
         // Drag and Drop functionality
-        interact('.escala-item').draggable({
-            listeners: {
-                start (event) {
-                    const item = event.target;
-                    item.classList.add('dragging');
-                },
-                move (event) {
-                    const item = event.target;
-                    const x = (parseFloat(item.getAttribute('data-x')) || 0) + event.dx;
-                    const y = (parseFloat(item.getAttribute('data-y')) || 0) + event.dy;
-                    item.style.transform = `translate(${x}px, ${y}px)`;
-                    item.setAttribute('data-x', x);
-                    item.setAttribute('data-y', y);
-                },
-                end (event) {
-                    const item = event.target;
-                    item.classList.remove('dragging');
-                    item.style.transform = 'none';
-                    item.removeAttribute('data-x');
-                    item.removeAttribute('data-y');
+        interact('.escala-item')
+            .draggable({
+                listeners: {
+                    start (event) {
+                        const item = event.target;
+                        item.classList.add('dragging');
+                    },
+                    move (event) {
+                        const item = event.target;
+                        const x = (parseFloat(item.getAttribute('data-x')) || 0) + event.dx;
+                        const y = (parseFloat(item.getAttribute('data-y')) || 0) + event.dy;
+                        item.style.transform = `translate(${x}px, ${y}px)`;
+                        item.setAttribute('data-x', x);
+                        item.setAttribute('data-y', y);
+                    },
+                    end (event) {
+                        const item = event.target;
+                        item.classList.remove('dragging');
+                        item.style.transform = 'none';
+                        item.removeAttribute('data-x');
+                        item.removeAttribute('data-y');
+                    }
                 }
-            }
-        });
+            })
+            .on('tap', function(event) {
+                const item = event.currentTarget;
+                currentEscalaId = $(item).data('id');
+                const url = `/get-escala/${currentEscalaId}/`;
+                $.get(url, function(data) {
+                    $('#modal-anestesiologista').text(data.anestesiologista_name);
+                    $('#modal-data').text(new Date(data.data + 'T00:00:00').toLocaleDateString('pt-BR'));
+                    $('#modal-hora-inicio').text(data.hora_inicio);
+                    $('#modal-hora-fim').text(data.hora_fim);
+                    $('#modal-observacoes').text(data.observacoes || 'N/A');
+                    
+                    const escalaTypeMap = {
+                        '{{ PLANTONISTA_ESCALA }}': 'Plantonista',
+                        '{{ SUBSTITUTO_ESCALA }}': 'Substituto',
+                        '{{ FERIAS_ESCALA }}': 'Férias/Licença'
+                    };
+                    $('#modal-escala-type').text(escalaTypeMap[data.escala_type] || 'N/A');
+                    $('#escala-details-modal').show();
+                });
+            });
 
         interact('.escala-day-cell').dropzone({
             accept: '.escala-item',
@@ -425,27 +446,6 @@
         });
         
         let currentEscalaId = null;
-
-        // Open details modal
-        $('.escala-item').on('click', function() {
-            currentEscalaId = $(this).data('id');
-            const url = `/get-escala/${currentEscalaId}/`;
-            $.get(url, function(data) {
-                $('#modal-anestesiologista').text(data.anestesiologista_name);
-                $('#modal-data').text(new Date(data.data + 'T00:00:00').toLocaleDateString('pt-BR'));
-                $('#modal-hora-inicio').text(data.hora_inicio);
-                $('#modal-hora-fim').text(data.hora_fim);
-                $('#modal-observacoes').text(data.observacoes || 'N/A');
-                
-                const escalaTypeMap = {
-                    '{{ PLANTONISTA_ESCALA }}': 'Plantonista',
-                    '{{ SUBSTITUTO_ESCALA }}': 'Substituto',
-                    '{{ FERIAS_ESCALA }}': 'Férias/Licença'
-                };
-                $('#modal-escala-type').text(escalaTypeMap[data.escala_type] || 'N/A');
-                $('#escala-details-modal').show();
-            });
-        });
 
         // Close details modal
         $('#escala-details-modal .close').on('click', function() {
