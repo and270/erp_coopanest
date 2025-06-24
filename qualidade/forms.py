@@ -279,12 +279,14 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
             financas.valor_faturado = self.cleaned_data['valor_faturado']
             financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
-            financas.data_pagamento = self.cleaned_data.get('data_pagamento') # Use .get for safety as it's not always required
+            data_pagamento = self.cleaned_data.get('data_pagamento')
+            financas.data_pagamento = data_pagamento
 
-            # Set the default status to em_processamento only if not already set or if certain conditions apply
-            # For now, let's keep the existing logic for status_pagamento, can be refined if needed
-            if not financas.status_pagamento or financas.status_pagamento == 'em_processamento': # Example condition
-                 financas.status_pagamento = 'em_processamento'
+            if data_pagamento:
+                financas.status_pagamento = 'processo_finalizado'
+                financas.valor_recebido = financas.valor_faturado
+            elif not financas.status_pagamento or financas.status_pagamento == 'em_processamento':
+                financas.status_pagamento = 'em_processamento'
 
             financas.group = qualidade_instance.procedimento.group
             financas.save()
@@ -379,9 +381,6 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
 
         if tipo_cobranca == 'particular' and not tipo_pagamento_direto:
             self.add_error('tipo_pagamento_direto', 'Este campo é obrigatório para pagamento direto.')
-
-        if tipo_cobranca in ['hospital', 'particular'] and not data_pagamento:
-            self.add_error('data_pagamento', 'A data do pagamento é obrigatória para cobrança via hospital ou direta.')
 
         # Validations for effective start and end times
         if inicio and fim: # Ensure both fields are present and valid so far
