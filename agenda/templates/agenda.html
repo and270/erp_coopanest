@@ -299,6 +299,11 @@
             </div>
             
             <div class="form-group">
+                <label for="{{ form.convenio_nome_novo.id_for_label }}">{{ form.convenio_nome_novo.label }}</label>
+                {{ form.convenio_nome_novo }}
+            </div>
+            
+            <div class="form-group">
                 <label for="{{ form.cpf_paciente.id_for_label }}">{{ form.cpf_paciente.label }}</label>
                 {{ form.cpf_paciente }}
             </div>
@@ -888,7 +893,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
                 document.getElementById('id_email_paciente').value = data.email_paciente;
-                document.getElementById('id_convenio').value = data.convenio;
+                document.getElementById('id_convenio_nome_novo').value = data.convenio_nome_novo;
                 document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
@@ -1322,6 +1327,21 @@ document.addEventListener('DOMContentLoaded', function() {
     cirurgiaoNomeInput.addEventListener('input', function() {
         if (this.value) {
             cirurgiaoSelect.value = '';
+        }
+    });
+
+    const convenioSelect = $('#id_convenio');
+    const convenioNomeNovoInput = document.getElementById('id_convenio_nome_novo');
+
+    convenioSelect.on('change', function() {
+        if ($(this).val()) {
+            convenioNomeNovoInput.value = '';
+        }
+    });
+
+    convenioNomeNovoInput.addEventListener('input', function() {
+        if (this.value) {
+            convenioSelect.val(null).trigger('change');
         }
     });
 });

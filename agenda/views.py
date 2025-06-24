@@ -231,6 +231,7 @@ def get_procedure(request, procedure_id):
             'id': procedure.convenio.id,
             'text': procedure.convenio.name
         } if procedure.convenio else None,
+        'convenio_nome_novo': '',
         'cpf_paciente': procedure.cpf_paciente,
         'procedimento_principal': {
             'id': procedure.procedimento_principal.id,
