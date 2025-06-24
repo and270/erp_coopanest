@@ -1014,8 +1014,7 @@ def conciliar_financas(request):
 
         # Fetch existing financas records with CPSA (for quick lookup and updates)
         financas_qs = ProcedimentoFinancas.objects.filter(
-            Q(procedimento__group=group) | Q(group=group),
-            tipo_cobranca='cooperativa'
+            Q(procedimento__group=group) | Q(group=group)
         ).select_related('procedimento') # Keep this select_related
 
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
@@ -1055,38 +1054,41 @@ def conciliar_financas(request):
                 financa = financas_dict_by_cpsa[cpsa_id]
                 # print(f"  Found existing Finanças ID {financa.id} with matching CPSA.")
                 
-                updated = False
-                guia_valor_faturado = guia.get('valor_faturado')
-                guia_valor_recebido = guia.get('valor_recebido')
-                guia_valor_recuperado = guia.get('valor_receuperado', guia.get('valor_recuperado'))
-                guia_valor_acatado = guia.get('valor_acatado')
-                guia_status = map_api_status(guia.get('STATUS'))
+                if financa.tipo_cobranca == 'cooperativa':
+                    updated = False
+                    guia_valor_faturado = guia.get('valor_faturado')
+                    guia_valor_recebido = guia.get('valor_recebido')
+                    guia_valor_recuperado = guia.get('valor_receuperado', guia.get('valor_recuperado'))
+                    guia_valor_acatado = guia.get('valor_acatado')
+                    guia_status = map_api_status(guia.get('STATUS'))
 
-                if guia_valor_faturado is not None and (financa.valor_faturado is None or financa.valor_faturado != float(guia_valor_faturado)):
-                    financa.valor_faturado = guia_valor_faturado; updated = True
-                if guia_valor_recebido is not None and (financa.valor_recebido is None or financa.valor_recebido != float(guia_valor_recebido)):
-                    financa.valor_recebido = guia_valor_recebido; updated = True
-                if guia_valor_recuperado is not None and (financa.valor_recuperado is None or financa.valor_recuperado != float(guia_valor_recuperado)):
-                    financa.valor_recuperado = guia_valor_recuperado; updated = True
-                if guia_valor_acatado is not None and (financa.valor_acatado is None or financa.valor_acatado != float(guia_valor_acatado)):
-                    financa.valor_acatado = guia_valor_acatado; updated = True
-                if guia_status and financa.status_pagamento != guia_status:
-                    financa.status_pagamento = guia_status; updated = True
-                if financa.api_paciente_nome != guia.get('paciente'):
-                    financa.api_paciente_nome = guia.get('paciente'); updated = True
-                if financa.api_hospital_nome != guia.get('hospital'):
-                    financa.api_hospital_nome = guia.get('hospital'); updated = True
-                if financa.api_cooperado_nome != guia.get('cooperado'):
-                    financa.api_cooperado_nome = guia.get('cooperado'); updated = True
-                
-                guia_api_date_parsed = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
-                if financa.api_data_cirurgia != guia_api_date_parsed:
-                    financa.api_data_cirurgia = guia_api_date_parsed; updated = True
-                
-                if updated:
-                    # print(f"    Marked Finanças ID {financa.id} for update.")
-                    if financa not in financas_to_update: financas_to_update.append(financa)
-                
+                    if guia_valor_faturado is not None and (financa.valor_faturado is None or financa.valor_faturado != float(guia_valor_faturado)):
+                        financa.valor_faturado = guia_valor_faturado; updated = True
+                    if guia_valor_recebido is not None and (financa.valor_recebido is None or financa.valor_recebido != float(guia_valor_recebido)):
+                        financa.valor_recebido = guia_valor_recebido; updated = True
+                    if guia_valor_recuperado is not None and (financa.valor_recuperado is None or financa.valor_recuperado != float(guia_valor_recuperado)):
+                        financa.valor_recuperado = guia_valor_recuperado; updated = True
+                    if guia_valor_acatado is not None and (financa.valor_acatado is None or financa.valor_acatado != float(guia_valor_acatado)):
+                        financa.valor_acatado = guia_valor_acatado; updated = True
+                    if guia_status and financa.status_pagamento != guia_status:
+                        financa.status_pagamento = guia_status; updated = True
+                    if financa.api_paciente_nome != guia.get('paciente'):
+                        financa.api_paciente_nome = guia.get('paciente'); updated = True
+                    if financa.api_hospital_nome != guia.get('hospital'):
+                        financa.api_hospital_nome = guia.get('hospital'); updated = True
+                    if financa.api_cooperado_nome != guia.get('cooperado'):
+                        financa.api_cooperado_nome = guia.get('cooperado'); updated = True
+                    
+                    guia_api_date_parsed = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+                    if financa.api_data_cirurgia != guia_api_date_parsed:
+                        financa.api_data_cirurgia = guia_api_date_parsed; updated = True
+                    
+                    if updated:
+                        # print(f"    Marked Finanças ID {financa.id} for update.")
+                        if financa not in financas_to_update: financas_to_update.append(financa)
+                    else:
+                        print(f"  Skipping financial data update for Finanças ID {financa.id} (CPSA: {cpsa_id}) because tipo_cobranca is '{financa.tipo_cobranca}'.")
+
                 if not financa.procedimento:
                      # print(f"    Existing Finanças ID {financa.id} is unlinked. Trying to find matching procedure...")
                      best_match_proc = None
