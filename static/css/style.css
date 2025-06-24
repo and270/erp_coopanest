@@ -2669,6 +2669,7 @@ select {
 #escala-form-modal .form-group,
 #edit-escala-modal .form-group {
     margin-bottom: 20px;
+    gap: 0;
 }
 
 
