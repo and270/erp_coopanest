@@ -30,8 +30,14 @@ class ProcedimentoForm(forms.ModelForm):
                 'data-minimum-input-length': 2,
             }
         ),
-        label='Convênio',
+        label='Convênio (selecione ou crie abaixo)',
         required=False,
+    )
+
+    convenio_nome_novo = forms.CharField(
+        label='Ou, Nome do Novo Convênio',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Digite se não encontrar na lista acima'})
     )
 
     data = forms.DateField(
@@ -77,7 +83,7 @@ class ProcedimentoForm(forms.ModelForm):
         model = Procedimento
         fields = [
             'procedimento_type', 'nome_paciente', 'email_paciente', 'cpf_paciente',
-            'convenio', 'procedimento_principal', 'hospital', 'outro_local',
+            'convenio', 'convenio_nome_novo', 'procedimento_principal', 'hospital', 'outro_local',
             'cirurgiao', 'cirurgiao_nome',
             'anestesista_selector', # Add the selector field
             'anestesistas_responsaveis', # Keep the hidden field
@@ -122,6 +128,17 @@ class ProcedimentoForm(forms.ModelForm):
         end_time = self.cleaned_data['end_time']
         instance.data_horario = datetime.combine(date, time)
         instance.data_horario_fim = datetime.combine(date, end_time)
+
+        convenio_nome_novo = self.cleaned_data.get('convenio_nome_novo')
+        convenio_selecionado = self.cleaned_data.get('convenio')
+
+        if convenio_nome_novo:
+            convenio_obj, created = Convenios.objects.get_or_create(name=convenio_nome_novo.strip())
+            instance.convenio = convenio_obj
+        elif convenio_selecionado:
+            instance.convenio = convenio_selecionado
+        # If neither is provided, instance.convenio remains what it was (or None if new)
+        # as 'convenio' field is not required.
 
         # The 'anestesistas_responsaveis' field (now hidden) will be correctly
         # populated by the form submission thanks to the updated JS.
