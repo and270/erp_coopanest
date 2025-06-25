@@ -162,6 +162,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'eventos_adversos_graves', 'eventos_adversos_graves_desc',
             'reacao_alergica_grave', 'reacao_alergica_grave_desc',
             'encaminhamento_uti', 'evento_adverso_evitavel',
+            'evento_adverso_evitavel_desc',
             'adesao_checklist', 'uso_tecnicas_assepticas',
             'conformidade_diretrizes', 'ponv', 'adesao_profilaxia_antibiotica',
             'adesao_prevencao_tvp_tep',
@@ -222,6 +223,11 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'evento_adverso_evitavel': forms.RadioSelect(
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
+            ),
+            'evento_adverso_evitavel_desc': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
             ),
             'adesao_checklist': forms.RadioSelect(
                 choices=[(True, 'Sim'), (False, 'Não')],
@@ -315,6 +321,8 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         tipo_cobranca = cleaned_data.get('tipo_cobranca')
         tipo_pagamento_direto = cleaned_data.get('tipo_pagamento_direto')
         data_pagamento = cleaned_data.get('data_pagamento')
+        evento_adverso_evitavel = cleaned_data.get('evento_adverso_evitavel')
+        evento_adverso_evitavel_desc = cleaned_data.get('evento_adverso_evitavel_desc')
 
         if inicio:
             # Convert to UTC, then back to Sao Paulo to preserve the exact time
@@ -346,6 +354,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
 
         if cleaned_data.get('reacao_alergica_grave') and not cleaned_data.get('reacao_alergica_grave_desc'):
             self.add_error('reacao_alergica_grave_desc', 'Este campo é obrigatório quando há reação alérgica grave.')
+
+        if evento_adverso_evitavel and not evento_adverso_evitavel_desc:
+            self.add_error('evento_adverso_evitavel_desc', 'Este campo é obrigatório quando há evento adverso evitável.')
 
         if dor_pos_operatoria is True:  # Only validate pain scale if dor_pos_operatoria is True
             if not escala:
