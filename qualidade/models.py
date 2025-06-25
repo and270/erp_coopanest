@@ -194,7 +194,8 @@ class ProcedimentoQualidade(models.Model):
     uso_tecnicas_assepticas = models.BooleanField(verbose_name='Uso adequado de técnicas assépticas', null=True, blank=True)
     conformidade_diretrizes = models.BooleanField(verbose_name='Conformidade com diretrizes e protocolos', null=True, blank=True)
     ponv = models.BooleanField(verbose_name='PONV', null=True, blank=True)
-    adesao_profilaxia = models.BooleanField(verbose_name='Adesão aos protocolos de profilaxia antibiótica e de prevenção de TVP/TEP', null=True, blank=True)
+    adesao_profilaxia_antibiotica = models.BooleanField(verbose_name='Adesão aos protocolos de profilaxia antibiótica', null=True, blank=True)
+    adesao_prevencao_tvp_tep = models.BooleanField(verbose_name='Adesão aos protocolos de prevenção de TVP/TEP', null=True, blank=True)
 
     # Survey form fields
     satisfacao_geral = models.IntegerField(

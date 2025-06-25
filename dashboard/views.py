@@ -190,6 +190,8 @@ def dashboard_view(request):
         'adesao_checklist': queryset.filter(adesao_checklist=True).count() / total_count * 100 if total_count > 0 else None,
         'conformidade_protocolos': queryset.filter(conformidade_diretrizes=True).count() / total_count * 100 if total_count > 0 else None,
         'tecnicas_assepticas': queryset.filter(uso_tecnicas_assepticas=True).count() / total_count * 100 if total_count > 0 else None,
+        'adesao_profilaxia_antibiotica': queryset.filter(adesao_profilaxia_antibiotica=True).count() / total_count * 100 if total_count > 0 else None,
+        'adesao_prevencao_tvp_tep': queryset.filter(adesao_prevencao_tvp_tep=True).count() / total_count * 100 if total_count > 0 else None,
         'csat_score': queryset.aggregate(Avg('csat_score'))['csat_score__avg'],
         'ponv_view': ponv_view,
         'evento_view': evento_view,

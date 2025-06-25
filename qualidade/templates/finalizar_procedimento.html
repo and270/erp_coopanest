@@ -318,7 +318,7 @@
 
             <!-- Exclude already handled fields from the general radio fields loop -->
             {% for field in form %}
-                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca'|split:',' %}
+                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca,adesao_profilaxia_antibiotica,adesao_prevencao_tvp_tep'|split:',' %}
                     {% if field.field.widget.input_type == "radio" and field.name not in excluded_fields %}
                         <div class="radio-group">
                             <label>{{ field.label }}</label>
@@ -343,6 +343,48 @@
                     {% endif %}
                 {% endwith %}
             {% endfor %}
+
+            <div class="radio-group">
+                <label>{{ form.adesao_profilaxia_antibiotica.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.adesao_profilaxia_antibiotica %}
+                        {% if radio.choice_label != '---------' %}
+                            <div class="radio-option">
+                                <label>{{ radio.tag }}</label>
+                                {{ radio.choice_label }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% if form.adesao_profilaxia_antibiotica.errors %}
+                <div class="error-message">
+                    {% for error in form.adesao_profilaxia_antibiotica.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group">
+                <label>{{ form.adesao_prevencao_tvp_tep.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.adesao_prevencao_tvp_tep %}
+                        {% if radio.choice_label != '---------' %}
+                            <div class="radio-option">
+                                <label>{{ radio.tag }}</label>
+                                {{ radio.choice_label }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% if form.adesao_prevencao_tvp_tep.errors %}
+                <div class="error-message">
+                    {% for error in form.adesao_prevencao_tvp_tep.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
 
             <div class="radio-group">
                 <label>{{ form.tipo_cobranca.label }}</label>

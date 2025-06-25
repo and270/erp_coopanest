@@ -163,7 +163,8 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'reacao_alergica_grave', 'reacao_alergica_grave_desc',
             'encaminhamento_uti', 'evento_adverso_evitavel',
             'adesao_checklist', 'uso_tecnicas_assepticas',
-            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia',
+            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia_antibiotica',
+            'adesao_prevencao_tvp_tep',
             # Financial fields that are part of this form
             'tipo_cobranca', 'valor_faturado', 'tipo_pagamento_direto', 'data_pagamento'
         ]
@@ -238,7 +239,11 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
             ),
-            'adesao_profilaxia': forms.RadioSelect(
+            'adesao_profilaxia_antibiotica': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'adesao_prevencao_tvp_tep': forms.RadioSelect(
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
             ),
@@ -331,8 +336,8 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'eventos_adversos_graves', 'reacao_alergica_grave',
             'encaminhamento_uti', 'evento_adverso_evitavel',
             'adesao_checklist', 'uso_tecnicas_assepticas',
-            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia',
-            'tipo_cobranca'
+            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia_antibiotica',
+            'adesao_prevencao_tvp_tep', 'tipo_cobranca'
         ]
         
         for field in required_fields:

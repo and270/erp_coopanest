@@ -194,6 +194,22 @@
                     <div class="progress-label">{% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas|floatformat:0 }}%{% else %}--{% endif %}</div>
                     <div class="progress-title">Uso de técnicas assépticas</div>
                 </div>
+
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {% if metrics.adesao_profilaxia_antibiotica %}{{ metrics.adesao_profilaxia_antibiotica|floatformat:0 }}%{% else %}100%{% endif %}"></div>
+                    </div>
+                    <div class="progress-label">{% if metrics.adesao_profilaxia_antibiotica %}{{ metrics.adesao_profilaxia_antibiotica|floatformat:0 }}%{% else %}--{% endif %}</div>
+                    <div class="progress-title">Adesão à profilaxia antibiótica</div>
+                </div>
+
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {% if metrics.adesao_prevencao_tvp_tep %}{{ metrics.adesao_prevencao_tvp_tep|floatformat:0 }}%{% else %}100%{% endif %}"></div>
+                    </div>
+                    <div class="progress-label">{% if metrics.adesao_prevencao_tvp_tep %}{{ metrics.adesao_prevencao_tvp_tep|floatformat:0 }}%{% else %}--{% endif %}</div>
+                    <div class="progress-title">Adesão à prevenção de TVP/TEP</div>
+                </div>
             </div>
         </div>
     </div>
