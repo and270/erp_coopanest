@@ -24,7 +24,7 @@
     <div class="header-actions">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Buscar por paciente, CPF ou CPSA" value="{{ search_query }}" autocomplete="off"> {# Updated placeholder #}
+            <input type="text" id="searchInput" placeholder="Buscar por paciente, CPF, CPSA ou Anestesista" value="{{ search_query }}" autocomplete="off"> {# Updated placeholder #}
         </div>
         
         {% if view_type == 'receitas' %} {# Only show status filter for Receitas #}
@@ -885,6 +885,18 @@ document.addEventListener('DOMContentLoaded', function() {
                  conciliateButton.disabled = false;
                  conciliateButton.innerHTML = '<i class="fas fa-sync"></i>'; // Reset icon
              });
+    }
+
+    // --- Re-focus on search input after search ---
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('search') && urlParams.get('search')) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+            // Move cursor to the end of the input
+            const val = searchInput.value;
+            searchInput.setSelectionRange(val.length, val.length);
+        }
     }
 
 }); // End DOMContentLoaded

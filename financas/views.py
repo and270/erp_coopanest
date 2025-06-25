@@ -86,8 +86,9 @@ def financas_view(request):
                 Q(procedimento__nome_paciente__icontains=search_query) |
                 Q(procedimento__cpf_paciente__icontains=search_query) |
                 Q(cpsa__icontains=search_query) |
-                Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) | # Search API name if unlinked
-                Q(procedimento__isnull=True, cpsa__icontains=search_query) # Search CPSA if unlinked
+                Q(procedimento__anestesistas_responsaveis__name__icontains=search_query) |
+                Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) |
+                Q(procedimento__isnull=True, api_cooperado_nome__icontains=search_query)
             )
 
         # Apply status filter
@@ -95,7 +96,7 @@ def financas_view(request):
             base_qs = base_qs.filter(status_pagamento=status)
 
         # Order results
-        queryset = base_qs.order_by(
+        queryset = base_qs.distinct().order_by(
             F('procedimento__data_horario').desc(nulls_last=True), # Prefer procedure date
             F('api_data_cirurgia').desc(nulls_last=True), # Fallback to API date
              '-id' # Final tie-breaker
@@ -478,13 +479,14 @@ def export_finances(request):
                  Q(procedimento__nome_paciente__icontains=search_query) |
                  Q(procedimento__cpf_paciente__icontains=search_query) |
                  Q(cpsa__icontains=search_query) |
+                 Q(procedimento__anestesistas_responsaveis__name__icontains=search_query) |
                  Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) |
-                 Q(procedimento__isnull=True, cpsa__icontains=search_query)
+                 Q(procedimento__isnull=True, api_cooperado_nome__icontains=search_query)
              )
         if status:
              base_qs = base_qs.filter(status_pagamento=status)
         
-        queryset = base_qs.order_by(
+        queryset = base_qs.distinct().order_by(
              F('procedimento__data_horario').desc(nulls_last=True), 
              F('api_data_cirurgia').desc(nulls_last=True), 
              '-id'
