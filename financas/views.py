@@ -1004,7 +1004,21 @@ def conciliar_financas(request):
         }
         response = requests.post(api_url, json=api_payload)
         response.raise_for_status()
+        
+        # Debug prints for raw API response
+        print(f"=== RAW API RESPONSE DEBUG ===")
+        print(f"Response Status Code: {response.status_code}")
+        print(f"Response Headers: {dict(response.headers)}")
+        print(f"Raw Response Text (first 2000 chars): {response.text[:2000]}")
+        print(f"Full Raw Response Text: {response.text}")
+        print(f"=== END RAW API RESPONSE DEBUG ===")
+        
         api_response_data = response.json()
+        
+        # Debug print for parsed JSON
+        print(f"=== PARSED API RESPONSE DEBUG ===")
+        print(f"Parsed JSON Data: {api_response_data}")
+        print(f"=== END PARSED API RESPONSE DEBUG ===")
 
         if api_response_data.get('erro') != '000':
             error_msg = f"API Error: {api_response_data.get('msg', 'Unknown API error')}"
