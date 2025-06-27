@@ -690,7 +690,6 @@ def find_or_create_surgeon(group, surgeon_name, surgeon_crm=None):
     if surgeon_crm:
         try:
             surgeon = Surgeon.objects.get(group=group, crm=surgeon_crm)
-            print(f"        Found existing Surgeon by CRM: {surgeon.name} (CRM: {surgeon.crm})")
             return surgeon
         except Surgeon.DoesNotExist:
             pass
@@ -708,7 +707,6 @@ def find_or_create_surgeon(group, surgeon_name, surgeon_crm=None):
                 best_match_surgeon = surgeon
     
     if best_match_surgeon:
-        print(f"        Found matching Surgeon by name: {best_match_surgeon.name} (Sim: {highest_sim:.2f})")
         return best_match_surgeon
     
     # Create new surgeon
@@ -717,7 +715,6 @@ def find_or_create_surgeon(group, surgeon_name, surgeon_crm=None):
         crm=surgeon_crm,
         group=group
     )
-    print(f"        Created new Surgeon: {new_surgeon.name} (CRM: {new_surgeon.crm or 'N/A'})")
     return new_surgeon
 
 def update_procedimento_with_api_data(procedimento, guia, group):
@@ -737,7 +734,6 @@ def update_procedimento_with_api_data(procedimento, guia, group):
         if not current_time or current_time == time(0, 0) or current_time != guia_hora_inicial:
             procedimento.data_horario = new_data_horario
             updated = True
-            print(f"        Updated Procedimento data_horario to {new_data_horario}")
     
     if guia_date and guia_hora_final:
         if guia_hora_final != guia_hora_inicial:
@@ -747,11 +743,6 @@ def update_procedimento_with_api_data(procedimento, guia, group):
             if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
                 procedimento.data_horario_fim = new_data_horario_fim
                 updated = True
-                print(f"        Updated Procedimento data_horario_fim to {new_data_horario_fim}")
-        else:
-            print(f"        Skipping data_horario_fim update: API start and end times are the same ({guia_hora_inicial})")
-    elif guia_date and guia_hora_inicial and not guia_hora_final:
-        print(f"        API has no hora_final, keeping existing data_horario_fim")
     
     api_surgeon_name = guia.get('cirurgiao')
     api_surgeon_crm = guia.get('crm_cirurgiao')
@@ -761,7 +752,6 @@ def update_procedimento_with_api_data(procedimento, guia, group):
         if api_surgeon and (not procedimento.cirurgiao or procedimento.cirurgiao.id != api_surgeon.id):
             procedimento.cirurgiao = api_surgeon
             updated = True
-            print(f"        Updated Procedimento surgeon to {api_surgeon.name}")
     
     api_hospital_name = guia.get('hospital')
     if api_hospital_name and api_hospital_name.strip():
@@ -772,7 +762,6 @@ def update_procedimento_with_api_data(procedimento, guia, group):
         if not procedimento.hospital or procedimento.hospital.id != hospital_obj.id:
             procedimento.hospital = hospital_obj
             updated = True
-            print(f"        Updated Procedimento hospital to {hospital_obj.name}")
 
     # Update ProcedimentoDetalhes (procedimento_principal)
     api_procedimentos = guia.get('procedimentos')
@@ -786,16 +775,10 @@ def update_procedimento_with_api_data(procedimento, guia, group):
                 codigo_procedimento=api_codigo,
                 defaults={'name': api_descricao}
             )
-            if created:
-                print(f"        Created new ProcedimentoDetalhes: {proc_detalhe.name} ({proc_detalhe.codigo_procedimento})")
-            else:
-                # Optionally update name if it differs, though codigo_procedimento is unique
+            if not created:
                 if proc_detalhe.name != api_descricao:
                     proc_detalhe.name = api_descricao
-                    # proc_detalhe.save() # Decide if overriding name is desired
-                    print(f"        Found existing ProcedimentoDetalhes, name updated if different: {proc_detalhe.name}")
-                else:
-                    print(f"        Found existing ProcedimentoDetalhes: {proc_detalhe.name}")
+                    proc_detalhe.save() # Decide if overriding name is desired
 
             if procedimento.procedimento_principal != proc_detalhe:
                 procedimento.procedimento_principal = proc_detalhe
@@ -805,11 +788,9 @@ def update_procedimento_with_api_data(procedimento, guia, group):
                 else:
                     procedimento.procedimento_type = CIRURGIA_AMBULATORIAL_PROCEDIMENTO
                 updated = True
-                print(f"        Updated Procedimento.procedimento_principal to {proc_detalhe.name}")
     
     if updated:
         procedimento.save()
-        print(f"        Saved updates to Procedimento ID {procedimento.id}")
     
     return updated
 
@@ -825,149 +806,77 @@ def find_comprehensive_procedure_match(all_procs_list, guia, group):
     guia_hospital = guia.get('hospital')
     guia_cirurgiao = guia.get('cirurgiao')
     
-    # print(f"    🔍 COMPREHENSIVE MATCH DEBUG for CPSA {guia.get('idcpsa')}:")
-    # print(f"      API Guide Data:")
-    # print(f"        - Patient: '{guia_paciente}'")
-    # print(f"        - Date: {guia_date}")
-    # print(f"        - Time: {guia_hora_inicial}")
-    # print(f"        - Cooperado: '{guia_cooperado}'")
-    # print(f"        - Hospital: '{guia_hospital}'")
-    # print(f"        - Surgeon: '{guia_cirurgiao}'")
-    
     if not guia_paciente or not guia_date:
-        # print(f"      ❌ SKIPPING: Missing essential data (patient: {bool(guia_paciente)}, date: {bool(guia_date)})")
         return None
     
     best_match_proc = None
     highest_score = 0.0
     
-    # print(f"      📋 Checking {len(all_procs_list)} existing procedures...")
-    
-    for i, proc in enumerate(all_procs_list):
-        # print(f"      [{i+1}/{len(all_procs_list)}] Checking Proc ID {proc.id}:")
-        # print(f"        - Patient: '{proc.nome_paciente}'")
-        # print(f"        - DateTime: {proc.data_horario}")
-        # print(f"        - Hospital: {proc.hospital.name if proc.hospital else 'None'}")
-        
+    for proc in all_procs_list:
         score = 0.0
         total_factors = 0
         
         # 1. Patient name similarity (most important) - CASE INSENSITIVE
         if proc.nome_paciente:
             name_sim = similar(guia_paciente.lower(), proc.nome_paciente.lower())
-            # print(f"        - Name similarity: {name_sim:.3f}")
             if name_sim < 0.8:  # Skip if name similarity is too low
-                # print(f"        ❌ SKIPPED: Name similarity too low ({name_sim:.3f} < 0.8)")
                 continue
             score += name_sim * 0.4  # 40% weight
             total_factors += 0.4
-            # print(f"        ✅ Name match: {name_sim:.3f} * 0.4 = {name_sim * 0.4:.3f}")
         
         # 2. Date match (essential)
         proc_date = proc.data_horario.date() if proc.data_horario else None
         if proc_date:
             date_diff = abs((guia_date - proc_date).days)
-            # print(f"        - Date comparison: API {guia_date} vs Proc {proc_date} (diff: {date_diff} days)")
             if date_diff > 1:  # Skip if date difference is more than 1 day
-                # print(f"        ❌ SKIPPED: Date difference too large ({date_diff} > 1 day)")
                 continue
             date_score = 1.0 if date_diff == 0 else 0.7  # Exact date match gets full score
             score += date_score * 0.25  # 25% weight
             total_factors += 0.25
-            # print(f"        ✅ Date match: {date_score} * 0.25 = {date_score * 0.25:.3f}")
         
         # 3. Time match (if available)
         if guia_hora_inicial and proc.data_horario:
             # Convert procedure's UTC time to local time for comparison
             proc_local_time = timezone.localtime(proc.data_horario).time()
-            # print(f"        - Time comparison: API {guia_hora_inicial} vs Proc {proc_local_time} (converted from UTC)")
             if proc_local_time != time(0, 0):  # Only compare if procedure has a real time (not midnight default)
                 time_diff_minutes = abs(
                     (guia_hora_inicial.hour * 60 + guia_hora_inicial.minute) - 
                     (proc_local_time.hour * 60 + proc_local_time.minute)
                 )
-                # print(f"        - Time difference: {time_diff_minutes} minutes")
                 if time_diff_minutes <= 30:  # Within 30 minutes
                     time_score = 1.0 if time_diff_minutes == 0 else 0.8
                     score += time_score * 0.15  # 15% weight
                     total_factors += 0.15
-                    # print(f"        ✅ Time match: {time_score} * 0.15 = {time_score * 0.15:.3f}")
                 elif time_diff_minutes > 240:  # More than 4 hours difference
-                    # print(f"        ❌ SKIPPED: Time difference too large ({time_diff_minutes} > 240 minutes)")
                     continue  # Skip this procedure
-                else:
-                    # print(f"        ⚠️ Time difference acceptable but not scored ({time_diff_minutes} minutes)")
-                    pass
-            else:
-                # print(f"        ⚠️ Procedure has default midnight time, skipping time comparison")
-                pass
-        else:
-            # print(f"        ⚠️ No time comparison possible (API time: {guia_hora_inicial}, Proc time: {proc.data_horario})")
-            pass
         
         # 4. Hospital match (if available) - CASE INSENSITIVE
         if guia_hospital and proc.hospital:
             hospital_sim = similar(guia_hospital.lower(), proc.hospital.name.lower())
-            # print(f"        - Hospital similarity: {hospital_sim:.3f}")
             if hospital_sim > 0.7:
                 score += hospital_sim * 0.1  # 10% weight
                 total_factors += 0.1
-                # print(f"        ✅ Hospital match: {hospital_sim:.3f} * 0.1 = {hospital_sim * 0.1:.3f}")
-            else:
-                # print(f"        ⚠️ Hospital similarity too low ({hospital_sim:.3f} <= 0.7)")
-                pass
-        else:
-            # print(f"        ⚠️ No hospital comparison possible")
-            pass
         
         # 5. Anesthesiologist match (if available) - CASE INSENSITIVE
         if guia_cooperado and proc.anestesistas_responsaveis.exists():
             anest_match = False
-            anest_names = [anest.name for anest in proc.anestesistas_responsaveis.all() if anest.name]
-            # print(f"        - Anesthesiologist comparison: API '{guia_cooperado}' vs Proc {anest_names}")
+            
             for anest in proc.anestesistas_responsaveis.all():
                 if anest.name and similar(guia_cooperado.lower(), anest.name.lower()) > 0.8:
                     anest_match = True
-                    # print(f"        ✅ Anesthesiologist match found: {anest.name}")
                     break
             if anest_match:
                 score += 0.1  # 10% weight
                 total_factors += 0.1
-                # print(f"        ✅ Anesthesiologist match: 0.1")
-            else:
-                # print(f"        ⚠️ No anesthesiologist match found")
-                pass
-        else:
-            # print(f"        ⚠️ No anesthesiologist comparison possible")
-            pass
         
         # Calculate final score as percentage
         if total_factors > 0:
             final_score = score / total_factors
-            # print(f"        📊 Final score: {score:.3f} / {total_factors:.3f} = {final_score:.3f}")
             
             # Require minimum combined score for match
             if final_score > 0.85 and final_score > highest_score:
                 highest_score = final_score
                 best_match_proc = proc
-                # print(f"        🎯 NEW BEST MATCH! Score: {final_score:.3f}")
-            elif final_score > 0.85:
-                # print(f"        ✅ Good match but not better than current best ({highest_score:.3f})")
-                pass
-            else:
-                # print(f"        ❌ Score too low ({final_score:.3f} <= 0.85)")
-                pass
-        else:
-            # print(f"        ❌ No factors to compare (total_factors = 0)")
-            pass
-        # print(f"        ---")
-    
-    if best_match_proc:
-        # print(f"      🎯 FINAL RESULT: Found match - Proc ID {best_match_proc.id} with score {highest_score:.3f}")
-        pass
-    else:
-        # print(f"      ❌ FINAL RESULT: No comprehensive match found")
-        pass
     
     return best_match_proc
 
@@ -1013,17 +922,17 @@ def conciliar_financas(request):
         # Debug prints for raw API response
         print(f"=== RAW API RESPONSE DEBUG ===")
         print(f"Response Status Code: {response.status_code}")
-        print(f"Response Headers: {dict(response.headers)}")
-        print(f"Raw Response Text (first 2000 chars): {response.text[:2000]}")
-        print(f"Full Raw Response Text: {response.text}")
+        print(f"Raw Response Text (first 500 chars): {response.text[:500]}")
         print(f"=== END RAW API RESPONSE DEBUG ===")
         
         api_response_data = response.json()
         
-        # Debug print for parsed JSON
-        print(f"=== PARSED API RESPONSE DEBUG ===")
-        print(f"Parsed JSON Data: {api_response_data}")
-        print(f"=== END PARSED API RESPONSE DEBUG ===")
+        # Show example of a single guia for debugging
+        guias_for_debug = api_response_data.get('listaguias', [])
+        if guias_for_debug:
+            print(f"=== SINGLE GUIA EXAMPLE ===")
+            print(f"Example Guia JSON: {guias_for_debug[0]}")
+            print(f"=== END SINGLE GUIA EXAMPLE ===")
 
         if api_response_data.get('erro') != '000':
             error_msg = f"API Error: {api_response_data.get('msg', 'Unknown API error')}"
@@ -1033,12 +942,12 @@ def conciliar_financas(request):
         guias = api_response_data.get('listaguias', [])
         
         
-        # Filter out guides without essential idcpsa
+        # Filter out guides without essential nrocpsa
         guias_dict = {
-            str(g['idcpsa']): g for g in guias
-            if g.get('idcpsa') and str(g.get('idcpsa')).strip()
+            str(g['nrocpsa']): g for g in guias
+            if g.get('nrocpsa') and str(g.get('nrocpsa')).strip()
         }
-        # print(f"API Fetch: Found {len(guias_dict)} guides with valid idcpsa.")
+        print(f"API Fetch: Found {len(guias_dict)} guides with valid nrocpsa.")
 
         # --- Fetch Existing DB Data ---
         # Fetch ALL relevant procedures for the group (within a reasonable timeframe?)
@@ -1056,7 +965,7 @@ def conciliar_financas(request):
             all_procs_qs = all_procs_qs.filter(anestesistas_responsaveis=user.anesthesiologist)
         
         all_procs_list = list(all_procs_qs)
-        # print(f"DB Fetch: Found {len(all_procs_list)} potentially relevant procedures.")
+        print(f"DB Fetch: Found {len(all_procs_list)} potentially relevant procedures.")
 
         # Fetch existing financas records with CPSA (for quick lookup and updates)
         financas_qs = ProcedimentoFinancas.objects.filter(
@@ -1072,7 +981,7 @@ def conciliar_financas(request):
              )
 
         financas_dict_by_cpsa = {f.cpsa: f for f in financas_qs if f.cpsa}
-        # print(f"DB Fetch: Found {len(financas_dict_by_cpsa)} existing financas records with CPSA.")
+        print(f"DB Fetch: Found {len(financas_dict_by_cpsa)} existing financas records with CPSA.")
 
         # --- Processing ---
         financas_to_update = []
@@ -1082,9 +991,8 @@ def conciliar_financas(request):
         # Define batch size for processing
         BATCH_SIZE = 50
         
-        # print("--- Processing API Guides ---")
+        print("--- Processing API Guides ---")
         for cpsa_id, guia in guias_dict.items():
-            # print(f"Processing Guide CPSA {cpsa_id} (Paciente: {guia.get('paciente')})")
             processed_cpsa_ids.add(cpsa_id) 
             
             guia_paciente = guia.get('paciente')
@@ -1095,12 +1003,10 @@ def conciliar_financas(request):
             active_role = user.get_active_role()
             if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                 if not guia_cooperado or not similar(guia_cooperado.lower(), user.anesthesiologist.name.lower()) > 0.8:
-                    # print(f"  Skipping CPSA {cpsa_id}: Cooperado mismatch for user {user.username}.")
                     continue
 
             if cpsa_id in financas_dict_by_cpsa:
                 financa = financas_dict_by_cpsa[cpsa_id]
-                # print(f"  Found existing Finanças ID {financa.id} with matching CPSA.")
                 
                 if financa.tipo_cobranca == 'cooperativa':
                     updated = False
@@ -1132,13 +1038,9 @@ def conciliar_financas(request):
                         financa.api_data_cirurgia = guia_api_date_parsed; updated = True
                     
                     if updated:
-                        # print(f"    Marked Finanças ID {financa.id} for update.")
                         if financa not in financas_to_update: financas_to_update.append(financa)
-                    else:
-                        print(f"  Skipping financial data update for Finanças ID {financa.id} (CPSA: {cpsa_id}) because tipo_cobranca is '{financa.tipo_cobranca}'.")
 
                 if not financa.procedimento:
-                     # print(f"    Existing Finanças ID {financa.id} is unlinked. Trying to find matching procedure...")
                      best_match_proc = None
                      highest_similarity = 0.7 
                      if guia_paciente and guia_date:
@@ -1157,50 +1059,26 @@ def conciliar_financas(request):
                               existing_financas_for_proc = list(best_match_proc.financas_records.all())
                               
                               # Allow linking even if procedure has other financial records (multiple charges per procedure)
-                              # print(f"    >>> Linking existing Finanças ID {financa.id} to Proc ID {best_match_proc.id} (Comprehensive match)")
-                              
                               # Update the procedure with API data before linking
                               update_procedimento_with_api_data(best_match_proc, guia, group)
                               
                               financa.procedimento = best_match_proc
                               newly_linked_count += 1 
                               if financa not in financas_to_update: financas_to_update.append(financa)
-                          else:
-                               # print(f"    No suitable procedure found to link Finanças ID {financa.id} to.")
-                               pass
-                     else:
-                         # print(f"    Cannot attempt linking Finanças ID {financa.id}: Guide missing patient/date.")
-                         pass
                 elif financa.procedimento:
                      processed_cpsa_ids.add(financa.cpsa)
 
             else: # No existing Finanças with this CPSA
-                # print(f"  No existing Finanças with CPSA {cpsa_id}.")
                 best_match_proc = None
                 
                 if guia_paciente and guia_date:
-                    # print(f"    Searching for comprehensive Procedure match for Guide CPSA {cpsa_id} (Patient: {guia_paciente}, Date: {guia_date})...")
-                    
                     # Use comprehensive matching instead of simple name/date matching
                     best_match_proc = find_comprehensive_procedure_match(all_procs_list, guia, group)
-                    
-                    if best_match_proc:
-                        # print(f"      Found comprehensive Procedure match: Proc ID {best_match_proc.id}")
-                        pass
-                    else:
-                        # print(f"      No comprehensive Procedure match found for Guide CPSA {cpsa_id}")
-                        pass
-                else:
-                    # print(f"    Cannot attempt to find matching procedure for Guide CPSA {cpsa_id}: Guide missing patient/date.")
-                    pass
 
                 if best_match_proc: # Matching procedure found
-                    # print(f"    Found matching Proc ID {best_match_proc.id}. Creating financial record for CPSA {cpsa_id}.")
-                    
                     # Update the matched procedure with API data
                     update_procedimento_with_api_data(best_match_proc, guia, group)
                     
-                    # print(f"    >>> Creating NEW Finanças record for Guide CPSA {cpsa_id} and linking to Proc ID {best_match_proc.id}.")
                     new_financa = ProcedimentoFinancas(
                         procedimento=best_match_proc,
                         group=group,
@@ -1221,23 +1099,17 @@ def conciliar_financas(request):
                     newly_linked_count += 1
                 else: # No matching procedure found OR guide data was insufficient to search
                     if guia_paciente and guia_date:
-                        # print(f"    No matching Procedure found for Guide CPSA {cpsa_id} after search.")
-                        
                         # Create new procedures in individual transactions
                         try:
                             with transaction.atomic():
                                 newly_created_procedimento = create_new_procedimento_from_guia(guia, cpsa_id, group)
                                 if newly_created_procedimento:
                                     all_procs_list.append(newly_created_procedimento)
-                                    print(f"      Added new Procedimento ID {newly_created_procedimento.id} to search list for future matching.")
                         except Exception as e_proc_create:
-                            print(f"    !!! Error creating new Procedimento for Guide CPSA {cpsa_id}: {str(e_proc_create)}")
-                            import traceback
-                            traceback.print_exc()
+                            print(f"Error creating new Procedimento for Guide CPSA {cpsa_id}: {str(e_proc_create)}")
                             api_errors.append(f"Erro ao criar procedimento para guia {cpsa_id}: {str(e_proc_create)}")
                             newly_created_procedimento = None
                         
-                        # print(f"    >>> Creating Finanças record for Guide CPSA {cpsa_id} (Linked to New Proc: {newly_created_procedimento.id if newly_created_procedimento else 'None'}).")
                         new_financa = ProcedimentoFinancas(
                              procedimento=newly_created_procedimento,
                              group=group,
@@ -1293,7 +1165,7 @@ def conciliar_financas(request):
         unprocessed_api_cpsa_ids = set(guias_dict.keys()) - processed_cpsa_ids 
         print(f"--- Conciliation Finished. Updated: {updated_records_count}, Created: {newly_created_count}, Linked: {newly_linked_count}, Unprocessed API CPSA: {len(unprocessed_api_cpsa_ids)} ---")
         if unprocessed_api_cpsa_ids: 
-            print(f"Warning: {len(unprocessed_api_cpsa_ids)} CPSA IDs from API were not processed: {list(unprocessed_api_cpsa_ids)}")
+            print(f"Warning: {len(unprocessed_api_cpsa_ids)} CPSA numbers from API were not processed: {list(unprocessed_api_cpsa_ids)}")
             api_errors.append(f"{len(unprocessed_api_cpsa_ids)} guias da API não foram processadas.")
         summary_message = []
         if updated_records_count > 0: summary_message.append(f"{updated_records_count} registros atualizados.")
@@ -1329,9 +1201,8 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
     """
     Helper function to create a new Procedimento from API guide data.
     This is separated to allow individual transaction handling.
+    cpsa_id parameter now contains the nrocpsa value from the API.
     """
-    # print(f"    🚨 CREATING NEW PROCEDIMENTO for Guide CPSA {cpsa_id} (Patient: {guia.get('paciente')}, Date: {parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))}).")
-    
     guia_paciente = guia.get('paciente')
     guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
     
@@ -1380,8 +1251,7 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
 
     paciente_nome_para_proc = guia_paciente
     if not paciente_nome_para_proc:
-        paciente_nome_para_proc = f"Paciente Guia {cpsa_id}"
-        # print(f"      Guia CPSA {cpsa_id} has no paciente name, using fallback: {paciente_nome_para_proc}")
+        paciente_nome_para_proc = f"Paciente CPSA {cpsa_id}"
 
     # Handle ProcedimentoDetalhes (procedimento_principal)
     procedimento_principal_obj = None
@@ -1395,15 +1265,10 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
                 codigo_procedimento=api_codigo,
                 defaults={'name': api_descricao}
             )
-            if created:
-                print(f"        Created new ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name} ({procedimento_principal_obj.codigo_procedimento})")
-            else:
+            if not created:
                 if procedimento_principal_obj.name != api_descricao:
                     procedimento_principal_obj.name = api_descricao
-                    # procedimento_principal_obj.save() # Decide if overriding name is desired
-                    print(f"        Found existing ProcedimentoDetalhes for new Proc, name updated if different: {procedimento_principal_obj.name}")
-                else:
-                    print(f"        Found existing ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name}")
+                    procedimento_principal_obj.save() # Decide if overriding name is desired
 
     proc_type = CIRURGIA_AMBULATORIAL_PROCEDIMENTO
     if procedimento_principal_obj and procedimento_principal_obj.codigo_procedimento == '10101012':
@@ -1421,7 +1286,7 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
         procedimento_type=proc_type,
         status=STATUS_PENDING
     )
-    print(f"      Created new Procedimento ID {newly_created_procedimento.id} for patient '{newly_created_procedimento.nome_paciente}' from guide CPSA {cpsa_id}")
+    print(f"Created new Procedimento ID {newly_created_procedimento.id} for patient '{newly_created_procedimento.nome_paciente}' from guide CPSA {cpsa_id}")
 
     # Handle anesthesiologist
     guia_cooperado = guia.get('cooperado')
@@ -1439,17 +1304,15 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
         anest_final = None
         if best_match_anest:
             anest_final = best_match_anest
-            print(f"        Found matching Anesthesiologist ID {anest_final.id} ({anest_final.name}) for cooperado '{guia_cooperado}'.")
         else:
             anest_final = Anesthesiologist.objects.create(
                 name=guia_cooperado,
                 group=group
             )
-            print(f"        Created new Anesthesiologist ID {anest_final.id} ({anest_final.name}) for cooperado '{guia_cooperado}'.")
+            print(f"Created new Anesthesiologist '{anest_final.name}' for cooperado '{guia_cooperado}'")
         
         if anest_final:
             newly_created_procedimento.anestesistas_responsaveis.add(anest_final)
-            print(f"        Linked Anesthesiologist {anest_final.name} to new Procedimento {newly_created_procedimento.id}.")
 
     return newly_created_procedimento
 
