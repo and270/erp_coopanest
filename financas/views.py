@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from agenda.models import Procedimento, Convenios, ProcedimentoDetalhes
-from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, CIRURGIA_PROCEDIMENTO, STATUS_PENDING
+from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, STATUS_PENDING, CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
 from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic, Surgeon
 from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
 from django.db.models import Q, Sum, F, Value
@@ -799,6 +799,11 @@ def update_procedimento_with_api_data(procedimento, guia, group):
 
             if procedimento.procedimento_principal != proc_detalhe:
                 procedimento.procedimento_principal = proc_detalhe
+                # Also update the procedure type based on the new principal procedure
+                if proc_detalhe.codigo_procedimento == '10101012':
+                    procedimento.procedimento_type = CONSULTA_PROCEDIMENTO
+                else:
+                    procedimento.procedimento_type = CIRURGIA_AMBULATORIAL_PROCEDIMENTO
                 updated = True
                 print(f"        Updated Procedimento.procedimento_principal to {proc_detalhe.name}")
     
@@ -1400,6 +1405,10 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
                 else:
                     print(f"        Found existing ProcedimentoDetalhes for new Proc: {procedimento_principal_obj.name}")
 
+    proc_type = CIRURGIA_AMBULATORIAL_PROCEDIMENTO
+    if procedimento_principal_obj and procedimento_principal_obj.codigo_procedimento == '10101012':
+        proc_type = CONSULTA_PROCEDIMENTO
+
     newly_created_procedimento = Procedimento.objects.create(
         group=group,
         nome_paciente=paciente_nome_para_proc,
@@ -1409,7 +1418,7 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
         convenio=convenio_obj,
         cirurgiao=surgeon_obj,
         procedimento_principal=procedimento_principal_obj, # Assign here
-        procedimento_type=CIRURGIA_PROCEDIMENTO,
+        procedimento_type=proc_type,
         status=STATUS_PENDING
     )
     print(f"      Created new Procedimento ID {newly_created_procedimento.id} for patient '{newly_created_procedimento.nome_paciente}' from guide CPSA {cpsa_id}")

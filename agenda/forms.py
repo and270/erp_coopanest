@@ -6,6 +6,7 @@ from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes, 
 from datetime import datetime, timedelta
 from dal import autocomplete
 from dal_select2 import widgets as dal_widgets
+from constants import CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
 
 class ProcedimentoForm(forms.ModelForm):
 
@@ -82,7 +83,7 @@ class ProcedimentoForm(forms.ModelForm):
     class Meta:
         model = Procedimento
         fields = [
-            'procedimento_type', 'nome_paciente', 'email_paciente', 'cpf_paciente',
+            'nome_paciente', 'email_paciente', 'cpf_paciente',
             'convenio', 'convenio_nome_novo', 'procedimento_principal', 'hospital', 'outro_local',
             'cirurgiao', 'cirurgiao_nome',
             'anestesista_selector', # Add the selector field
@@ -128,6 +129,13 @@ class ProcedimentoForm(forms.ModelForm):
         end_time = self.cleaned_data['end_time']
         instance.data_horario = datetime.combine(date, time)
         instance.data_horario_fim = datetime.combine(date, end_time)
+
+        # Auto-classify procedure type
+        procedimento_principal = self.cleaned_data.get('procedimento_principal')
+        if procedimento_principal and procedimento_principal.codigo_procedimento == '10101012':
+            instance.procedimento_type = CONSULTA_PROCEDIMENTO
+        else:
+            instance.procedimento_type = CIRURGIA_AMBULATORIAL_PROCEDIMENTO
 
         convenio_nome_novo = self.cleaned_data.get('convenio_nome_novo')
         convenio_selecionado = self.cleaned_data.get('convenio')
