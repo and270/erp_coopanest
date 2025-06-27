@@ -337,7 +337,7 @@
 
 
 {# Add FABs here, outside the main container typically #}
-{% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %} {# Only show FABs to relevant users #}
+{% if active_role == 'gestor' or user.is_superuser %} {# Only show FABs to relevant users #}
     {# Removed Add Receita FAB - moved to header actions #}
     <button id="conciliate-fab" class="fab conciliate" onclick="runConciliation()" title="Conciliar Dados da API">
         <i class="fas fa-sync"></i>

@@ -71,7 +71,7 @@ def login_register_view(request):
 
 @login_required
 def profile_view(request):
-    from registration.models import Membership  # so we can reference it easily
+    from registration.models import Membership, USER_TYPE_CHOICES  # so we can reference it easily
 
     # Query all of this user's group memberships for the "switch active group" dropdown
     user_memberships = request.user.memberships.select_related('group').all()
@@ -96,6 +96,7 @@ def profile_view(request):
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
         'user_memberships': user_memberships,
+        'USER_TYPE_CHOICES': USER_TYPE_CHOICES,
     }
     return render(request, 'profile.html', context)
 
@@ -106,7 +107,8 @@ def cadastro_view(request):
         return render(request, 'usuario_nao_autenticado.html')
 
     # Allow only GESTOR and ADMIN
-    if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
+    active_role = request.user.get_active_role()
+    if active_role not in [GESTOR_USER, ADMIN_USER]:
         # return render(request, 'usuario_fora_funcao.html') # Or redirect to home
         return redirect('home') # Redirect home if not authorized
 
@@ -173,11 +175,13 @@ def edit_view(request, model_name, object_id):
     form_class = None
     template_name = None
 
+    active_role = request.user.get_active_role()
+
     if model_name == 'anesthesiologist':
         instance = get_object_or_404(Anesthesiologist, id=object_id)
         # Permission Check: User must be GESTOR/ADMIN in the *same group* or the specific ANESTESISTA user
-        is_correct_user = (request.user.user_type == ANESTESISTA_USER and instance.user == request.user)
-        is_group_manager = (request.user.user_type in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group)
+        is_correct_user = (active_role == ANESTESISTA_USER and instance.user == request.user)
+        is_group_manager = (active_role in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group)
 
         if not (is_correct_user or is_group_manager):
              return redirect('home') # Or show permission denied
@@ -188,7 +192,7 @@ def edit_view(request, model_name, object_id):
     elif model_name == 'surgeon':
         instance = get_object_or_404(Surgeon, id=object_id)
         # Permission Check: User must be GESTOR/ADMIN in the *same group*
-        if not (request.user.user_type in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group):
+        if not (active_role in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group):
             return redirect('home')
         form_class = SurgeonForm
         template_name = 'edit_surgeon.html'
@@ -196,7 +200,7 @@ def edit_view(request, model_name, object_id):
     elif model_name == 'hospital_clinic':
         instance = get_object_or_404(HospitalClinic, id=object_id)
          # Permission Check: User must be GESTOR/ADMIN in the *same group*
-        if not (request.user.user_type in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group):
+        if not (active_role in [GESTOR_USER, ADMIN_USER] and instance.group == request.user.group):
             return redirect('home')
         form_class = HospitalClinicForm
         template_name = 'edit_hospital_clinic.html'
@@ -239,7 +243,8 @@ def members_view(request):
             'ANESTESISTA_USER': ANESTESISTA_USER,
          })
 
-    if request.user.user_type == ANESTESISTA_USER:
+    active_role = request.user.get_active_role()
+    if active_role == ANESTESISTA_USER:
         # Anestesista only sees their own record
         my_anesthesiologist_record = Anesthesiologist.objects.filter(user=request.user, group=user_group).first()
 
@@ -250,7 +255,7 @@ def members_view(request):
             'ANESTESISTA_USER': ANESTESISTA_USER,
         })
 
-    elif request.user.user_type in [GESTOR_USER, ADMIN_USER]:
+    elif active_role in [GESTOR_USER, ADMIN_USER]:
         # Gestor/Admin sees all members in the group
         anesthesiologists = Anesthesiologist.objects.filter(group=user_group)
         surgeons = Surgeon.objects.filter(group=user_group)
@@ -274,7 +279,8 @@ def delete_view(request, model_name, object_id):
     if not request.user.validado:
         return HttpResponseForbidden("Você não tem permissão para acessar esta funcionalidade.")
 
-    if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
+    active_role = request.user.get_active_role()
+    if active_role not in [GESTOR_USER, ADMIN_USER]:
          return HttpResponseForbidden("Você não tem permissão para deletar registros.")
 
     instance = None
@@ -324,7 +330,8 @@ def cadastro_redirect(request, tab):
         return render(request, 'usuario_nao_autenticado.html')
 
     # Allow only GESTOR and ADMIN
-    if request.user.user_type not in [GESTOR_USER, ADMIN_USER]:
+    active_role = request.user.get_active_role()
+    if active_role not in [GESTOR_USER, ADMIN_USER]:
         # return render(request, 'usuario_fora_funcao.html')
          return redirect('home') # Redirect home if not authorized
 
@@ -434,15 +441,16 @@ def fetch_user_details_from_api(user):
 
                     # Determine user type based on API admin status or origem
                     if is_admin or user.origem == 'PJ':
-                        user.user_type = GESTOR_USER
+                        # user.user_type = GESTOR_USER # This is now role-based
                         print(f"Condition 'is_admin or user.origem == PJ' is TRUE (is_admin={is_admin}, origem={user.origem})")
-                        print(f"Assigning User Type: GESTOR_USER")
+                        print(f"User role will be set to GESTOR_USER for the relevant group.")
                     else:
-                        user.user_type = ANESTESISTA_USER
+                        # user.user_type = ANESTESISTA_USER # This is now role-based
                         print(f"Condition 'is_admin or user.origem == PJ' is FALSE (is_admin={is_admin}, origem={user.origem})")
-                        print(f"Assigning User Type: ANESTESISTA_USER")
+                        print(f"User role will be set to ANESTESISTA_USER for the relevant group.")
 
-                    print(f"Final User Type Set: {user.user_type}")
+                    # print(f"Final User Type Set: {user.user_type}")
+                    print(f"User role is now managed via Membership model.")
                     print(f"--- End Debug: Assigning User Type ---")
                     # --- Debugging End: User Type Logic ---
 

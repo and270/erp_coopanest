@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from agenda.models import Procedimento, Convenios, ProcedimentoDetalhes
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, CIRURGIA_PROCEDIMENTO, STATUS_PENDING
@@ -7,7 +7,7 @@ from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
 from django.db.models import Q, Sum, F, Value
 from datetime import datetime, timedelta, time
 from django.utils import timezone
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.views.decorators.http import require_http_methods
 import json
 import pandas as pd
@@ -21,11 +21,15 @@ DATA_INICIO_PUXAR_GUIAS_API = datetime(2025, 4, 1).date()
 
 @login_required
 def financas_view(request):
+    # Base permission check
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
-    if request.user.user_type != GESTOR_USER:
-        return HttpResponseForbidden("Acesso Negado")
-    
+
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
+        return redirect('home')  # Redirect non-gestores
+
+    # Get user's group and other initial variables
     user = request.user
     user_group = user.group
     view_type = request.GET.get('view', 'receitas')
@@ -64,13 +68,14 @@ def financas_view(request):
         ).select_related('procedimento', 'procedimento__hospital').prefetch_related('procedimento__anestesistas_responsaveis')
 
         # Filter for user type
+        active_role = user.get_active_role()
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+        if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
             base_qs = base_qs.filter(
                 Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
                 Q(procedimento__isnull=True, api_cooperado_nome__iexact=user.anesthesiologist.name)
             )
-        elif user.user_type not in [GESTOR_USER, ADMIN_USER]: # Allow ADMIN too? Assume yes for now.
+        elif active_role not in [GESTOR_USER, ADMIN_USER]: # Allow ADMIN too? Assume yes for now.
             base_qs = ProcedimentoFinancas.objects.none() # Non-gestors/admins see nothing unless anesthesiologist
 
         # Apply period filter (check both procedure date and api date)
@@ -109,12 +114,13 @@ def financas_view(request):
         # Filter for user type (Anesthesiologist might only see their own related expenses if logic requires)
         # Current logic shows all group expenses to Gestor/Admin, Anesthesiologist sees none directly unless linked?
         # Let's assume Gestor/Admin see all group expenses. Anesthesiologist logic might need review based on exact reqs.
-        if user.user_type == ANESTESISTA_USER:
+        active_role = user.get_active_role()
+        if active_role == ANESTESISTA_USER:
              # If Anesthesiologists should only see expenses linked to their procedures:
              # base_qs = base_qs.filter(procedimento__anestesistas_responsaveis=user.anesthesiologist)
              # If they see none, keep as is for now (or set to none())
              base_qs = Despesas.objects.none() # Assuming they don't see general expenses
-        elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+        elif active_role not in [GESTOR_USER, ADMIN_USER]:
              base_qs = Despesas.objects.none()
 
         # Apply period filter
@@ -145,6 +151,7 @@ def financas_view(request):
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
+        'active_role': active_role,
     }
 
     return render(request, 'financas.html', context)
@@ -153,7 +160,9 @@ def financas_view(request):
 def get_finance_item(request, type, id):
     if not request.user.validado:
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
-    if request.user.user_type != GESTOR_USER:
+    
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
         return JsonResponse({'error': 'Acesso negado'}, status=403)
 
     user = request.user
@@ -168,13 +177,14 @@ def get_finance_item(request, type, id):
             )
 
             # Check access for Anesthesiologist
+            active_role = user.get_active_role()
             #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+            if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                  is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
                  is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome.lower(), user.anesthesiologist.name.lower()) > 0.8
                  if not (is_linked_and_responsible or is_unlinked_and_cooperado):
                      return JsonResponse({'error': 'Acesso negado'}, status=403)
-            elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+            elif active_role not in [GESTOR_USER, ADMIN_USER]:
                  return JsonResponse({'error': 'Acesso negado'}, status=403)
 
 
@@ -202,7 +212,8 @@ def get_finance_item(request, type, id):
                 group=user_group # Assuming only Gestor access despesas directly
             )
              # Add specific permission checks for Despesas if needed
-            if user.user_type not in [GESTOR_USER, ADMIN_USER]:
+            active_role = user.get_active_role()
+            if active_role not in [GESTOR_USER, ADMIN_USER]:
                  return JsonResponse({'error': 'Acesso negado'}, status=403)
                  
             data = {
@@ -226,7 +237,9 @@ def get_finance_item(request, type, id):
 def update_finance_item(request):
     if not request.user.validado:
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
-    if request.user.user_type != GESTOR_USER:
+    
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
         return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     user = request.user
@@ -245,13 +258,14 @@ def update_finance_item(request):
             )
 
             # Permission Check (similar to get_finance_item)
+            active_role = user.get_active_role()
             #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+            if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                  is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
                  is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome.lower(), user.anesthesiologist.name.lower()) > 0.8
                  if not (is_linked_and_responsible or is_unlinked_and_cooperado):
                      return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
-            elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+            elif active_role not in [GESTOR_USER, ADMIN_USER]:
                  return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
             # Update common fields
@@ -283,7 +297,8 @@ def update_finance_item(request):
                 group=user_group
             )
              # Permission check
-            if user.user_type not in [GESTOR_USER, ADMIN_USER]:
+            active_role = user.get_active_role()
+            if active_role not in [GESTOR_USER, ADMIN_USER]:
                  return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
             item.descricao = data.get('descricao')
@@ -310,7 +325,8 @@ def update_finance_item(request):
 def create_receita_item(request):
     if not request.user.validado:
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
-    if request.user.user_type != GESTOR_USER:
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
         return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     user = request.user
@@ -381,7 +397,8 @@ def create_receita_item(request):
 def create_finance_item(request): # This view now ONLY handles Despesas
     if not request.user.validado:
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401) 
-    if request.user.user_type != GESTOR_USER:
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
         return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     try:
@@ -426,7 +443,8 @@ def create_finance_item(request): # This view now ONLY handles Despesas
 def export_finances(request):
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html') # Or return error response
-    if request.user.user_type != GESTOR_USER:
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
         return HttpResponseForbidden("Acesso Negado")
 
     user = request.user
@@ -460,13 +478,14 @@ def export_finances(request):
             Q(procedimento__group=user_group) | Q(group=user_group)
         ).select_related('procedimento', 'procedimento__hospital', 'procedimento__convenio').prefetch_related('procedimento__anestesistas_responsaveis')
         
+        active_role = user.get_active_role()
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+        if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
              base_qs = base_qs.filter(
                  Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
                  Q(procedimento__isnull=True, api_cooperado_nome__iexact=user.anesthesiologist.name)
              )
-        elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+        elif active_role not in [GESTOR_USER, ADMIN_USER]:
              base_qs = ProcedimentoFinancas.objects.none()
 
         if start_date and end_date:
@@ -524,9 +543,10 @@ def export_finances(request):
     else: # view_type == 'despesas'
          # Despesas export logic remains the same, just re-apply filters
         base_qs = Despesas.objects.filter(group=user_group)
+        active_role = user.get_active_role()
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-        if user.user_type == ANESTESISTA_USER: base_qs = Despesas.objects.none() # Or specific logic
-        elif user.user_type not in [GESTOR_USER, ADMIN_USER]: base_qs = Despesas.objects.none()
+        if active_role == ANESTESISTA_USER: base_qs = Despesas.objects.none() # Or specific logic
+        elif active_role not in [GESTOR_USER, ADMIN_USER]: base_qs = Despesas.objects.none()
 
         if start_date and end_date: base_qs = base_qs.filter(data__gte=start_date, data__lte=end_date)
         if search_query: base_qs = base_qs.filter(descricao__icontains=search_query)
@@ -559,7 +579,8 @@ def export_finances(request):
 def delete_finance_item(request):
     if not request.user.validado:
         return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
-    if request.user.user_type != GESTOR_USER:
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
         return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
     user = request.user
@@ -576,13 +597,14 @@ def delete_finance_item(request):
                  id=finance_id
             )
              # Permission Check (similar to get/update)
+            active_role = user.get_active_role()
             #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+            if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                  is_linked_and_responsible = item.procedimento and item.procedimento.anestesistas_responsaveis.filter(id=user.anesthesiologist.id).exists()
                  is_unlinked_and_cooperado = not item.procedimento and item.api_cooperado_nome and similar(item.api_cooperado_nome.lower(), user.anesthesiologist.name.lower()) > 0.8
                  if not (is_linked_and_responsible or is_unlinked_and_cooperado):
                      return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
-            elif user.user_type not in [GESTOR_USER, ADMIN_USER]:
+            elif active_role not in [GESTOR_USER, ADMIN_USER]:
                  return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
 
         elif finance_type == 'despesas':
@@ -590,7 +612,8 @@ def delete_finance_item(request):
                 id=finance_id,
                 group=user_group
             )
-            if user.user_type not in [GESTOR_USER, ADMIN_USER]:
+            active_role = user.get_active_role()
+            if active_role not in [GESTOR_USER, ADMIN_USER]:
                  return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
         else:
              return JsonResponse({'success': False, 'error': 'Tipo inválido'}, status=400)
@@ -947,7 +970,8 @@ def find_comprehensive_procedure_match(all_procs_list, guia, group):
 def conciliar_financas(request):
     if not request.user.validado:
         return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
-    if request.user.user_type != GESTOR_USER:
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
         return JsonResponse({'error': 'Acesso negado'}, status=403)
 
     user = request.user
@@ -1007,8 +1031,9 @@ def conciliar_financas(request):
         ).select_related('hospital', 'convenio').prefetch_related('financas_records') # Use prefetch_related for financas_records
 
         # Add anesthesiologist filter if applicable
+        active_role = user.get_active_role()
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+        if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
             all_procs_qs = all_procs_qs.filter(anestesistas_responsaveis=user.anesthesiologist)
         
         all_procs_list = list(all_procs_qs)
@@ -1019,8 +1044,9 @@ def conciliar_financas(request):
             Q(procedimento__group=group) | Q(group=group)
         ).select_related('procedimento') # Keep this select_related
 
+        active_role = user.get_active_role()
         #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-        if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+        if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
              financas_qs = financas_qs.filter(
                  Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
                  Q(procedimento__isnull=True, api_cooperado_nome__iexact=user.anesthesiologist.name)
@@ -1047,7 +1073,8 @@ def conciliar_financas(request):
             guia_date = parse_api_date(guia_date_str)
             guia_cooperado = guia.get('cooperado') 
 
-            if user.user_type == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+            active_role = user.get_active_role()
+            if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
                 if not guia_cooperado or not similar(guia_cooperado.lower(), user.anesthesiologist.name.lower()) > 0.8:
                     # print(f"  Skipping CPSA {cpsa_id}: Cooperado mismatch for user {user.username}.")
                     continue

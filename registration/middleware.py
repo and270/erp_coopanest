@@ -8,20 +8,26 @@ class CoopahubConnectionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        user = request.user
         # Check if user is authenticated and has a connection key
-        if request.user.is_authenticated and hasattr(request.user, 'connection_key') and request.user.connection_key:
-            # Check if token needs refreshing
-            token_refresh_minutes = settings.COOPAHUB_API.get('TOKEN_REFRESH_MINUTES', 30)
-            
-            if (not request.user.last_token_check or 
-                request.user.last_token_check < (timezone.now() - timedelta(minutes=token_refresh_minutes))):
-                self.validate_connection_key(request.user)
+        if user.is_authenticated:
+            # Make active_role available globally for templates
+            request.active_role = user.get_active_role()
+
+            if hasattr(user, 'connection_key') and user.connection_key:
+                # Check if token needs refreshing
+                token_refresh_minutes = settings.COOPAHUB_API.get('TOKEN_REFRESH_MINUTES', 30)
+                
+                if (not user.last_token_check or 
+                    user.last_token_check < (timezone.now() - timedelta(minutes=token_refresh_minutes))):
+                    self.validate_connection_key(request)
             
         response = self.get_response(request)
         return response
     
-    def validate_connection_key(self, user):
+    def validate_connection_key(self, request):
         """Validate the user's connection key and update user data if needed."""
+        user = request.user
         try:
             validate_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/acesso/ajaxValidaConexao.php"
             validate_data = {"conexao": user.connection_key}

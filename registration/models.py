@@ -6,6 +6,11 @@ from django.utils.translation import gettext_lazy as _
 
 from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER
 
+USER_TYPE_CHOICES = (
+    (GESTOR_USER, 'Administração'),
+    (ANESTESISTA_USER, 'Anestesista'),
+)
+
 class Groups(models.Model):
     name = models.CharField(max_length=255, verbose_name='Nome do Grupo')
     email = models.EmailField(default='', verbose_name='E-mail do Grupo')
@@ -19,11 +24,6 @@ class Groups(models.Model):
         return self.name
     
 class CustomUser(AbstractUser):
-    USER_TYPE = (
-        (GESTOR_USER , 'Administração'),
-        (ANESTESISTA_USER , 'Anestesista'),
-    )
-
     groups = models.ManyToManyField(Group, blank=True, related_name="%(app_label)s_%(class)s_related")
     user_permissions = models.ManyToManyField(Permission, blank=True, related_name="%(app_label)s_%(class)s_related")
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
@@ -36,12 +36,6 @@ class CustomUser(AbstractUser):
     last_token_check = models.DateTimeField(null=True, blank=True, verbose_name='Última Verificação de Token')
     full_name = models.CharField(max_length=255, null=True, blank=True, verbose_name='Nome Completo')
 
-    user_type = models.CharField(
-        max_length=40,
-        default=ANESTESISTA_USER,
-        choices=USER_TYPE,
-        verbose_name='Tipo de usuário',
-    )
     validado = models.BooleanField(default=False, verbose_name='Validado') 
     
     # Add to CustomUser class
@@ -54,6 +48,21 @@ class CustomUser(AbstractUser):
         constraints = [
             models.UniqueConstraint(fields=['email'], name='unique_email')
         ]
+
+    def get_active_role(self):
+        """
+        Returns the role of the user in their currently active group.
+        """
+        if not self.group:
+            return None
+        
+        try:
+            membership = self.memberships.get(group=self.group)
+            return membership.role
+        except Membership.DoesNotExist:
+            # This might happen if memberships are out of sync.
+            # Default to the most restrictive role.
+            return ANESTESISTA_USER
 
     def clean(self):
         if self.email:
@@ -77,12 +86,18 @@ class Membership(models.Model):
     user = models.ForeignKey('registration.CustomUser', on_delete=models.CASCADE, related_name='memberships')
     group = models.ForeignKey('registration.Groups', on_delete=models.CASCADE)
     validado = models.BooleanField(default=False)
+    role = models.CharField(
+        max_length=40,
+        choices=USER_TYPE_CHOICES,
+        default=ANESTESISTA_USER,
+        verbose_name='Cargo no Grupo'
+    )
 
     class Meta:
         unique_together = ('user', 'group')
 
     def __str__(self):
-        return f"{self.user.email} in {self.group.name} (validado={self.validado})"
+        return f"{self.user.email} in {self.group.name} (role={self.get_role_display()})"
 
 class Anesthesiologist(models.Model):
     ROLE_CHOICES = [
@@ -113,10 +128,12 @@ class Anesthesiologist(models.Model):
 
     def clean(self):
         # Allow GESTOR or ANESTESISTA to be linked
-        if self.user and self.user.user_type not in [ANESTESISTA_USER, GESTOR_USER]:
-            raise ValidationError({
-                'user': _('O usuário selecionado não tem um tipo permitido (Anestesista ou Gestor) para ser associado a um perfil de Anestesista.')
-            })
+        if self.user:
+            active_role = self.user.get_active_role()
+            if active_role and active_role not in [ANESTESISTA_USER, GESTOR_USER]:
+                raise ValidationError({
+                    'user': _('O usuário selecionado não tem um tipo permitido (Anestesista ou Gestor) para ser associado a um perfil de Anestesista.')
+                })
         # Ensure group is set if user is set (important for linking)
         if self.user and not self.group:
              # If the user has an active group, assign it automatically
