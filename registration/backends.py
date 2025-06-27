@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.utils import timezone
 from constants import ANESTESISTA_USER, GESTOR_USER
-from .models import Groups, Membership, Anesthesiologist
+from .models import Groups, Membership, Anesthesiologist, USER_TYPE_CHOICES
 
 User = get_user_model()
 
@@ -75,9 +75,14 @@ class CoopahubAuthBackend(ModelBackend):
                 # Store the user's full name from login response
                 user.full_name = user_full_name
                 user.save()
-                
-                # Fetch additional user information 
-                self._fetch_and_update_user_data(user)
+
+                # Process the 'empresa' list directly from the login response
+                # This replaces the need for _fetch_and_update_user_data during login
+                if 'empresa' in data and isinstance(data['empresa'], list):
+                    self._process_user_groups(user, data['empresa'])
+                else:
+                    # Handle single company response (PJ users)
+                    self._process_single_company_response(user, data)
                 
                 return user
             
@@ -125,11 +130,11 @@ class CoopahubAuthBackend(ModelBackend):
 
                     # Determine user type
                     assigned_user_type = GESTOR_USER if is_admin or user.origem == 'PJ' else ANESTESISTA_USER
-                    user.user_type = assigned_user_type # Assign determined type
+                    # user.user_type = assigned_user_type # This is now handled per-membership
 
                     print(f"Condition 'is_admin or user.origem == PJ' is {is_admin or user.origem == 'PJ'} (is_admin={is_admin}, origem={user.origem})")
-                    print(f"Assigning User Type: {assigned_user_type}")
-                    print(f"Final User Type Set: {user.user_type}")
+                    # print(f"Assigning User Type: {assigned_user_type}") # No longer assigned globally
+                    print(f"User Type is now determined by group membership role.")
                     print(f"--- End Debug: Assigning User Type ---")
                     # --- Debugging End: User Type Logic ---
 
@@ -139,10 +144,14 @@ class CoopahubAuthBackend(ModelBackend):
                         user.external_id = first_item['IdMedico'] # Get from the dictionary
 
                     # Process user's groups using the entire list received
+                    # Note: This old logic does not have role information.
+                    # The middleware will call this. For now, it will just sync groups.
                     self._process_user_groups(user, user_data_list) # Pass the list directly
 
                     # --- Automatic Anesthesiologist Creation ---
-                    if user.user_type == ANESTESISTA_USER and user.group:
+                    # The role is now per-group, so we check the active group's role
+                    active_role = user.get_active_role()
+                    if active_role == ANESTESISTA_USER and user.group:
                         # Check if an Anesthesiologist record already exists for this user
                         if not Anesthesiologist.objects.filter(user=user).exists():
                             print(f"--- Creating Anesthesiologist record for user {user.username} ---")
@@ -190,26 +199,81 @@ class CoopahubAuthBackend(ModelBackend):
             # Add the exception type for better debugging
             print(f"Error fetching user data ({type(e).__name__}): {e}") # Updated print
     
+    def _process_single_company_response(self, user, data):
+        """
+        Process single company response for PJ users.
+        """
+        external_id = data.get('id_empresa')
+        name = data.get('razao_social')
+        
+        if not external_id or not name:
+            print(f"Invalid single company data for user {user.username}: {data}")
+            return
+        
+        # PJ users are typically managers/gestores
+        role = GESTOR_USER
+        
+        # Get or create group
+        group, created = Groups.objects.get_or_create(
+            external_id=external_id,
+            defaults={'name': name}
+        )
+        
+        # If the group exists but has a different name, update it
+        if not created and group.name != name:
+            group.name = name
+            group.save()
+        
+        # Get or create membership with GESTOR role
+        membership, membership_created = Membership.objects.get_or_create(
+            user=user,
+            group=group,
+            defaults={'validado': True, 'role': role}
+        )
+        
+        # Update role if membership already existed
+        if not membership_created and membership.role != role:
+            membership.role = role
+            membership.save()
+        
+        # Set the user's active group
+        user.group = group
+        user.save()
+        
+        print(f"Processed single company for user {user.username}: {name} (Role: {role})")
+
     def _process_user_groups(self, user, empresas_list): # Renamed parameter
-        """Process and associate user with their groups/empresas from a list."""
-        # Check if the received data is actually a list
+        """
+        Process and associate user with their groups/empresas from a list.
+        This function handles two different formats from the API:
+        1. The rich format from the login endpoint (`loginportal.php`).
+        2. The simple format from the user details endpoint (`guia/index.php`).
+        """
         if not isinstance(empresas_list, list):
              print("----- _process_user_groups did not receive a list -----")
              print(f"Received data: {empresas_list}")
              print("-------------------------------------------------------")
              return
 
-        # --- Debugging removed/adjusted as the previous step now passes the list ---
-
-        # If user has no empresas, there's nothing to do
         if not empresas_list:
              print("----- Empty empresas list received -----")
              return
 
         # Process each empresa dictionary in the list
         for empresa_data in empresas_list: # Iterate directly over the list
-            external_id = empresa_data.get('id_empresa') # Use the correct key 'id_empresa'
-            name = empresa_data.get('razao_social')   # Use the correct key 'razao_social'
+            # Detect format and extract data
+            is_login_format = 'value' in empresa_data and 'label' in empresa_data
+            
+            if is_login_format:
+                external_id = empresa_data.get('value')
+                name = empresa_data.get('label')
+                role = GESTOR_USER if empresa_data.get('administrador') == 'S' else ANESTESISTA_USER
+            else: # Assuming old format
+                external_id = empresa_data.get('id_empresa')
+                name = empresa_data.get('razao_social')
+                # The old format doesn't provide a role, so we can't update it here.
+                # We'll just ensure the membership exists.
+                role = None 
 
             if not external_id or not name:
                 print(f"Skipping invalid empresa data: {empresa_data}") # Added log
@@ -226,15 +290,17 @@ class CoopahubAuthBackend(ModelBackend):
                 group.name = name
                 group.save()
             
-            # Associate user with this group through membership
-            membership, _ = Membership.objects.get_or_create(
+            # Get or create membership
+            membership, membership_created = Membership.objects.get_or_create(
                 user=user,
                 group=group,
                 defaults={'validado': True}
             )
-            
-            # TODO: In the future, check empresa_data.get('adm', False) to determine
-            # if user is admin of this specific group
+
+            # Update role only if provided by the API (i.e., login format)
+            if role and membership.role != role:
+                membership.role = role
+                membership.save()
             
             # Set the user's active group if not already set
             if not user.group:

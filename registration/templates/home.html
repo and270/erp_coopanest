@@ -8,11 +8,11 @@
     <h2 class="sub-title">ENTERPRISE RESOURCE PLANNING PARA PROFISSIONAIS DA SAÚDE</h2>
     <div class="cards">
             {% if user.is_authenticated %}
-                {% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
+                {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
                     <a href="{% url 'cadastro' %}" class="card cadastro">
                         <span>Cadastro</span>
                     </a>
-                {% elif user.user_type == ANESTESISTA_USER %}
+                {% elif request.active_role == ANESTESISTA_USER %}
                     <a href="{% url 'members' %}" class="card cadastro">
                         <span>Meu cadastro</span>
                     </a>
@@ -20,7 +20,7 @@
                 <a href="{% url 'agenda' %}" class="card agenda">
                     <span>Agenda</span>
                 </a>
-                {% if user.user_type == GESTOR_USER %}
+                {% if request.active_role == GESTOR_USER %}
                     <a href="{% url 'financas' %}" class="card financas">
                         <span>Finanças</span>
                     </a>
@@ -28,7 +28,7 @@
                 <a href="{% url 'qualidade' %}" class="card qualidade">
                     <span>Qualidade</span>
                 </a>
-                {% if user.user_type == GESTOR_USER %}
+                {% if request.active_role == GESTOR_USER %}
                     <a href="{% url 'dashboard' %}" class="card dashboard">
                         <span>Dashboard</span>
                     </a>

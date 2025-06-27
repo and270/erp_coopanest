@@ -316,9 +316,42 @@
                 {% endif %}
             </div>
 
+            <div class="radio-group">
+                <label>{{ form.evento_adverso_evitavel.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.evento_adverso_evitavel %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.evento_adverso_evitavel.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso_evitavel.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group" id="evento_adverso_evitavel_desc_group" style="display: none;">
+                <label for="{{ form.evento_adverso_evitavel_desc.id_for_label }}">{{ form.evento_adverso_evitavel_desc.label }}</label>
+                <div class="input-width-280">
+                    {{ form.evento_adverso_evitavel_desc }}
+                </div>
+                {% if form.evento_adverso_evitavel_desc.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso_evitavel_desc.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
             <!-- Exclude already handled fields from the general radio fields loop -->
             {% for field in form %}
-                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca,adesao_profilaxia_antibiotica,adesao_prevencao_tvp_tep'|split:',' %}
+                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca,adesao_profilaxia_antibiotica,adesao_prevencao_tvp_tep,evento_adverso_evitavel'|split:',' %}
                     {% if field.field.widget.input_type == "radio" and field.name not in excluded_fields %}
                         <div class="radio-group">
                             <label>{{ field.label }}</label>
@@ -748,6 +781,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialEventosAdversos = document.querySelector('input[name="eventos_adversos_graves"]:checked');
     if (initialEventosAdversos) {
         handleEventosAdversosGravesChange({ target: initialEventosAdversos });
+    }
+
+    // Evento Adverso Evitável handler
+    const eventoAdversoEvitavelInputs = document.querySelectorAll('input[name="evento_adverso_evitavel"]');
+    const eventoAdversoEvitavelDescGroup = document.getElementById('evento_adverso_evitavel_desc_group');
+
+    function handleEventoAdversoEvitavelChange(event) {
+        const selectedValue = event.target.value === 'True';
+        eventoAdversoEvitavelDescGroup.style.display = selectedValue ? 'block' : 'none';
+        
+        if (!selectedValue) {
+            const select = document.querySelector('select[name="evento_adverso_evitavel_desc"]');
+            if (select) select.value = '';
+        }
+    }
+
+    eventoAdversoEvitavelInputs.forEach(input => {
+        input.addEventListener('change', handleEventoAdversoEvitavelChange);
+    });
+
+    const initialEventoAdversoEvitavel = document.querySelector('input[name="evento_adverso_evitavel"]:checked');
+    if (initialEventoAdversoEvitavel) {
+        handleEventoAdversoEvitavelChange({ target: initialEventoAdversoEvitavel });
     }
 
     // Reação Alérgica Grave handler

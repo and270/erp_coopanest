@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from registration.models import Anesthesiologist
 from dateutil.relativedelta import relativedelta
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 import xlsxwriter
 from io import BytesIO
 from qualidade.models import AvaliacaoRPA
@@ -23,7 +23,7 @@ def dashboard_view(request):
     """Dashboard de Qualidade, com opção de Período Personalizado."""
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
-    if request.user.user_type != GESTOR_USER:
+    if request.user.get_active_role() != GESTOR_USER:
         return HttpResponseForbidden("Acesso Negado")
 
     user_group = request.user.group
@@ -213,6 +213,7 @@ def dashboard_view(request):
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
+        'active_role': request.user.get_active_role(),
     })
 
 @login_required
@@ -224,7 +225,7 @@ def financas_dashboard_view(request):
 
     if not request.user.validado:
         return render(request, 'usuario_nao_autenticado.html')
-    if request.user.user_type != GESTOR_USER:
+    if request.user.get_active_role() != GESTOR_USER:
         return HttpResponseForbidden("Acesso Negado")
 
     user_group = request.user.group
@@ -258,7 +259,7 @@ def financas_dashboard_view(request):
     current_user_anesthesiologist = None
 
     # Apesar de anestesista não terem acesso ao dashboard, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-    if user.user_type == ANESTESISTA_USER:
+    if user.get_active_role() == ANESTESISTA_USER:
         try:
             current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)
             anestesistas_for_template = [current_user_anesthesiologist] # Only self for dropdown
@@ -276,7 +277,7 @@ def financas_dashboard_view(request):
              anestesistas_for_template = []
              selected_anestesista_id = None # Cannot filter if profile doesn't exist
 
-    elif user.user_type in [GESTOR_USER, ADMIN_USER]:
+    elif user.get_active_role() in [GESTOR_USER, ADMIN_USER]:
         # Gestor/Admin can filter by any anesthesiologist
         if selected_anestesista_id:
             queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id)
@@ -652,7 +653,7 @@ def financas_dashboard_view(request):
         'period_total': period_total,
         'anestesista_total': anestesista_total,
         'selected_graph_type': selected_graph_type,
-        'user_type': user.user_type,
+        'active_role': request.user.get_active_role(),
     }
 
     return render(request, 'dashboard_financas.html', context)
@@ -662,7 +663,7 @@ def export_financas_excel(request):
     """Handle Excel export for financial dashboard data"""
     if not request.user.validado:
         return HttpResponse('Unauthorized', status=401)
-    if request.user.user_type != GESTOR_USER:
+    if request.user.get_active_role() != GESTOR_USER:
         return HttpResponse('Acesso Negado', status=403)
 
     # Create output buffer
@@ -707,7 +708,7 @@ def export_financas_excel(request):
 
     # Apply Anestesista Filter based on user type
     #Apesar de anestesista não terem acesso ao dashboard, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-    if user.user_type == ANESTESISTA_USER:
+    if user.get_active_role() == ANESTESISTA_USER:
         try:
             current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)
             if selected_anestesista_id and str(current_user_anesthesiologist.id) == selected_anestesista_id:
@@ -716,7 +717,7 @@ def export_financas_excel(request):
         except Anesthesiologist.DoesNotExist:
             pass # Don't filter if profile is missing
 
-    elif user.user_type in [GESTOR_USER, ADMIN_USER]:
+    elif user.get_active_role() in [GESTOR_USER, ADMIN_USER]:
         if selected_anestesista_id:
             queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id)
 

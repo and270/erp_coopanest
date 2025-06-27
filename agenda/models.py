@@ -1,8 +1,8 @@
 from django.utils import timezone
 from django.db import models
 from constants import (
-    CIRURGIA_PROCEDIMENTO, EXAME_PROCEDIMENTO, FORA_CENTRO_PROCEDIMENTO,
-    PLANTONISTA_ESCALA, STATUS_FINISHED, STATUS_PENDING, SUBSTITUTO_ESCALA, FERIAS_ESCALA
+    PLANTONISTA_ESCALA, STATUS_FINISHED, STATUS_PENDING, SUBSTITUTO_ESCALA, FERIAS_ESCALA,
+    CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
 )
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
 import uuid
@@ -26,9 +26,8 @@ class Convenios(models.Model):
 
 class Procedimento(models.Model):
     PROCEDIMENTO_TYPE = (
-        (CIRURGIA_PROCEDIMENTO , 'Cirurgia'),
-        (FORA_CENTRO_PROCEDIMENTO , 'Procedimento Fora do Centro Cirúrgico'),
-        (EXAME_PROCEDIMENTO , 'Exame'),
+        (CONSULTA_PROCEDIMENTO, 'Consulta'),
+        (CIRURGIA_AMBULATORIAL_PROCEDIMENTO, 'Cirurgia / Procedimento ambulatorial'),
     )
 
     STATUS_CHOICES = (
@@ -39,7 +38,7 @@ class Procedimento(models.Model):
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     procedimento_type = models.CharField(
         max_length=40,
-        default=CIRURGIA_PROCEDIMENTO,
+        default=CIRURGIA_AMBULATORIAL_PROCEDIMENTO,
         choices=PROCEDIMENTO_TYPE,
         verbose_name='Tipo de Procedimento',
     )

@@ -24,7 +24,7 @@
     <div class="header-actions">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Buscar por paciente, CPF ou CPSA" value="{{ search_query }}" autocomplete="off"> {# Updated placeholder #}
+            <input type="text" id="searchInput" placeholder="Buscar por paciente, CPF, CPSA ou Anestesista" value="{{ search_query }}" autocomplete="off"> {# Updated placeholder #}
         </div>
         
         {% if view_type == 'receitas' %} {# Only show status filter for Receitas #}
@@ -337,7 +337,7 @@
 
 
 {# Add FABs here, outside the main container typically #}
-{% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %} {# Only show FABs to relevant users #}
+{% if active_role == 'gestor' or user.is_superuser %} {# Only show FABs to relevant users #}
     {# Removed Add Receita FAB - moved to header actions #}
     <button id="conciliate-fab" class="fab conciliate" onclick="runConciliation()" title="Conciliar Dados da API">
         <i class="fas fa-sync"></i>
@@ -885,6 +885,18 @@ document.addEventListener('DOMContentLoaded', function() {
                  conciliateButton.disabled = false;
                  conciliateButton.innerHTML = '<i class="fas fa-sync"></i>'; // Reset icon
              });
+    }
+
+    // --- Re-focus on search input after search ---
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('search') && urlParams.get('search')) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+            // Move cursor to the end of the input
+            const val = searchInput.value;
+            searchInput.setSelectionRange(val.length, val.length);
+        }
     }
 
 }); // End DOMContentLoaded

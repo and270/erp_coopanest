@@ -1718,9 +1718,8 @@ select {
 }
 
 
-.btn-cirurgias::before { background-color: #33B679; }
+.btn-consultas::before { background-color: #33B679; }
 .btn-procedimentos::before { background-color: #F4511E; }
-.btn-exames::before { background-color: #F6BF26; }
 
 .btn-plantonista::before { background-color: #7986CB; }
 .btn-substituto::before { background-color: #C440EB; }
@@ -1814,6 +1813,8 @@ select {
     grid-template-rows: repeat(15, 1fr);
     background-color: #ffffff;
     border-left: 1px solid #e0e0e0; /* Ensure border is applied */
+    min-width: 0; /* Allow column to shrink */
+    overflow: hidden; /* Prevent overflow */
 }
 
 .time-slots {
@@ -1848,6 +1849,7 @@ select {
     height: auto; /* Adjust height to fit content */
     padding: 5px;
     border-bottom: 1px solid #e0e0e0;
+    overflow: hidden; /* Prevent overflow */
 }
 
 .day {
@@ -2129,13 +2131,14 @@ select {
 }
 
 .week-view-card {
-    flex-grow: 1; /* Allow cards to grow and shrink as needed */
-    flex-shrink: 0;
-    padding: 5px;
+    width: 100%; /* Force card to take full width of container */
+    padding: 3px;
     box-sizing: border-box;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
     background-color: #f5f5f5;
-    border-radius: 5px;
+    border-radius: 3px;
+    overflow: hidden; /* Prevent any content from overflowing */
+    word-wrap: break-word; /* Break long words */
 }
 
 .procedure-card:hover {
@@ -2149,19 +2152,43 @@ select {
     text-overflow: ellipsis;
 }
 
+.procedure-first-row {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+}
+
+.procedure-first-row .procedure-time {
+    display: inline;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.procedure-first-row .procedure-patient {
+    display: inline;
+    font-weight: bold;
+}
+
+.procedure-card .procedure-name,
+.procedure-card .procedure-anesthesiologist {
+    display: block;
+    font-size: 0.8em;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+}
+
 
 
 /* Specific colors based on procedimento_type */
-.cirurgia {
-    background-color: #33B679; /* Green for CIRURGIA_PROCEDIMENTO */
+.consulta {
+    background-color: #33B679; /* Green for Consulta */
 }
 
-.fora-centro {
-    background-color: #F4511E; /* Orange for FORA_CENTRO_PROCEDIMENTO */
-}
-
-.exame {
-    background-color: #F6BF26; /* Gold for EXAME_PROCEDIMENTO */
+.cirurgia-ambulatorial {
+    background-color: #F4511E; /* Orange for Cirurgia/Ambulatorial */
 }
 
 .close-modal {

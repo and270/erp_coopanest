@@ -35,19 +35,19 @@
             </button>
             <ul class="nav-links">
                 {% if user.is_authenticated %}
-                    {% if user.user_type == GESTOR_USER or user.user_type == ADMIN_USER %}
+                    {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
                         <li><a href="{% url 'members' %}" {% if request.resolver_match.url_name == 'members' %}class="active"{% endif %}>Membros</a></li>
                         <li><a href="{% url 'cadastro' %}" {% if request.resolver_match.url_name == 'cadastro' %}class="active"{% endif %}>Cadastro</a></li>
-                    {% elif user.user_type == ANESTESISTA_USER %}
+                    {% elif request.active_role == ANESTESISTA_USER %}
                         <li><a href="{% url 'members' %}" {% if request.resolver_match.url_name == 'members' %}class="active"{% endif %}>Meu cadastro</a></li>
                     {% endif %}
                 {% endif %}
                 <li><a href="{% url 'agenda' %}" {% if request.resolver_match.url_name == 'agenda' %}class="active"{% endif %}>Agenda</a></li>
-                {% if user.user_type == GESTOR_USER %}
+                {% if request.active_role == GESTOR_USER %}
                 <li><a href="{% url 'financas' %}" {% if request.resolver_match.url_name == 'financas' %}class="active"{% endif %}>Finanças</a></li>
                 {% endif %}
                 <li><a href="{% url 'qualidade' %}" {% if request.resolver_match.url_name == 'qualidade' %}class="active"{% endif %}>Qualidade</a></li>
-                {% if user.user_type == GESTOR_USER %}
+                {% if request.active_role == GESTOR_USER %}
                 <li><a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
                 {% endif %}
                 {% if user.is_authenticated %}

@@ -65,9 +65,8 @@
             <div class="event-types-container">
                 <div class="event-types-legend">Legenda</div>
                 <ul class="event-types">
-                    <li><button class="btn-cirurgias">Cirurgia</button></li>
-                    <li><button class="btn-procedimentos">Procedimento fora do centro cirúrgico</button></li>
-                    <li><button class="btn-exames">Exame</button></li>
+                    <li><button class="btn-consultas">Consulta</button></li>
+                    <li><button class="btn-procedimentos">Cirurgia / Procedimento ambulatorial</button></li>
                 </ul>
             </div>
         </div>
@@ -110,7 +109,7 @@
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
                             {% if procedimento.data_horario.date == date.day.date %}
-                                <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
                                     <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
@@ -186,15 +185,15 @@
                             <div class="hour-slot" data-hour="{{ hour }}">
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
-                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                             <div class="procedure-first-row">
                                                 <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             </div>
-                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
+                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:15 }}</span>
                                             <span class="procedure-anesthesiologist">
                                                 {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
+                                                    {{ anestesista.name|truncatechars:15 }}{% if not forloop.last %}, {% endif %}
                                                 {% endfor %}
                                             </span>
                                         </div>
@@ -260,11 +259,6 @@
             {% csrf_token %}
             <input type="hidden" name="procedure_id" id="procedure_id">
             {{ form.non_field_errors }}
-            
-            <div class="form-group">
-                <label for="{{ form.procedimento_type.id_for_label }}">{{ form.procedimento_type.label }}<span class="required-asterisk">*</span></label>
-                {{ form.procedimento_type }}
-            </div>
             
             <div class="form-group">
                 <label for="{{ form.data.id_for_label }}">{{ form.data.label }}<span class="required-asterisk">*</span></label>
@@ -884,7 +878,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 document.getElementById('procedure_id').value = procedureId;
-                document.getElementById('id_procedimento_type').value = data.procedimento_type;
                 document.getElementById('id_data').value = data.data;
                 
                 // Directly use the time strings from the server

@@ -5,11 +5,17 @@
 <div class="profile-container">
     <h1>Seu Perfil</h1>
     <p><strong>Seu nome:</strong> {{ user.full_name }}</p>
-    <p><strong>Seu acesso ao sistema:</strong> {{ user.get_user_type_display }}</p>
     {% if user.group %}
         <p><strong>Seu Grupo ativo:</strong> {{ user.group }}</p>
     {% endif %}
 
+    {% if user.get_active_role %}
+    <p><strong>Seu acesso ao sistema no grupo atual:</strong> 
+    {% for key, value in USER_TYPE_CHOICES %}
+        {% if key == user.get_active_role %}{{ value }}{% endif %}
+    {% endfor %}
+    </p>
+    {% endif %}
 
     <hr>
     {% if user_memberships|length > 1 %} {# Only show switcher if user belongs to more than one group #}

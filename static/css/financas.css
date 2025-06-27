@@ -233,7 +233,7 @@
 .financas-table {
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow-x: auto;
     margin-bottom: 24px;
     width: 100%;
 }
