@@ -390,7 +390,7 @@
 
             <!-- Exclude already handled fields from the general radio fields loop -->
             {% for field in form %}
-                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca,adesao_profilaxia_antibiotica,adesao_prevencao_tvp_tep,evento_adverso_evitavel'|split:',' %}
+                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca,adesao_profilaxia_antibiotica,adesao_prevencao_tvp_tep,evento_adverso_evitavel,abreviacao_jejum,escala_aldrete'|split:',' %}
                     {% if field.field.widget.input_type == "radio" and field.name not in excluded_fields %}
                         <div class="radio-group">
                             <label>{{ field.label }}</label>
