@@ -46,9 +46,8 @@
             <div class="event-types-container">
                 <div class="event-types-legend">Legenda</div>
                 <ul class="event-types">
-                    <li><button class="btn-cirurgias">Cirurgia</button></li>
-                    <li><button class="btn-procedimentos">Procedimento fora do centro cirúrgico</button></li>
-                    <li><button class="btn-exames">Exame</button></li>
+                    <li><button class="btn-consultas">Consulta</button></li>
+                    <li><button class="btn-procedimentos">Cirurgia / Procedimento ambulatorial</button></li>
                 </ul>
             </div>
         </div>
@@ -91,7 +90,7 @@
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
                             {% if procedimento.data_horario.date == date.day.date %}
-                                <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
                                     <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
@@ -170,7 +169,7 @@
                             <div class="hour-slot" data-hour="{{ hour }}">
                                 {% for procedimento in procedimentos %}
                                     {% if procedimento.data_horario|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
-                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
                                             <div class="procedure-first-row">
                                                 <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
