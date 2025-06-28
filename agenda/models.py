@@ -86,7 +86,7 @@ class Procedimento(models.Model):
     tipo_procedimento = models.CharField(
         max_length=10,
         choices=TIPO_PROCEDIMENTO_CHOICES,
-        verbose_name='Tipo de Procedimento (Agenda)',
+        verbose_name='Eletiva ou Urgência',
         default='eletiva', # Default to 'eletiva' or choose another appropriate default
         null=True, blank=True # Allow null and blank temporarily if procedures can exist without this info initially
     )

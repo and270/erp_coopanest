@@ -117,7 +117,7 @@ class ProcedimentoForm(forms.ModelForm):
         self.fields['anestesista_selector'].empty_label = "--- Selecione ---"
         # Hide the label for the original field in the template using JS/CSS might be better
         # self.fields['anestesistas_responsaveis'].label = ''
-        self.fields['tipo_procedimento'].widget = forms.Select(attrs={'class': 'form-control'})
+        self.fields['tipo_procedimento'].widget.attrs.update({'class': 'form-control'})
         self.fields['tipo_procedimento'].empty_label = "--- Selecione o Tipo ---"
 
 

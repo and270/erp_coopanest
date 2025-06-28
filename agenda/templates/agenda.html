@@ -309,6 +309,11 @@
             </div>
             
             <div class="form-group">
+                <label for="{{ form.tipo_procedimento.id_for_label }}">{{ form.tipo_procedimento.label }}</label>
+                {{ form.tipo_procedimento }}
+            </div>
+            
+            <div class="form-group">
                 <label for="{{ form.hospital.id_for_label }}">{{ form.hospital.label }}</label>
                 {{ form.hospital }}
             </div>
@@ -895,6 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
+                document.getElementById('id_tipo_procedimento').value = data.tipo_procedimento;
                 
                 // Fix for procedimento_principal (Select2)
                 if (data.procedimento_principal) {
