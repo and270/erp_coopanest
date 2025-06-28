@@ -248,6 +248,7 @@ def get_procedure(request, procedure_id):
         'visita_pre_anestesica': procedure.visita_pre_anestesica,
         'data_visita_pre_anestesica': procedure.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedure.data_visita_pre_anestesica else '',
         'nome_responsavel_visita': procedure.nome_responsavel_visita,
+        'tipo_procedimento': procedure.tipo_procedimento,
     }
     return JsonResponse(data)
 

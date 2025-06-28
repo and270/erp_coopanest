@@ -166,6 +166,8 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'adesao_checklist', 'uso_tecnicas_assepticas',
             'conformidade_diretrizes', 'ponv', 'adesao_profilaxia_antibiotica',
             'adesao_prevencao_tvp_tep',
+            # New fields
+            'abreviacao_jejum', 'escala_aldrete',
             # Financial fields that are part of this form
             'tipo_cobranca', 'valor_faturado', 'tipo_pagamento_direto', 'data_pagamento'
         ]
@@ -266,6 +268,14 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                     'id': 'id_valor_faturado'
                 }
             ),
+            'abreviacao_jejum': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'escala_aldrete': forms.RadioSelect(
+                choices=[(i, str(i)) for i in range(0, 11)],
+                attrs={'class': 'form-options-text'}
+            ),
         }
 
     def save(self, commit=True):
@@ -345,7 +355,8 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'encaminhamento_uti', 'evento_adverso_evitavel',
             'adesao_checklist', 'uso_tecnicas_assepticas',
             'conformidade_diretrizes', 'ponv', 'adesao_profilaxia_antibiotica',
-            'adesao_prevencao_tvp_tep', 'tipo_cobranca'
+            'adesao_prevencao_tvp_tep', 'tipo_cobranca',
+            'abreviacao_jejum', 'escala_aldrete'  # Added new fields
         ]
         
         for field in required_fields:

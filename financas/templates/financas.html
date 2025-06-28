@@ -94,6 +94,7 @@
                         <th>Paciente</th>
                         <th>CPF</th>
                         <th>Data Cirurgia</th>
+                        <th>Eletiva / Urgência</th>
                         <th>Valor Faturado</th>
                         <th>Valor Recebido</th>
                         <th>Valor Recuperado</th>
@@ -131,6 +132,13 @@
                                     {{ item.procedimento.data_horario|date:"d/m/Y" }}
                                 {% elif item.api_data_cirurgia %}
                                     {{ item.api_data_cirurgia|date:"d/m/Y" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.procedimento %}
+                                    {{ item.procedimento.get_tipo_procedimento_display|default:"--" }}
                                 {% else %}
                                     --
                                 {% endif %}
@@ -183,7 +191,7 @@
                     </tr>
                 {% empty %}
                  <tr>
-                    <td colspan="{% if view_type == 'receitas' %}13{% else %}5{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                    <td colspan="{% if view_type == 'receitas' %}14{% else %}5{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
                  </tr>
                 {% endfor %}
             </tbody>

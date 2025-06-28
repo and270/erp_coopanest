@@ -196,6 +196,8 @@ def dashboard_view(request):
         'ponv_view': ponv_view,
         'evento_view': evento_view,
         'dor_view': dor_view,
+        'abreviacao_jejum_percent': queryset.filter(abreviacao_jejum=True).count() / total_count * 100 if total_count > 0 else None,
+        'aldrete_maior_que_8_percent': queryset.filter(escala_aldrete__gt=8).count() / total_count * 100 if total_count > 0 else None,
     }
 
     # Procedures for the filter

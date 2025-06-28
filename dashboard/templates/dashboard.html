@@ -126,6 +126,18 @@
                 <h3>Encaminhamentos não programados ao CTI</h3>
                 <div class="metric-value">{% if metrics.encaminhamentos_uti %}{{ metrics.encaminhamentos_uti|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
+
+            <div class="metric-card">
+                <h3>Abreviação de Jejum</h3>
+                <div class="metric-value">{% if metrics.abreviacao_jejum_percent %}{{ metrics.abreviacao_jejum_percent|floatformat:0 }}%{% else %}--{% endif %}</div>
+                <div class="metric-label">Sim</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Aldrete > 8</h3>
+                <div class="metric-value">{% if metrics.aldrete_maior_que_8_percent %}{{ metrics.aldrete_maior_que_8_percent|floatformat:0 }}%{% else %}--{% endif %}</div>
+                <div class="metric-label">% com Aldrete acima de 8</div>
+            </div>
         </div>
 
         <!-- Column 3 -->
