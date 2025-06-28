@@ -272,13 +272,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
             ),
-            'escala_aldrete': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'min': '0',
-                    'max': '10',
-                    'step': '1'
-                }
+            'escala_aldrete': forms.RadioSelect(
+                choices=[(i, str(i)) for i in range(0, 11)],
+                attrs={'class': 'form-options-text'}
             ),
         }
 

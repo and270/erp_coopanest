@@ -253,6 +253,45 @@
             </div>
 
             <div class="radio-group">
+                <label>{{ form.abreviacao_jejum.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.abreviacao_jejum %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.abreviacao_jejum.errors %}
+                <div class="error-message">
+                    {% for error in form.abreviacao_jejum.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group scale-container">
+                <label>{{ form.escala_aldrete.label }}</label>
+                <div class="rainbow-scale"></div>
+                <div class="horizontal-radio-group">
+                    {% for radio in form.escala_aldrete %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.escala_aldrete.errors %}
+                <div class="error-message">
+                    {% for error in form.escala_aldrete.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group">
                 <label>{{ form.eventos_adversos_graves.label }}</label>
                 <div class="radio-options-container">
                     {% for radio in form.eventos_adversos_graves %}
