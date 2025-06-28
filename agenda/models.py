@@ -35,6 +35,11 @@ class Procedimento(models.Model):
         (STATUS_FINISHED, 'Finalizado'),
     )
 
+    TIPO_PROCEDIMENTO_CHOICES = (
+        ('urgencia', 'Urgência'),
+        ('eletiva', 'Eletiva'),
+    )
+
     group = models.ForeignKey(Groups, on_delete=models.SET_NULL, verbose_name='Grupo', null=True, blank=True)
     procedimento_type = models.CharField(
         max_length=40,
@@ -78,6 +83,13 @@ class Procedimento(models.Model):
     foto_anexo = models.ImageField(upload_to='anexos/', blank=True, null=True, verbose_name='Anexo Visita Pré-Anestésica')
     nome_responsavel_visita = models.CharField(max_length=255, blank=True, verbose_name='Nome do Responsável pela Visita', default='')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name='Status')
+    tipo_procedimento = models.CharField(
+        max_length=10,
+        choices=TIPO_PROCEDIMENTO_CHOICES,
+        verbose_name='Tipo de Procedimento (Agenda)',
+        default='eletiva', # Default to 'eletiva' or choose another appropriate default
+        null=True, blank=True # Allow null and blank temporarily if procedures can exist without this info initially
+    )
 
     class Meta:
         verbose_name = "Procedimento"

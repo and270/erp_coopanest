@@ -89,7 +89,8 @@ class ProcedimentoForm(forms.ModelForm):
             'anestesista_selector', # Add the selector field
             'anestesistas_responsaveis', # Keep the hidden field
             'visita_pre_anestesica',
-            'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita'
+            'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita',
+            'tipo_procedimento' # Added new field
         ]
 
     def __init__(self, *args, **kwargs):
@@ -116,6 +117,9 @@ class ProcedimentoForm(forms.ModelForm):
         self.fields['anestesista_selector'].empty_label = "--- Selecione ---"
         # Hide the label for the original field in the template using JS/CSS might be better
         # self.fields['anestesistas_responsaveis'].label = ''
+        self.fields['tipo_procedimento'].widget = forms.Select(attrs={'class': 'form-control'})
+        self.fields['tipo_procedimento'].empty_label = "--- Selecione o Tipo ---"
+
 
     def save(self, commit=True):
         # Remove anestesista_selector from cleaned_data before saving the model instance

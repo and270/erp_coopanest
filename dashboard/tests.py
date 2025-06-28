@@ -104,23 +104,24 @@ class DashboardViewTest(TestCase):
         self.group = Group.objects.create(name="Test Group")
         # Ensure a user with user_type GESTOR_USER exists and is validated
         self.user = User.objects.create_user(
-            username='testgestor', 
-            password='password', 
+            username='testgestor',
+            password='password',
             email='gestor@example.com',
-            user_type=1,  # GESTOR_USER
+            # user_type=CustomUser.UserTypeChoices.GESTOR, # Assuming UserTypeChoices exists
+            user_type=1, # Fallback to integer if choices not directly usable here
             group=self.group,
-            validado=True # Ensure user is validated
+            validado=True
         )
         
         # Common timezone
         self.sp_timezone = pytz.timezone('America/Sao_Paulo') # Use pytz
 
         # Create some ProcedimentoDetalhes for filtering
-        self.proc_detail1 = ProcedimentoDetalhes.objects.create(name="Procedure A", group=self.group)
-        self.proc_detail2 = ProcedimentoDetalhes.objects.create(name="Procedure B", group=self.group)
+        self.proc_detail1 = ProcedimentoDetalhes.objects.create(name="Procedure A Test")
+        self.proc_detail2 = ProcedimentoDetalhes.objects.create(name="Procedure B Test")
 
 
-    def _create_procedimento_qualidade(self, agendado_dt_str, inicio_efetivo_dt_str, fim_efetivo_dt_str, csat_score=None, proc_detail=None):
+    def _create_procedimento_qualidade(self, agendado_dt_str, inicio_efetivo_dt_str, fim_efetivo_dt_str, csat_score=None, proc_detail=None, abreviacao_jejum=None, escala_aldrete=None):
         agendado_dt = self.sp_timezone.localize(datetime.strptime(agendado_dt_str, '%Y-%m-%d %H:%M'))
         inicio_efetivo_dt = self.sp_timezone.localize(datetime.strptime(inicio_efetivo_dt_str, '%Y-%m-%d %H:%M')) if inicio_efetivo_dt_str else None
         fim_efetivo_dt = self.sp_timezone.localize(datetime.strptime(fim_efetivo_dt_str, '%Y-%m-%d %H:%M')) if fim_efetivo_dt_str else None
@@ -138,6 +139,8 @@ class DashboardViewTest(TestCase):
             data_horario_inicio_efetivo=inicio_efetivo_dt,
             data_horario_fim_efetivo=fim_efetivo_dt,
             csat_score=csat_score,
+            abreviacao_jejum=abreviacao_jejum,
+            escala_aldrete=escala_aldrete,
             # Add other required fields for ProcedimentoQualidade if any
             dor_pos_operatoria=False, # To simplify, assume no pain
             eventos_adversos_graves=False,
@@ -148,9 +151,36 @@ class DashboardViewTest(TestCase):
             uso_tecnicas_assepticas=True,
             conformidade_diretrizes=True,
             ponv=False,
-            adesao_profilaxia=True,
+            adesao_profilaxia_antibiotica=True, # Corrected field name
+            adesao_prevencao_tvp_tep=True,      # Added missing required field
         )
         return pq
+
+    def test_dashboard_new_metrics_calculation_and_template(self):
+        # Data for new metrics
+        self._create_procedimento_qualidade('2023-01-01 10:00', '2023-01-01 10:00', '2023-01-01 11:00', abreviacao_jejum=True, escala_aldrete=9)
+        self._create_procedimento_qualidade('2023-01-02 10:00', '2023-01-02 10:00', '2023-01-02 11:00', abreviacao_jejum=False, escala_aldrete=7)
+        self._create_procedimento_qualidade('2023-01-03 10:00', '2023-01-03 10:00', '2023-01-03 11:00', abreviacao_jejum=True, escala_aldrete=10)
+        self._create_procedimento_qualidade('2023-01-04 10:00', '2023-01-04 10:00', '2023-01-04 11:00', abreviacao_jejum=True, escala_aldrete=8) # Not > 8
+
+        request = self.factory.get('/dashboard/')
+        request.user = self.user
+        response = dashboard_view(request)
+        self.assertEqual(response.status_code, 200)
+
+        metrics = response.context_data['metrics']
+        # 3 out of 4 had abreviacao_jejum = True
+        self.assertAlmostEqual(metrics['abreviacao_jejum_percent'], 75.0)
+        # 2 out of 4 had escala_aldrete > 8 (i.e., 9 and 10)
+        self.assertAlmostEqual(metrics['aldrete_maior_que_8_percent'], 50.0)
+
+        # Test template rendering (basic check for presence of text)
+        self.assertContains(response, "Abreviação de Jejum")
+        self.assertContains(response, "75%") # Check if the calculated value is rendered
+        self.assertContains(response, "Aldrete &gt; 8") # HTML escaped >
+        self.assertContains(response, "50%")
+        self.assertContains(response, "% com Aldrete acima de 8")
+
 
     def test_avg_delay_and_duration_no_outliers(self):
         # Delays: 10m, 20m. Durations: 60m, 70m.

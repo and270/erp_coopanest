@@ -1,8 +1,65 @@
 from django.test import TestCase
+from django.core.exceptions import ValidationError
+from .models import ProcedimentoQualidade, Procedimento, Groups
 from .forms import ProcedimentoFinalizacaoForm
 from financas.models import ProcedimentoFinancas # For COBRANCA_CHOICES
+from agenda.models import ProcedimentoDetalhes as AgendaProcedimentoDetalhes # Renamed to avoid clash
+from django.utils import timezone
 from datetime import datetime, timedelta
 import pytz
+
+class ProcedimentoQualidadeModelTest(TestCase):
+    def setUp(self):
+        self.group = Groups.objects.create(name="Test Group Qualidade")
+        self.proc_detalhes_agenda = AgendaProcedimentoDetalhes.objects.create(name="Detalhe Agenda Qualidade")
+        self.procedimento_agenda = Procedimento.objects.create(
+            group=self.group,
+            nome_paciente='Paciente Qualidade Teste',
+            procedimento_principal=self.proc_detalhes_agenda,
+            data_horario=timezone.now(),
+            status='finished' # Important for some quality logic perhaps
+        )
+
+    def test_procedimento_qualidade_creation_new_fields(self):
+        qualidade = ProcedimentoQualidade.objects.create(
+            procedimento=self.procedimento_agenda,
+            abreviacao_jejum=True,
+            escala_aldrete=9
+        )
+        self.assertTrue(qualidade.abreviacao_jejum)
+        self.assertEqual(qualidade.escala_aldrete, 9)
+
+    def test_procedimento_qualidade_aldrete_score_validation(self):
+        # Test valid scores
+        for score in [0, 5, 10]:
+            qualidade = ProcedimentoQualidade(
+                procedimento=self.procedimento_agenda,
+                escala_aldrete=score
+            )
+            qualidade.full_clean() # Should not raise ValidationError
+            self.assertEqual(qualidade.escala_aldrete, score)
+
+        # Test invalid scores (below 0)
+        with self.assertRaises(ValidationError) as context:
+            qualidade_low = ProcedimentoQualidade(procedimento=self.procedimento_agenda, escala_aldrete=-1)
+            qualidade_low.full_clean()
+        self.assertIn('escala_aldrete', context.exception.message_dict)
+
+        # Test invalid scores (above 10)
+        with self.assertRaises(ValidationError) as context:
+            qualidade_high = ProcedimentoQualidade(procedimento=self.procedimento_agenda, escala_aldrete=11)
+            qualidade_high.full_clean()
+        self.assertIn('escala_aldrete', context.exception.message_dict)
+
+    def test_procedimento_qualidade_new_fields_defaults_null(self):
+        # Test that fields can be null if not provided, as null=True
+        qualidade = ProcedimentoQualidade.objects.create(
+            procedimento=self.procedimento_agenda
+            # abreviacao_jejum and escala_aldrete are not set
+        )
+        self.assertIsNone(qualidade.abreviacao_jejum)
+        self.assertIsNone(qualidade.escala_aldrete)
+
 
 class ProcedimentoFinalizacaoFormTest(TestCase):
     def setUp(self):
@@ -12,11 +69,23 @@ class ProcedimentoFinalizacaoFormTest(TestCase):
         self.start_time = self.sp_timezone.localize(datetime(2023, 1, 1, 10, 0, 0))
         self.end_time = self.sp_timezone.localize(datetime(2023, 1, 1, 12, 0, 0))
 
+        # Create a Procedimento instance for the form
+        self.group = Groups.objects.create(name="Test Group Qualidade Form")
+        self.proc_detalhes_agenda = AgendaProcedimentoDetalhes.objects.create(name="Detalhe Agenda Qualidade Form")
+        self.procedimento_agenda_instance = Procedimento.objects.create(
+            group=self.group,
+            nome_paciente='Paciente Qualidade Form Teste',
+            procedimento_principal=self.proc_detalhes_agenda,
+            data_horario=timezone.now(),
+            status='pending' # Initial status
+        )
+
+
         self.valid_data = {
             'data_horario_inicio_efetivo': self.start_time.strftime('%Y-%m-%dT%H:%M'),
             'data_horario_fim_efetivo': self.end_time.strftime('%Y-%m-%dT%H:%M'),
             'dor_pos_operatoria': True, # Default to True, pain scale fields required
-            'escala': 'EVA',
+            'escala': 'EVA', # Make sure this is default if dor_pos_operatoria is True
             'eva_score': 5,
             # FLACC fields (conditionally required)
             'face': 1, 'pernas': 1, 'atividade': 1, 'choro': 1, 'consolabilidade': 1,
@@ -30,15 +99,104 @@ class ProcedimentoFinalizacaoFormTest(TestCase):
             # 'reacao_alergica_grave_desc': '', # Not required if False
             'encaminhamento_uti': False,
             'evento_adverso_evitavel': False,
+            # 'evento_adverso_evitavel_desc': '', # Not required if False
             'adesao_checklist': True,
             'uso_tecnicas_assepticas': True,
             'conformidade_diretrizes': True,
             'ponv': False,
-            'adesao_profilaxia': True,
-            'tipo_cobranca': ProcedimentoFinancas.COBRANCA_CHOICES[0][0], # e.g., 'cooperativa'
-            # 'valor_faturado': None, # Not required for 'cooperativa'
-            # 'tipo_pagamento_direto': None, # Not required for 'cooperativa'
+            'adesao_profilaxia_antibiotica': True, # Corrected
+            'adesao_prevencao_tvp_tep': True,
+            'tipo_cobranca': ProcedimentoFinancas.COBRANCA_CHOICES[0][0],
+            'valor_faturado': '0',
+            'tipo_pagamento_direto': ProcedimentoFinancas.DIRECT_PAYMENT_CHOICES[0][0],
+            'data_pagamento': self.sp_timezone.localize(datetime(2023,1,1)).strftime('%Y-%m-%d'),
+            'abreviacao_jejum': True,
+            'escala_aldrete': 8,
         }
+
+    def test_form_valid_with_new_fields(self):
+        # Make sure 'procedimento' is linked to the form if creating new ProcedimentoQualidade
+        # For existing, it's through `instance`. For new, view usually handles linking.
+        # Here, we're testing the form's capability to handle data.
+        # The form's save() method expects a Procedimento associated with ProcedimentoQualidade.
+        # We pass the ProcedimentoQualidade instance (or None for new) to the form.
+        # The ProcedimentoQualidade model has a OneToOne to Procedimento.
+        # Let's simulate creating a new ProcedimentoQualidade via the form.
+        # The form itself doesn't create Procedimento; it assumes ProcedimentoQualidade is/will be linked.
+
+        # If we are testing form creation of ProcedimentoQualidade:
+        # pq_instance = ProcedimentoQualidade(procedimento=self.procedimento_agenda_instance)
+        # form = ProcedimentoFinalizacaoForm(data=self.valid_data, instance=pq_instance)
+        # This would be more like an update.
+
+        # For creation, the instance might be None or a new unsaved ProcedimentoQualidade object
+        # linked to a Procedimento. The form's save() method then saves this.
+        # The key is that `form.instance.procedimento` must be valid.
+
+        # Let's refine: the form is for *finalizing*, so it implies a ProcedimentoQualidade
+        # might already exist or is being created for an existing Procedimento.
+        # The form's save() method updates `qualidade_instance.procedimento.status`.
+        # So, `qualidade_instance.procedimento` must exist.
+
+        # If ProcedimentoQualidade doesn't exist yet for self.procedimento_agenda_instance:
+        pq, created = ProcedimentoQualidade.objects.get_or_create(procedimento=self.procedimento_agenda_instance)
+
+        form = ProcedimentoFinalizacaoForm(data=self.valid_data, instance=pq)
+        if not form.is_valid():
+            print("Form errors (new_fields):", form.errors.as_json())
+        self.assertTrue(form.is_valid())
+
+        # Mock the related Procedimento instance if form.save() needs it and it's not passed via instance
+        # For saving, the form expects the ProcedimentoQualidade instance to have a 'procedimento' attribute.
+        # If we don't pass an instance to the form, we need to create one before saving.
+        # However, the form is designed to be initialized with an instance or create a new one.
+        # For simplicity, we'll assume the view handles instance creation/association.
+        # Here, we test if the form can save the new fields.
+
+        # To test saving, we need a ProcedimentoQualidade instance linked to Procedimento
+        # If testing creation, ProcedimentoQualidade model would be created by form.save()
+        # Let's assume we are creating a new ProcedimentoQualidade record through the form
+
+        qualidade_instance = form.save(commit=False)
+        qualidade_instance.procedimento = self.procedimento_agenda_instance # Explicitly link
+        # Manually set group on financas if created, or ensure it's handled
+        # The form's save method handles ProcedimentoFinancas creation/update.
+        # It expects `qualidade_instance.procedimento.group` to be set.
+        qualidade_instance.procedimento.group = self.group
+        qualidade_instance.save()
+        form.save_m2m() # if any
+
+        saved_qualidade = ProcedimentoQualidade.objects.get(pk=qualidade_instance.pk)
+        self.assertEqual(saved_qualidade.abreviacao_jejum, True)
+        self.assertEqual(saved_qualidade.escala_aldrete, 8)
+
+    def test_form_missing_abreviacao_jejum(self):
+        data = self.valid_data.copy()
+        del data['abreviacao_jejum']
+        form = ProcedimentoFinalizacaoForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('abreviacao_jejum', form.errors)
+
+    def test_form_missing_escala_aldrete(self):
+        data = self.valid_data.copy()
+        del data['escala_aldrete']
+        form = ProcedimentoFinalizacaoForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('escala_aldrete', form.errors)
+
+    def test_form_escala_aldrete_invalid_value(self):
+        data_low = self.valid_data.copy()
+        data_low['escala_aldrete'] = -1
+        form_low = ProcedimentoFinalizacaoForm(data=data_low)
+        self.assertFalse(form_low.is_valid())
+        self.assertIn('escala_aldrete', form_low.errors)
+
+        data_high = self.valid_data.copy()
+        data_high['escala_aldrete'] = 11
+        form_high = ProcedimentoFinalizacaoForm(data=data_high)
+        self.assertFalse(form_high.is_valid())
+        self.assertIn('escala_aldrete', form_high.errors)
+
 
     # 1.a. Pain Scale Conditional Logic
     def test_pain_scale_dor_false_valid_without_scale_fields(self):

@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from agenda.models import Procedimento
 from django.utils.safestring import mark_safe
 
@@ -285,6 +286,20 @@ class ProcedimentoQualidade(models.Model):
     expressao_facial_painad = models.IntegerField(verbose_name="Expressão facial", null=True, blank=True)
     linguagem_corporal = models.IntegerField(verbose_name="Linguagem corporal", null=True, blank=True)
     consolabilidade_painad = models.IntegerField(verbose_name="Consolabilidade", null=True, blank=True)
+
+    # New fields for fasting and Aldrete score
+    abreviacao_jejum = models.BooleanField(
+        verbose_name='Houve abreviação de jejum?',
+        null=True,  # Allows for procedures where this question might not be applicable or answered
+        blank=True  # Allows the field to be blank in forms
+    )
+    escala_aldrete = models.IntegerField(
+        verbose_name='Escala de Aldrete',
+        null=True,
+        blank=True,
+        help_text='Valor de 0 a 10',
+        validators=[MinValueValidator(0), MaxValueValidator(10)]
+    )
 
     class Meta:
         verbose_name = "Qualidade do Procedimento"
