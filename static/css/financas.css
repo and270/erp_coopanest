@@ -585,3 +585,44 @@
 #no-matches p {
     color: #000000; /* Ensure message text is black */
 }
+
+/* Despesas Recorrentes Styles */
+.add-buttons-container {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.add-buttons-container .add-btn {
+    margin-top: 0; /* Remove individual margin since container has it */
+}
+
+.btn-recorrente {
+    background: #28a745 !important; /* Green color for recurring expenses */
+}
+
+.btn-recorrente:hover {
+    background: #218838 !important;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+}
+
+.badge-despesa {
+    background-color: #6c757d; /* Gray for regular expenses */
+}
+
+.badge-recorrente {
+    background-color: #28a745; /* Green for recurring expenses */
+}
+
+/* Hide despesas-recorrentes-fields by default */
+#despesas-recorrentes-fields {
+    display: none;
+}
