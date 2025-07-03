@@ -106,10 +106,12 @@
                         <th>Data Pagamento</th>
                         <th>Ações</th> {# Renamed Header #}
                     {% else %} {# Despesas Headers #}
+                        <th>Tipo</th>
                         <th>Descrição</th>
                         <th>Data</th>
                         <th>Valor</th>
-                        <th>Pago</th>
+                        <th>Periodicidade</th>
+                        <th>Status</th>
                         <th>Ações</th> {# Renamed Header #}
                     {% endif %}
                 </tr>
@@ -172,26 +174,48 @@
                                 </div>
                             </td>
                         {% else %} {# Despesas Row #}
-                            <td>{{ item.descricao }}</td>
-                            <td>{{ item.data|date:"d/m/Y" }}</td>
-                            {# Revert to original formatting #}
-                            <td>{% if item.valor is not None %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
-                            <td>{% if item.pago %}Sim{% else %}Não{% endif %}</td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button type="button" class="edit-btn action-btn" title="Editar">
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-                                    <button type="button" class="delete-btn action-btn" title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+                            {% if item.item_type == 'despesa' %}
+                                <td><span class="badge badge-despesa">Despesa</span></td>
+                                <td>{{ item.descricao }}</td>
+                                <td>{{ item.data|date:"d/m/Y" }}</td>
+                                {# Revert to original formatting #}
+                                <td>{% if item.valor is not None %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                                <td>--</td>
+                                <td>{% if item.pago %}Pago{% else %}Pendente{% endif %}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button type="button" class="edit-btn action-btn" title="Editar" data-type="despesas">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <button type="button" class="delete-btn action-btn" title="Excluir" data-type="despesas">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            {% else %} {# Despesa Recorrente #}
+                                <td><span class="badge badge-recorrente">Recorrente</span></td>
+                                <td>{{ item.descricao }}</td>
+                                <td>{{ item.data_inicio|date:"d/m/Y" }}</td>
+                                {# Revert to original formatting #}
+                                <td>{% if item.valor is not None %}R$ {{ item.valor|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
+                                <td>{{ item.get_periodicidade_display_short }}</td>
+                                <td>{% if item.ativa %}Ativa{% else %}Inativa{% endif %}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button type="button" class="edit-btn action-btn" title="Editar" data-type="despesas_recorrentes">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <button type="button" class="delete-btn action-btn" title="Excluir" data-type="despesas_recorrentes">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            {% endif %}
                         {% endif %}
                     </tr>
                 {% empty %}
                  <tr>
-                    <td colspan="{% if view_type == 'receitas' %}14{% else %}5{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                    <td colspan="{% if view_type == 'receitas' %}14{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
                  </tr>
                 {% endfor %}
             </tbody>
@@ -199,10 +223,16 @@
     </div>
     
     {% if view_type == 'despesas' %}
-    <button class="add-btn" onclick="openAddDespesaModal()">
-        <i class="fas fa-plus"></i>
-        Inserir despesa ou custo
-    </button>
+    <div class="add-buttons-container">
+        <button class="add-btn" onclick="openAddDespesaModal()">
+            <i class="fas fa-plus"></i>
+            Inserir despesa ou custo
+        </button>
+        <button class="add-btn btn-recorrente" onclick="openAddDespesaRecorrenteModal()">
+            <i class="fas fa-sync-alt"></i>
+            Inserir despesa recorrente
+        </button>
+    </div>
     {% endif %}
     {% if view_type == 'receitas' %}
     <button class="add-btn" onclick="openAddReceitaModal()">
@@ -332,6 +362,40 @@
                     <label>
                         Pago
                         <input type="checkbox" id="pago" name="pago">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Despesas Recorrentes fields -->
+            <div id="despesas-recorrentes-fields">
+                <div class="form-group">
+                    <label for="descricao_recorrente">Descrição</label>
+                    <input type="text" id="descricao_recorrente" name="descricao" required>
+                </div>
+                <div class="form-group">
+                    <label for="valor_recorrente">Valor</label>
+                    <input type="text" class="money-input" id="valor_recorrente" name="valor_recorrente" required>
+                </div>
+                <div class="form-group">
+                    <label for="periodicidade">Periodicidade</label>
+                    <select id="periodicidade" name="periodicidade" required>
+                        <option value="">Selecione a periodicidade</option>
+                        <option value="diaria">Diária</option>
+                        <option value="semanal">Semanal</option>
+                        <option value="quinzenal">Quinzenal</option>
+                        <option value="mensal">Mensal</option>
+                        <option value="semestral">Semestral</option>
+                        <option value="anual">Anual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="data_inicio">Data de Início</label>
+                    <input type="date" id="data_inicio" name="data_inicio" required>
+                </div>
+                <div class="form-group">
+                    <label>
+                        Ativa
+                        <input type="checkbox" id="ativa" name="ativa" checked>
                     </label>
                 </div>
             </div>
@@ -475,40 +539,72 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const row = this.closest('tr');
             const financeId = row.dataset.id;
-            const viewType = '{{ view_type }}'; 
+            const viewType = '{{ view_type }}';
+            const dataType = this.getAttribute('data-type'); // Get the specific type for despesas
             
             // Reset form and modal state for EDIT
             form.reset();
             document.getElementById('modal-action-type').textContent = 'Editar';
             document.getElementById('finance_id').value = financeId;
-            document.getElementById('finance_type').value = viewType;
             document.getElementById('is_new').value = 'false'; // EDITING
 
             // Show/hide field sections AND set required attributes
             if (viewType === 'receitas') {
+                document.getElementById('finance_type').value = viewType;
                 document.getElementById('manual-receita-fields').style.display = 'none'; // Hide manual fields
                 document.getElementById('receitas-fields').style.display = 'block';
                 document.getElementById('despesas-fields').style.display = 'none';
+                document.getElementById('despesas-recorrentes-fields').style.display = 'none';
                 document.getElementById('modal-title-type').textContent = 'Receita';
                 // Remove required from despesas fields
                 document.getElementById('descricao').required = false;
                 document.getElementById('valor').required = false;
                 document.getElementById('data').required = false;
-            } else { // despesas
+                document.getElementById('descricao_recorrente').required = false;
+                document.getElementById('valor_recorrente').required = false;
+                document.getElementById('periodicidade').required = false;
+                document.getElementById('data_inicio').required = false;
+            } else if (dataType === 'despesas') { // Normal despesas
+                document.getElementById('finance_type').value = 'despesas';
                 document.getElementById('manual-receita-fields').style.display = 'none';
                 document.getElementById('receitas-fields').style.display = 'none';
                 document.getElementById('despesas-fields').style.display = 'block';
+                document.getElementById('despesas-recorrentes-fields').style.display = 'none';
                 document.getElementById('modal-title-type').textContent = 'Despesa';
-                 // Set required for despesas fields
-                 document.getElementById('descricao').required = true;
-                 document.getElementById('valor').required = true;
-                 document.getElementById('data').required = true;
-                 // You might also want to remove required from receita fields here if any were added
-                 // Example: document.getElementById('manual_api_paciente_nome').required = false; 
+                // Set required for despesas fields
+                document.getElementById('descricao').required = true;
+                document.getElementById('valor').required = true;
+                document.getElementById('data').required = true;
+                // Remove required from other fields
+                document.getElementById('descricao_recorrente').required = false;
+                document.getElementById('valor_recorrente').required = false;
+                document.getElementById('periodicidade').required = false;
+                document.getElementById('data_inicio').required = false;
+            } else { // despesas_recorrentes
+                document.getElementById('finance_type').value = 'despesas_recorrentes';
+                document.getElementById('manual-receita-fields').style.display = 'none';
+                document.getElementById('receitas-fields').style.display = 'none';
+                document.getElementById('despesas-fields').style.display = 'none';
+                document.getElementById('despesas-recorrentes-fields').style.display = 'block';
+                document.getElementById('modal-title-type').textContent = 'Despesa Recorrente';
+                // Set required for despesas recorrentes fields
+                document.getElementById('descricao_recorrente').required = true;
+                document.getElementById('valor_recorrente').required = true;
+                document.getElementById('periodicidade').required = true;
+                document.getElementById('data_inicio').required = true;
+                // Remove required from other fields
+                document.getElementById('descricao').required = false;
+                document.getElementById('valor').required = false;
+                document.getElementById('data').required = false;
             }
             
-            // Fetch item data
-            fetch(`/financas/get-item/${viewType}/${financeId}/`)
+            // Fetch item data - use different endpoint for despesas recorrentes
+            let fetchUrl = `/financas/get-item/${viewType}/${financeId}/`;
+            if (dataType === 'despesas_recorrentes') {
+                fetchUrl = `/financas/get-despesa-recorrente/${financeId}/`;
+            }
+            
+            fetch(fetchUrl)
                 .then(response => {
                     if (!response.ok) {
                          return response.json().then(err => { throw new Error(err.error || `Erro ${response.status}`) });
@@ -557,12 +653,19 @@ document.addEventListener('DOMContentLoaded', function() {
                          toggleReceitaFieldsVisibility();
                          toggleDataPagamentoVisibility(); 
 
-                    } else { // despesas
+                    } else if (dataType === 'despesas') { // despesas normais
                          document.getElementById('descricao').value = data.descricao || '';
                          const valorInput = document.getElementById('valor');
                          if(valorInput?.maskRef) valorInput.maskRef.unmaskedValue = String(data.valor || '0');
                          document.getElementById('data').value = data.data || '';
                          document.getElementById('pago').checked = data.pago || false;
+                    } else { // despesas recorrentes
+                         document.getElementById('descricao_recorrente').value = data.descricao || '';
+                         const valorRecorrenteInput = document.getElementById('valor_recorrente');
+                         if(valorRecorrenteInput?.maskRef) valorRecorrenteInput.maskRef.unmaskedValue = String(data.valor || '0');
+                         document.getElementById('periodicidade').value = data.periodicidade || '';
+                         document.getElementById('data_inicio').value = data.data_inicio || '';
+                         document.getElementById('ativa').checked = data.ativa || false;
                     }
                     
                     editModal.style.display = "block";
@@ -625,16 +728,37 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
+        // Disable unused form sections to prevent field conflicts
+        const financeType = document.getElementById('finance_type').value;
+        const isNew = document.getElementById('is_new').value === 'true';
+        
+        // Disable fields in unused sections to prevent them from being submitted
+        if (financeType === 'receitas') {
+            // Disable despesas fields
+            document.querySelectorAll('#despesas-fields input, #despesas-fields select').forEach(input => input.disabled = true);
+            document.querySelectorAll('#despesas-recorrentes-fields input, #despesas-recorrentes-fields select').forEach(input => input.disabled = true);
+        } else if (financeType === 'despesas') {
+            // Disable receitas and despesas recorrentes fields
+            document.querySelectorAll('#receitas-fields input, #receitas-fields select').forEach(input => input.disabled = true);
+            document.querySelectorAll('#manual-receita-fields input').forEach(input => input.disabled = true);
+            document.querySelectorAll('#despesas-recorrentes-fields input, #despesas-recorrentes-fields select').forEach(input => input.disabled = true);
+        } else if (financeType === 'despesas_recorrentes') {
+            // Disable receitas and normal despesas fields
+            document.querySelectorAll('#receitas-fields input, #receitas-fields select').forEach(input => input.disabled = true);
+            document.querySelectorAll('#manual-receita-fields input').forEach(input => input.disabled = true);
+            document.querySelectorAll('#despesas-fields input, #despesas-fields select').forEach(input => input.disabled = true);
+        }
+        
         const formData = new FormData(this);
-        const financeType = formData.get('finance_type');
-        const isNew = formData.get('is_new') === 'true';
         
         // Data Preparation (money fields)
         let valueFields = [];
         if (financeType === 'receitas') {
              valueFields = ['valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado'];
-        } else { // despesas
+        } else if (financeType === 'despesas') {
              valueFields = ['valor'];
+        } else { // despesas_recorrentes
+             valueFields = ['valor_recorrente'];
         }
         valueFields.forEach(name => {
              const elem = document.getElementById(name);
@@ -645,9 +769,12 @@ document.addEventListener('DOMContentLoaded', function() {
                  formData.set(name, parseFloat(valor) || '0');
              }
         });
-         // Handle checkbox for despesas
+         // Handle checkboxes
          if (financeType === 'despesas' && !formData.has('pago')) {
              formData.set('pago', ''); 
+         }
+         if (financeType === 'despesas_recorrentes' && !formData.has('ativa')) {
+             formData.set('ativa', ''); 
          }
         
         // Validation (simplified example) -> Can be removed if relying solely on native HTML5 validation now
@@ -681,11 +808,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isNew) {
              if (financeType === 'receitas') {
                  url = '/financas/create-receita/'; // NEW endpoint for manual receita
-             } else { // despesas
+             } else if (financeType === 'despesas') {
                  url = '/financas/create-item/'; 
+             } else { // despesas_recorrentes
+                 url = '/financas/create-despesa-recorrente/';
              }
         } else { // Editing existing item
-             url = '/financas/update-item/';
+             if (financeType === 'despesas_recorrentes') {
+                 url = '/financas/update-despesa-recorrente/';
+             } else {
+                 url = '/financas/update-item/';
+             }
         }
         
         const submitButton = form.querySelector('button[type="submit"]');
@@ -713,6 +846,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .finally(() => {
              submitButton.disabled = false;
              submitButton.textContent = 'Salvar'; // Reset button text
+             
+             // Re-enable all form fields after submission
+             document.querySelectorAll('#edit-finance-form input, #edit-finance-form select').forEach(input => {
+                 input.disabled = false;
+             });
         });
     });
 
@@ -725,6 +863,15 @@ document.addEventListener('DOMContentLoaded', function() {
              });
         }
     });
+
+    // Also initialize mask for valor_recorrente specifically (in case it was added dynamically)
+    const valorRecorrenteInput = document.getElementById('valor_recorrente');
+    if (valorRecorrenteInput && !valorRecorrenteInput.maskRef) {
+        valorRecorrenteInput.maskRef = IMask(valorRecorrenteInput, {
+            mask: 'R$ num',
+            blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, normalizeZeros: true, radix: ',', mapToRadix: ['.'], } }
+        });
+    }
 
     // Add CPF mask (only if element exists)
     const cpfInput = document.getElementById('cpf');
@@ -835,6 +982,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('manual-receita-fields').style.display = 'none'; 
         document.getElementById('receitas-fields').style.display = 'none';
         document.getElementById('despesas-fields').style.display = 'block';
+        document.getElementById('despesas-recorrentes-fields').style.display = 'none';
         document.getElementById('unlinked-info').style.display = 'none'; 
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('data').value = today;
@@ -845,23 +993,72 @@ document.addEventListener('DOMContentLoaded', function() {
         // Remove required from hidden receitas fields (optional but good practice)
         document.getElementById('manual_api_paciente_nome').required = false;
         document.getElementById('manual_api_data_cirurgia').required = false;
-        // Add others if needed
+        // Remove required from hidden despesas recorrentes fields
+        document.getElementById('descricao_recorrente').required = false;
+        document.getElementById('valor_recorrente').required = false;
+        document.getElementById('periodicidade').required = false;
+        document.getElementById('data_inicio').required = false;
 
         editModal.style.display = "block";
     }
 
-    // --- Delete Buttons (no changes needed) ---
+    // --- Add Despesa Recorrente Modal Trigger ---
+    window.openAddDespesaRecorrenteModal = function() {
+        form.reset(); 
+        document.getElementById('modal-action-type').textContent = 'Adicionar';
+        document.getElementById('modal-title-type').textContent = 'Despesa Recorrente';
+        document.getElementById('finance_type').value = 'despesas_recorrentes';
+        document.getElementById('is_new').value = 'true';
+        document.getElementById('is_linked').value = 'false'; 
+        document.getElementById('manual-receita-fields').style.display = 'none'; 
+        document.getElementById('receitas-fields').style.display = 'none';
+        document.getElementById('despesas-fields').style.display = 'none';
+        document.getElementById('despesas-recorrentes-fields').style.display = 'block';
+        document.getElementById('unlinked-info').style.display = 'none'; 
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('data_inicio').value = today;
+        document.getElementById('ativa').checked = true;
+        // Ensure required is set for despesas recorrentes fields
+        document.getElementById('descricao_recorrente').required = true;
+        document.getElementById('valor_recorrente').required = true;
+        document.getElementById('periodicidade').required = true;
+        document.getElementById('data_inicio').required = true;
+        // Remove required from hidden fields
+        document.getElementById('manual_api_paciente_nome').required = false;
+        document.getElementById('manual_api_data_cirurgia').required = false;
+        document.getElementById('descricao').required = false;
+        document.getElementById('valor').required = false;
+        document.getElementById('data').required = false;
+
+        editModal.style.display = "block";
+    }
+
+    // --- Delete Buttons ---
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault(); e.stopPropagation();
             if (confirm('Deseja realmente excluir este item?')) {
                 const row = this.closest('tr');
                 const financeId = row.dataset.id;
-                const viewType = '{{ view_type }}'; 
+                const viewType = '{{ view_type }}';
+                const dataType = this.getAttribute('data-type');
                 const formData = new FormData();
-                formData.append('finance_type', viewType);
+                
+                // Determine the finance_type and URL based on data-type
+                let financeType = viewType;
+                let deleteUrl = '/financas/delete-item/';
+                
+                if (dataType === 'despesas_recorrentes') {
+                    financeType = 'despesas_recorrentes';
+                    deleteUrl = '/financas/delete-despesa-recorrente/';
+                } else if (dataType === 'despesas') {
+                    financeType = 'despesas';
+                }
+                
+                formData.append('finance_type', financeType);
                 formData.append('finance_id', financeId);
-                fetch('/financas/delete-item/', {
+                
+                fetch(deleteUrl, {
                     method: 'POST', body: formData, headers: { 'X-CSRFToken': '{{ csrf_token }}' }
                 })
                 .then(response => response.json().then(data => ({ ok: response.ok, data })))

@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from agenda.models import Procedimento, Convenios, ProcedimentoDetalhes
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, STATUS_PENDING, CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
 from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic, Surgeon
-from .models import ProcedimentoFinancas, Despesas, ConciliacaoTentativa
+from .models import ProcedimentoFinancas, Despesas, DespesasRecorrentes, ConciliacaoTentativa
 from django.db.models import Q, Sum, F, Value
 from datetime import datetime, timedelta, time
 from django.utils import timezone
@@ -16,8 +16,43 @@ import requests
 from difflib import SequenceMatcher
 from django.conf import settings
 from django.db import transaction
+import re
+from decimal import Decimal, InvalidOperation
 
 DATA_INICIO_PUXAR_GUIAS_API = datetime(2025, 4, 1).date()
+
+def clean_money_value(value_str):
+    """
+    Clean money string from mask format to decimal
+    Example: "R$ 1.234,56" -> "1234.56"
+    """
+    if not value_str:
+        return None
+    
+    # Remove currency symbol and spaces
+    cleaned = str(value_str).replace('R$', '').strip()
+    
+    # Handle Brazilian format (1.234,56) -> American format (1234.56)
+    if ',' in cleaned and '.' in cleaned:
+        # Both comma and dot present - assume Brazilian format
+        cleaned = cleaned.replace('.', '').replace(',', '.')
+    elif ',' in cleaned:
+        # Only comma present - could be thousands separator or decimal
+        parts = cleaned.split(',')
+        if len(parts) == 2 and len(parts[1]) <= 2:
+            # Likely decimal separator
+            cleaned = cleaned.replace(',', '.')
+        else:
+            # Likely thousands separator
+            cleaned = cleaned.replace(',', '')
+    
+    # Remove any remaining non-numeric characters except decimal point
+    cleaned = re.sub(r'[^\d.]', '', cleaned)
+    
+    try:
+        return Decimal(cleaned) if cleaned else None
+    except (InvalidOperation, ValueError):
+        return None
 
 @login_required
 def financas_view(request):
@@ -109,7 +144,8 @@ def financas_view(request):
 
     else: # view_type == 'despesas'
         # Despesas logic remains largely unchanged, but ensure group filtering
-        base_qs = Despesas.objects.filter(group=user_group).select_related('procedimento')
+        despesas_qs = Despesas.objects.filter(group=user_group).select_related('procedimento')
+        despesas_recorrentes_qs = DespesasRecorrentes.objects.filter(group=user_group)
 
         # Filter for user type (Anesthesiologist might only see their own related expenses if logic requires)
         # Current logic shows all group expenses to Gestor/Admin, Anesthesiologist sees none directly unless linked?
@@ -117,28 +153,50 @@ def financas_view(request):
         active_role = user.get_active_role()
         if active_role == ANESTESISTA_USER:
              # If Anesthesiologists should only see expenses linked to their procedures:
-             # base_qs = base_qs.filter(procedimento__anestesistas_responsaveis=user.anesthesiologist)
+             # despesas_qs = despesas_qs.filter(procedimento__anestesistas_responsaveis=user.anesthesiologist)
              # If they see none, keep as is for now (or set to none())
-             base_qs = Despesas.objects.none() # Assuming they don't see general expenses
+             despesas_qs = Despesas.objects.none() # Assuming they don't see general expenses
+             despesas_recorrentes_qs = DespesasRecorrentes.objects.none()
         elif active_role not in [GESTOR_USER, ADMIN_USER]:
-             base_qs = Despesas.objects.none()
+             despesas_qs = Despesas.objects.none()
+             despesas_recorrentes_qs = DespesasRecorrentes.objects.none()
 
         # Apply period filter
         if start_date and end_date:
-            base_qs = base_qs.filter(data__gte=start_date, data__lte=end_date)
+            despesas_qs = despesas_qs.filter(data__gte=start_date, data__lte=end_date)
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(data_inicio__gte=start_date, data_inicio__lte=end_date)
 
         # Apply search filter
         if search_query:
-            base_qs = base_qs.filter(descricao__icontains=search_query)
+            despesas_qs = despesas_qs.filter(descricao__icontains=search_query)
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(descricao__icontains=search_query)
 
-        # Apply status filter (using 'pago' field for despesas)
+        # Apply status filter (using 'pago' field for despesas, 'ativa' for recorrentes)
         if status == 'pago':
-            base_qs = base_qs.filter(pago=True)
+            despesas_qs = despesas_qs.filter(pago=True)
         elif status == 'nao_pago':
-            base_qs = base_qs.filter(pago=False)
+            despesas_qs = despesas_qs.filter(pago=False)
+        elif status == 'ativa':
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(ativa=True)
+        elif status == 'inativa':
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(ativa=False)
 
         # Order results
-        queryset = base_qs.order_by('-data', '-id')
+        despesas_list = list(despesas_qs.order_by('-data', '-id'))
+        despesas_recorrentes_list = list(despesas_recorrentes_qs.order_by('-data_inicio', '-criado_em'))
+        
+        # Combine both lists and mark type for template
+        for despesa in despesas_list:
+            despesa.item_type = 'despesa'
+        for despesa_rec in despesas_recorrentes_list:
+            despesa_rec.item_type = 'despesa_recorrente'
+        
+        # Combine and sort by date (using data for despesas and data_inicio for recorrentes)
+        queryset = sorted(
+            despesas_list + despesas_recorrentes_list,
+            key=lambda x: x.data if hasattr(x, 'data') else x.data_inicio,
+            reverse=True
+        )
 
     context = {
         'items': queryset,
@@ -206,7 +264,7 @@ def get_finance_item(request, type, id):
                                   item.api_data_cirurgia.strftime('%Y-%m-%d') if item.api_data_cirurgia else None),
                  # Add other fields as needed by the frontend modal
             }
-        else: # Despesas
+        elif type == 'despesas':
             item = Despesas.objects.get(
                 id=id,
                 group=user_group # Assuming only Gestor access despesas directly
@@ -222,8 +280,24 @@ def get_finance_item(request, type, id):
                 'data': item.data.strftime('%Y-%m-%d') if item.data else None,
                 'pago': item.pago
             }
+        else: # despesas_recorrentes
+            item = DespesasRecorrentes.objects.get(
+                id=id,
+                group=user_group
+            )
+            active_role = user.get_active_role()
+            if active_role not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'error': 'Acesso negado'}, status=403)
+                 
+            data = {
+                'descricao': item.descricao,
+                'valor': float(item.valor) if item.valor else 0,
+                'periodicidade': item.periodicidade,
+                'data_inicio': item.data_inicio.strftime('%Y-%m-%d') if item.data_inicio else None,
+                'ativa': item.ativa
+            }
         return JsonResponse(data)
-    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
+    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist, DespesasRecorrentes.DoesNotExist):
         return JsonResponse({'error': 'Item não encontrado'}, status=404)
     except Exception as e:
         print(f"Error in get_finance_item: {str(e)}")
@@ -269,10 +343,10 @@ def update_finance_item(request):
                  return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
             # Update common fields
-            item.valor_faturado = data.get('valor_faturado') if data.get('valor_faturado') else None
-            item.valor_recebido = data.get('valor_recebido') if data.get('valor_recebido') else None
-            item.valor_recuperado = data.get('valor_recuperado') if data.get('valor_recuperado') else None
-            item.valor_acatado = data.get('valor_acatado') if data.get('valor_acatado') else None
+            item.valor_faturado = clean_money_value(data.get('valor_faturado'))
+            item.valor_recebido = clean_money_value(data.get('valor_recebido'))
+            item.valor_recuperado = clean_money_value(data.get('valor_recuperado'))
+            item.valor_acatado = clean_money_value(data.get('valor_acatado'))
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
             item.cpsa = data.get('cpsa') or None
@@ -302,16 +376,39 @@ def update_finance_item(request):
                  return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
 
             item.descricao = data.get('descricao')
-            item.valor = data.get('valor') if data.get('valor') else None
+            item.valor = clean_money_value(data.get('valor'))
             item.pago = data.get('pago') == 'on'
             item.data = data.get('data') or None
+
+        elif finance_type == 'despesas_recorrentes':
+            item = DespesasRecorrentes.objects.select_for_update().get(
+                id=finance_id,
+                group=user_group
+            )
+            # Permission check
+            active_role = user.get_active_role()
+            if active_role not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
+
+            # Parse date
+            data_inicio_str = data.get('data_inicio')
+            try:
+                data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date() if data_inicio_str else None
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'error': 'Data de início inválida'}, status=400)
+
+            item.descricao = data.get('descricao')
+            item.valor = clean_money_value(data.get('valor'))
+            item.periodicidade = data.get('periodicidade')
+            item.data_inicio = data_inicio
+            item.ativa = data.get('ativa') == 'on'
 
         else:
              return JsonResponse({'success': False, 'error': 'Tipo de item inválido'}, status=400)
 
         item.save()
         return JsonResponse({'success': True})
-    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
+    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist, DespesasRecorrentes.DoesNotExist):
         return JsonResponse({'success': False, 'error': 'Item não encontrado'}, status=404)
     except Exception as e:
         print(f"Error in update_finance_item: {str(e)}")
@@ -372,10 +469,10 @@ def create_receita_item(request):
             api_data_cirurgia=api_data_cirurgia,
             api_cooperado_nome=data.get('api_cooperado_nome'), # Optional manual field
             api_hospital_nome=data.get('api_hospital_nome'),   # Optional manual field
-            valor_faturado=data.get('valor_faturado') or None,
-            valor_recebido=data.get('valor_recebido') or None,
-            valor_recuperado=data.get('valor_recuperado') or None,
-            valor_acatado=data.get('valor_acatado') or None,
+            valor_faturado=clean_money_value(data.get('valor_faturado')),
+            valor_recebido=clean_money_value(data.get('valor_recebido')),
+            valor_recuperado=clean_money_value(data.get('valor_recuperado')),
+            valor_acatado=clean_money_value(data.get('valor_acatado')),
             status_pagamento=status_pagamento,
             data_pagamento=data_pagamento,
             cpsa=cpsa or None,
@@ -418,7 +515,7 @@ def create_finance_item(request): # This view now ONLY handles Despesas
         item = Despesas(
             group=request.user.group,
             descricao=data.get('descricao'),
-            valor=data.get('valor') or None, # Allow None if empty
+            valor=clean_money_value(data.get('valor')), # Clean money value
             pago=data.get('pago') == 'on',  # Convert checkbox value to boolean
             data=data_despesa
         )
@@ -615,13 +712,21 @@ def delete_finance_item(request):
             active_role = user.get_active_role()
             if active_role not in [GESTOR_USER, ADMIN_USER]:
                  return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
+        elif finance_type == 'despesas_recorrentes':
+            item = DespesasRecorrentes.objects.get(
+                id=finance_id,
+                group=user_group
+            )
+            active_role = user.get_active_role()
+            if active_role not in [GESTOR_USER, ADMIN_USER]:
+                 return JsonResponse({'success': False, 'error': 'Acesso negado para excluir'}, status=403)
         else:
              return JsonResponse({'success': False, 'error': 'Tipo inválido'}, status=400)
 
         item.delete()
         return JsonResponse({'success': True})
 
-    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist):
+    except (ProcedimentoFinancas.DoesNotExist, Despesas.DoesNotExist, DespesasRecorrentes.DoesNotExist):
         return JsonResponse({'success': False, 'error': 'Item não encontrado'}, status=404)
     except Exception as e:
         print(f"Error deleting item: {e}")
@@ -1315,5 +1420,183 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
             newly_created_procedimento.anestesistas_responsaveis.add(anest_final)
 
     return newly_created_procedimento
+
+
+# --- Despesas Recorrentes Views ---
+
+@login_required
+def get_despesa_recorrente_item(request, id):
+    if not request.user.validado:
+        return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
+    
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
+        return JsonResponse({'error': 'Acesso negado'}, status=403)
+
+    user = request.user
+    user_group = user.group
+
+    try:
+        item = DespesasRecorrentes.objects.get(
+            id=id,
+            group=user_group
+        )
+        
+        data = {
+            'descricao': item.descricao,
+            'valor': float(item.valor) if item.valor else 0,
+            'periodicidade': item.periodicidade,
+            'data_inicio': item.data_inicio.strftime('%Y-%m-%d') if item.data_inicio else None,
+            'ativa': item.ativa
+        }
+        return JsonResponse(data)
+    except DespesasRecorrentes.DoesNotExist:
+        return JsonResponse({'error': 'Despesa recorrente não encontrada'}, status=404)
+    except Exception as e:
+        print(f"Error in get_despesa_recorrente_item: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': 'Erro interno ao buscar despesa recorrente'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def create_despesa_recorrente_item(request):
+    if not request.user.validado:
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
+        return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
+
+    try:
+        data = request.POST
+        
+        # Parse the date from the form
+        data_inicio_str = data.get('data_inicio')
+        try:
+            data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Data de início inválida'
+            }, status=400)
+        
+        item = DespesasRecorrentes(
+            group=request.user.group,
+            descricao=data.get('descricao'),
+            valor=clean_money_value(data.get('valor_recorrente')),
+            periodicidade=data.get('periodicidade'),
+            data_inicio=data_inicio,
+            ativa=data.get('ativa') == 'on'
+        )
+        
+        # Add basic validation
+        if not item.descricao:
+             return JsonResponse({'success': False, 'error': 'Descrição é obrigatória.'}, status=400)
+        if item.valor is None:
+             return JsonResponse({'success': False, 'error': 'Valor é obrigatório.'}, status=400)
+        if not item.periodicidade:
+             return JsonResponse({'success': False, 'error': 'Periodicidade é obrigatória.'}, status=400)
+        if not item.data_inicio:
+             return JsonResponse({'success': False, 'error': 'Data de início é obrigatória.'}, status=400)
+
+        item.save()
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        print(f"Error creating despesa recorrente: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': f"Erro interno ao criar despesa recorrente: {str(e)}"}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def update_despesa_recorrente_item(request):
+    if not request.user.validado:
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+    
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
+        return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
+
+    user = request.user
+    user_group = user.group
+
+    try:
+        data = request.POST
+        finance_id = data.get('finance_id')
+
+        item = DespesasRecorrentes.objects.select_for_update().get(
+            id=finance_id,
+            group=user_group
+        )
+
+        # Parse date
+        data_inicio_str = data.get('data_inicio')
+        try:
+            data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date() if data_inicio_str else None
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'error': 'Data de início inválida'}, status=400)
+
+        item.descricao = data.get('descricao')
+        item.valor = clean_money_value(data.get('valor_recorrente'))
+        item.periodicidade = data.get('periodicidade')
+        item.data_inicio = data_inicio
+        item.ativa = data.get('ativa') == 'on'
+
+        # Basic validation
+        if not item.descricao:
+             return JsonResponse({'success': False, 'error': 'Descrição é obrigatória.'}, status=400)
+        if item.valor is None:
+             return JsonResponse({'success': False, 'error': 'Valor é obrigatório.'}, status=400)
+        if not item.periodicidade:
+             return JsonResponse({'success': False, 'error': 'Periodicidade é obrigatória.'}, status=400)
+        if not item.data_inicio:
+             return JsonResponse({'success': False, 'error': 'Data de início é obrigatória.'}, status=400)
+
+        item.save()
+        return JsonResponse({'success': True})
+    except DespesasRecorrentes.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Despesa recorrente não encontrada'}, status=404)
+    except Exception as e:
+        print(f"Error in update_despesa_recorrente_item: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': f'Erro interno ao atualizar despesa recorrente: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def delete_despesa_recorrente_item(request):
+    if not request.user.validado:
+        return JsonResponse({'success': False, 'error': 'Usuário não autenticado'}, status=401)
+    active_role = request.user.get_active_role()
+    if active_role != GESTOR_USER:
+        return JsonResponse({'success': False, 'error': 'Acesso negado'}, status=403)
+
+    user = request.user
+    user_group = user.group
+
+    try:
+        data = request.POST
+        finance_id = data.get('finance_id')
+
+        item = DespesasRecorrentes.objects.get(
+            id=finance_id,
+            group=user_group
+        )
+
+        item.delete()
+        return JsonResponse({'success': True})
+
+    except DespesasRecorrentes.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Despesa recorrente não encontrada'}, status=404)
+    except Exception as e:
+        print(f"Error deleting despesa recorrente: {e}")
+        return JsonResponse({'success': False, 'error': f'Erro ao excluir despesa recorrente: {str(e)}'}, status=500)
 
 

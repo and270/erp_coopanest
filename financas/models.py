@@ -200,6 +200,62 @@ class Despesas(models.Model):
     def __str__(self):
         return f"Despesa - {self.descricao[:30]}"
 
+class DespesasRecorrentes(models.Model):
+    PERIODICIDADE_CHOICES = [
+        ('diaria', 'Diária'),
+        ('semanal', 'Semanal'),
+        ('quinzenal', 'Quinzenal'),
+        ('mensal', 'Mensal'),
+        ('semestral', 'Semestral'),
+        ('anual', 'Anual'),
+    ]
+
+    group = models.ForeignKey(
+        'registration.Groups',
+        on_delete=models.SET_NULL,
+        verbose_name='Grupo',
+        null=True,
+        blank=True
+    )
+    descricao = models.TextField(verbose_name='Descrição')
+    valor = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='Valor'
+    )
+    periodicidade = models.CharField(
+        max_length=20,
+        choices=PERIODICIDADE_CHOICES,
+        verbose_name='Periodicidade'
+    )
+    data_inicio = models.DateField(verbose_name='Data de Início')
+    ativa = models.BooleanField(
+        default=True,
+        verbose_name='Ativa'
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Despesa Recorrente"
+        verbose_name_plural = "Despesas Recorrentes"
+        ordering = ['-data_inicio', '-criado_em']
+
+    def __str__(self):
+        return f"Despesa Recorrente - {self.descricao[:30]} ({self.get_periodicidade_display()})"
+
+    def get_periodicidade_display_short(self):
+        """Retorna versão abreviada da periodicidade para exibição em tabelas"""
+        mapping = {
+            'diaria': 'Diária',
+            'semanal': 'Semanal',
+            'quinzenal': 'Quinz.',
+            'mensal': 'Mensal',
+            'semestral': 'Semest.',
+            'anual': 'Anual',
+        }
+        return mapping.get(self.periodicidade, self.get_periodicidade_display())
+
 class ConciliacaoTentativa(models.Model):
     procedimento_financas = models.ForeignKey(ProcedimentoFinancas, on_delete=models.CASCADE)
     cpsa_id = models.CharField(max_length=255)
