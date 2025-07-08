@@ -106,7 +106,7 @@
                     <span>SÁB</span>
                 </div>
                 {% for date in calendar_dates %}
-                    <div class="day {% if not date.is_current_month %}other-month{% endif %}" data-date="{{ date.day|date:'Y-m-d' }}">
+                    <div class="day" data-date="{{ date.day|date:'Y-m-d' }}">
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
                             {% with local_time=procedimento.data_horario|localtime %}
