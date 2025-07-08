@@ -308,17 +308,17 @@ def search_agenda(request):
         except ValueError:
             # Invalid date format
             date_obj = datetime.today().date()
-        procedimentos = Procedimento.objects.filter(data_horario__date=date_obj, group=request.user.group)
+        procedimentos = Procedimento.objects.filter(data_horario__date=date_obj, group=request.user.group).order_by('data_horario')
         view_type = 'week'
         highlight_date = date_obj
     elif paciente:
         search_type = 'paciente'
-        procedimentos = Procedimento.objects.filter(nome_paciente__icontains=paciente, group=request.user.group)
+        procedimentos = Procedimento.objects.filter(nome_paciente__icontains=paciente, group=request.user.group).order_by('data_horario')
         view_type = 'week'
         highlight_date = procedimentos.first().data_horario.date() if procedimentos.exists() else None
     elif procedimento:
         search_type = 'procedimento'
-        procedimentos = Procedimento.objects.filter(procedimento__icontains=procedimento, group=request.user.group)
+        procedimentos = Procedimento.objects.filter(procedimento__icontains=procedimento, group=request.user.group).order_by('data_horario')
         view_type = 'week'
         highlight_date = procedimentos.first().data_horario.date() if procedimentos.exists() else None
     else:
@@ -512,7 +512,7 @@ def agenda_view(request):
         calendar_dates = get_calendar_dates(year, month)
         week_dates = []
 
-    procedimentos = Procedimento.objects.filter(group=request.user.group).prefetch_related('anestesistas_responsaveis')
+    procedimentos = Procedimento.objects.filter(group=request.user.group).prefetch_related('anestesistas_responsaveis').order_by('data_horario')
     
 
     for procedimento in procedimentos:

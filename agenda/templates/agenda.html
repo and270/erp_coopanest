@@ -1,5 +1,6 @@
 {% extends 'layout.html' %}
 {% load static %}
+{% load tz %}
 
 {% block title %}Agenda{% endblock %}
 
@@ -108,9 +109,10 @@
                     <div class="day {% if not date.is_current_month %}other-month{% endif %}" data-date="{{ date.day|date:'Y-m-d' }}">
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
-                            {% if procedimento.data_horario.date == date.day.date %}
-                                <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
-                                    <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
+                            {% with local_time=procedimento.data_horario|localtime %}
+                            {% if local_time.date == date.day.date %}
+                                <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
+                                    <span class="procedure-time-patient">{{ local_time|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
                                     <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
                                         {% for anestesista in procedimento.anestesistas_responsaveis.all %}
@@ -122,8 +124,8 @@
                                     <div class="procedure-modal-content">
                                         <span class="close-modal">&times;</span>
                                         <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                        <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
-                                        <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
+                                        <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
+                                        <p><span class="modal-start-time">{{ local_time|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span></p>
                                         <br>
                                         <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                         <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
@@ -161,6 +163,7 @@
                                     </div>
                                 </div>
                             {% endif %}
+                            {% endwith %}
                         {% endfor %}
                     </div>
                 {% endfor %}
@@ -185,10 +188,11 @@
                         {% for hour in hours %}
                             <div class="hour-slot" data-hour="{{ hour }}">
                                 {% for procedimento in procedimentos %}
-                                    {% if procedimento.data_horario|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
-                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                    {% with local_time=procedimento.data_horario|localtime %}
+                                    {% if local_time|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
+                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
                                             <div class="procedure-first-row">
-                                                <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                                <span class="procedure-time">{{ local_time|date:"H:i" }}</span>
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             </div>
                                             <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:15 }}</span>
@@ -202,8 +206,8 @@
                                             <div class="procedure-modal-content">
                                                 <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                                <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
-                                                <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
+                                                <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
+                                                <p><span class="modal-start-time">{{ local_time|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span></p>
                                                 <br>
                                                 <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                                 <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
@@ -241,6 +245,7 @@
                                             </div>
                                         </div>
                                     {% endif %}
+                                    {% endwith %}
                                 {% endfor %}
                             </div>
                         {% endfor %}
