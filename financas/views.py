@@ -19,7 +19,7 @@ from django.db import transaction
 import re
 from decimal import Decimal, InvalidOperation
 
-DATA_INICIO_PUXAR_GUIAS_API = datetime(2025, 4, 1).date()
+DATA_INICIO_PUXAR_GUIAS_API = datetime(2025, 1, 1).date()
 
 def clean_money_value(value_str):
     """
