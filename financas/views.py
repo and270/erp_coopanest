@@ -576,7 +576,6 @@ def export_finances(request):
         ).select_related('procedimento', 'procedimento__hospital', 'procedimento__convenio').prefetch_related('procedimento__anestesistas_responsaveis')
         
         active_role = user.get_active_role()
-        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
         if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
              base_qs = base_qs.filter(
                  Q(procedimento__anestesistas_responsaveis=user.anesthesiologist) |
@@ -598,7 +597,7 @@ def export_finances(request):
                  Q(procedimento__anestesistas_responsaveis__name__icontains=search_query) |
                  Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) |
                  Q(procedimento__isnull=True, api_cooperado_nome__icontains=search_query)
-             )
+             ).distinct()
         if status:
              base_qs = base_qs.filter(status_pagamento=status)
         
@@ -638,28 +637,66 @@ def export_finances(request):
             })
 
     else: # view_type == 'despesas'
-         # Despesas export logic remains the same, just re-apply filters
-        base_qs = Despesas.objects.filter(group=user_group)
+        # --- Replicate financas_view logic to fetch both Despesas and DespesasRecorrentes ---
+        despesas_qs = Despesas.objects.filter(group=user_group)
+        despesas_recorrentes_qs = DespesasRecorrentes.objects.filter(group=user_group)
+
         active_role = user.get_active_role()
-        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-        if active_role == ANESTESISTA_USER: base_qs = Despesas.objects.none() # Or specific logic
-        elif active_role not in [GESTOR_USER, ADMIN_USER]: base_qs = Despesas.objects.none()
+        if active_role == ANESTESISTA_USER or active_role not in [GESTOR_USER, ADMIN_USER]:
+            despesas_qs = Despesas.objects.none()
+            despesas_recorrentes_qs = DespesasRecorrentes.objects.none()
 
-        if start_date and end_date: base_qs = base_qs.filter(data__gte=start_date, data__lte=end_date)
-        if search_query: base_qs = base_qs.filter(descricao__icontains=search_query)
-        if status == 'pago': base_qs = base_qs.filter(pago=True)
-        elif status == 'nao_pago': base_qs = base_qs.filter(pago=False)
-        
-        queryset = base_qs.order_by('-data', '-id')
+        # Apply period filter
+        if start_date and end_date:
+            despesas_qs = despesas_qs.filter(data__gte=start_date, data__lte=end_date)
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(data_inicio__gte=start_date, data_inicio__lte=end_date)
 
+        # Apply search filter
+        if search_query:
+            despesas_qs = despesas_qs.filter(descricao__icontains=search_query)
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(descricao__icontains=search_query)
+
+        # Apply status filter exactly as in financas_view
+        if status == 'pago':
+            despesas_qs = despesas_qs.filter(pago=True)
+        elif status == 'nao_pago':
+            despesas_qs = despesas_qs.filter(pago=False)
+        elif status == 'ativa':
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(ativa=True)
+        elif status == 'inativa':
+            despesas_recorrentes_qs = despesas_recorrentes_qs.filter(ativa=False)
+
+        # Fetch, combine, and sort the items
+        despesas_list = list(despesas_qs)
+        despesas_recorrentes_list = list(despesas_recorrentes_qs)
+
+        all_items = sorted(
+            despesas_list + despesas_recorrentes_list,
+            key=lambda x: x.data if hasattr(x, 'data') else x.data_inicio,
+            reverse=True
+        )
+
+        # Prepare data for export
         data = []
-        for item in queryset:
-            data.append({
-                'Descrição': item.descricao,
-                'Data': item.data.strftime('%d/%m/%Y') if item.data else '',
-                'Valor': float(item.valor) if item.valor else 0.0,
-                'Pago': 'Sim' if item.pago else 'Não',
-            })
+        for item in all_items:
+            if isinstance(item, Despesas):
+                data.append({
+                    'Tipo': 'Despesa Pontual',
+                    'Descrição': item.descricao,
+                    'Data': item.data.strftime('%d/%m/%Y') if item.data else '',
+                    'Valor': float(item.valor) if item.valor is not None else 0.0,
+                    'Status': 'Pago' if item.pago else 'Não Pago',
+                    'Periodicidade': '-',
+                })
+            elif isinstance(item, DespesasRecorrentes):
+                data.append({
+                    'Tipo': 'Despesa Recorrente',
+                    'Descrição': item.descricao,
+                    'Data': item.data_inicio.strftime('%d/%m/%Y') if item.data_inicio else '',
+                    'Valor': float(item.valor) if item.valor is not None else 0.0,
+                    'Status': 'Ativa' if item.ativa else 'Inativa',
+                    'Periodicidade': item.get_periodicidade_display(),
+                })
 
     # Create DataFrame and Excel Response
     df = pd.DataFrame(data)
