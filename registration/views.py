@@ -257,9 +257,9 @@ def members_view(request):
 
     elif active_role in [GESTOR_USER, ADMIN_USER]:
         # Gestor/Admin sees all members in the group
-        anesthesiologists = Anesthesiologist.objects.filter(group=user_group)
-        surgeons = Surgeon.objects.filter(group=user_group)
-        hospitals = HospitalClinic.objects.filter(group=user_group)
+        anesthesiologists = Anesthesiologist.objects.filter(group=user_group).order_by('name')
+        surgeons = Surgeon.objects.filter(group=user_group).order_by('name')
+        hospitals = HospitalClinic.objects.filter(group=user_group).order_by('name')
 
         return render(request, 'members.html', {
             'anesthesiologists': anesthesiologists,
