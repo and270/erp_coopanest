@@ -7,16 +7,13 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="mb-4" style="overflow: auto;">
+        {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
+            <a href="{% url 'cadastro' %}" class="cadastrar-btn" style="margin-top: 0;">Adicionar Membro</a>
+        {% endif %}
         <h1>
             {% if request.active_role == ANESTESISTA_USER %}Meu Cadastro{% else %}Membros{% endif %}
         </h1>
-        <div>
-            <!-- Button to trigger the 'Cadastro' page, only for Gestor/Admin -->
-            {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
-                 <a href="{% url 'cadastro' %}" class="btn btn-primary">Adicionar Membro</a>
-            {% endif %}
-        </div>
     </div>
 
     {% if request.active_role == ANESTESISTA_USER %}
@@ -45,8 +42,8 @@
     {% elif request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
         {# Gestor/Admin View: Show tables for each member type #}
         
-        <div id="anesthesiologists">
-            <h2 class="tab-title">Anestesiologistas</h2>
+        <div id="anesthesiologists" class="mb-5">
+            <h2>Anestesiologistas</h2>
             {% if anesthesiologists %}
                 <table class="member-table">
                     <thead>
@@ -83,8 +80,8 @@
             {% endif %}
         </div>
 
-        <div id="surgeons">
-            <h2 class="tab-title">Cirurgiões</h2>
+        <div id="surgeons" class="mb-5">
+            <h2>Cirurgiões</h2>
             {% if surgeons %}
                 <table class="member-table">
                     <thead>
@@ -119,8 +116,8 @@
             {% endif %}
         </div>
 
-        <div id="hospitals">
-            <h2 class="tab-title">Hospitais e Clínicas</h2>
+        <div id="hospitals" class="mb-5">
+            <h2>Hospitais e Clínicas</h2>
             {% if hospitals %}
                 <table class="member-table">
                     <thead>
