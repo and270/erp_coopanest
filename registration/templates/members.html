@@ -7,13 +7,13 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="mb-4" style="overflow: auto;">
-        {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
-            <a href="{% url 'cadastro' %}" class="cadastrar-btn" style="margin-top: 0;">Adicionar Membro</a>
-        {% endif %}
-        <h1>
+    <div style="overflow: hidden; padding-bottom: 15px;">
+        <h1 style="float: left;">
             {% if request.active_role == ANESTESISTA_USER %}Meu Cadastro{% else %}Membros{% endif %}
         </h1>
+        {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
+            <a href="{% url 'cadastro' %}" class="cadastrar-btn" style="text-decoration: none; margin-top: 30px; margin-right: 30px;">Adicionar Membro</a>
+        {% endif %}
     </div>
 
     {% if request.active_role == ANESTESISTA_USER %}
