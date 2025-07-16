@@ -33,7 +33,7 @@
                     <p><strong>Cargo:</strong> {{ my_anesthesiologist_record.get_role_in_group_display }}</p>
                 </div>
                  <div class="card-footer">
-                    <a href="{% url 'edit_object' model_name='anesthesiologist' object_id=my_anesthesiologist_record.id %}" class="btn btn-sm btn-outline-primary">Editar meu cadastro</a>
+                    <a href="{% url 'edit' model_name='anesthesiologist' object_id=my_anesthesiologist_record.id %}" class="btn btn-sm btn-outline-primary">Editar meu cadastro</a>
                 </div>
             </div>
         {% else %}
@@ -81,7 +81,7 @@
                                         <div class="actions-dropdown">
                                             <button class="actions-button">Ações ▼</button>
                                             <div class="actions-content">
-                                                <a href="{% url 'edit_object' model_name='anesthesiologist' object_id=anesthesiologist.id %}">Editar</a>
+                                                <a href="{% url 'edit' model_name='anesthesiologist' object_id=anesthesiologist.id %}">Editar</a>
                                                 {# Delete is forbidden #}
                                             </div>
                                         </div>
@@ -117,8 +117,8 @@
                                         <div class="actions-dropdown">
                                             <button class="actions-button">Ações ▼</button>
                                             <div class="actions-content">
-                                                <a href="{% url 'edit_object' model_name='surgeon' object_id=surgeon.id %}">Editar</a>
-                                                <a href="{% url 'delete_object' model_name='surgeon' object_id=surgeon.id %}" onclick="return confirm('Tem certeza que deseja deletar este Cirurgião?');" class="delete-action">Deletar</a>
+                                                <a href="{% url 'edit' model_name='surgeon' object_id=surgeon.id %}">Editar</a>
+                                                <a href="{% url 'delete' model_name='surgeon' object_id=surgeon.id %}" onclick="return confirm('Tem certeza que deseja deletar este Cirurgião?');" class="delete-action">Deletar</a>
                                             </div>
                                         </div>
                                     </td>
@@ -153,8 +153,8 @@
                                         <div class="actions-dropdown">
                                             <button class="actions-button">Ações ▼</button>
                                             <div class="actions-content">
-                                                <a href="{% url 'edit_object' model_name='hospital_clinic' object_id=hospital.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
-                                                <form action="{% url 'delete_object' model_name='hospital_clinic' object_id=hospital.id %}" method="post" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja deletar {{ hospital.name }}?');">
+                                                <a href="{% url 'edit' model_name='hospital_clinic' object_id=hospital.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                                <form action="{% url 'delete' model_name='hospital_clinic' object_id=hospital.id %}" method="post" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja deletar {{ hospital.name }}?');">
                                                     {% csrf_token %}
                                                     <button type="submit" class="btn btn-sm btn-outline-danger">Deletar</button>
                                                 </form>
