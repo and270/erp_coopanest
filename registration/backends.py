@@ -259,6 +259,10 @@ class CoopahubAuthBackend(ModelBackend):
              print("----- Empty empresas list received -----")
              return
 
+        print("----- Processing user groups (_process_user_groups) -----")
+        print(json.dumps(empresas_list, indent=2))
+        print("---------------------------------------------------------")
+
         # Process each empresa dictionary in the list
         for empresa_data in empresas_list: # Iterate directly over the list
             # Detect format and extract data
