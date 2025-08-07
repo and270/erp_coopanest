@@ -23,12 +23,40 @@ from django.db.models import Q
 from django.core.mail import send_mail
 from django.urls import reverse
 from dal_select2.views import Select2QuerySetView
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.templatetags.static import static
+from django.core.mail import EmailMultiAlternatives
+from email.mime.image import MIMEImage
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
     5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
     9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
 }
+
+def _send_brand_email(subject: str, html_body: str, recipients: list[str]) -> None:
+    plain_body = strip_tags(html_body)
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=plain_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=recipients,
+    )
+    email.attach_alternative(html_body, "text/html")
+
+    # Attach inline logo using CID so it renders in most email clients
+    logo_file_path = os.path.join(settings.BASE_DIR, 'static', 'logo_email.png')
+    if os.path.exists(logo_file_path):
+        with open(logo_file_path, 'rb') as f:
+            logo_bytes = f.read()
+            # Create MIMEImage and set Content-ID header for inline display
+            img = MIMEImage(logo_bytes)
+            img.add_header('Content-ID', '<logo_email.png>')
+            img.add_header('Content-Disposition', 'inline', filename='logo_email.png')
+            email.attach(img)
+
+    email.send(fail_silently=False)
 
 @require_http_methods(["POST"])
 def update_procedure(request, procedure_id):
@@ -75,7 +103,9 @@ def update_procedure(request, procedure_id):
             try:
                 survey_url = request.build_absolute_uri(reverse('survey', args=[updated_procedure.nps_token]))
                 subject = 'Pesquisa de Satisfação com Atendimento Anestésico em procedimento cirúrgico'
-                message = f"""Prezado(a) {updated_procedure.nome_paciente},
+                message_context = {
+                    'logo_src': 'cid:logo_email.png',
+                    'message': f"""Prezado(a) {updated_procedure.nome_paciente},
 
 Estamos entrando em contato para solicitar sua colaboração em um processo importante de melhoria contínua do nosso atendimento.
 Você foi submetido(a) recentemente a um procedimento cirúrgico, ou está prestes a passar por um, e gostaríamos de conhecer sua opinião sobre o atendimento anestésico que recebeu ou receberá. 
@@ -84,16 +114,16 @@ Sua experiência é fundamental para nós, e seu feedback nos ajudará a aprimor
 
 Pedimos, gentilmente, que responda a um breve questionário de avaliação de satisfação após a realização do procedimento anestésico. 
 
-{survey_url}
+<a href="{survey_url}">Acessar Questionário</a>
 
 Suas respostas serão tratadas com total confidencialidade e utilizadas exclusivamente para fins de melhoria do atendimento.
 
 Agradecemos antecipadamente por sua disponibilidade e colaboração. 
 
 Sua opinião é extremamente valiosa para nós."""
-                from_email = settings.DEFAULT_FROM_EMAIL
-                recipient_list = [updated_procedure.email_paciente]
-                send_mail(subject, message, from_email, recipient_list)
+                }
+                html_message = render_to_string('email_templates/email_template.html', message_context)
+                _send_brand_email(subject, html_message, [updated_procedure.email_paciente])
                 email_sent = True
             except Exception as e:
                 email_error = str(e)
@@ -157,7 +187,9 @@ def create_procedure(request):
             try:
                 survey_url = request.build_absolute_uri(reverse('survey', args=[procedure.nps_token]))
                 subject = 'Pesquisa de Satisfação com Atendimento Anestésico em procedimento cirúrgico'
-                message = f"""Prezado(a) {procedure.nome_paciente},
+                message_context = {
+                    'logo_src': 'cid:logo_email.png',
+                    'message': f"""Prezado(a) {procedure.nome_paciente},
 
 Estamos entrando em contato para solicitar sua colaboração em um processo importante de melhoria contínua do nosso atendimento.
 Você foi submetido(a) recentemente a um procedimento cirúrgico, ou está prestes a passar por um, e gostaríamos de conhecer sua opinião sobre o atendimento anestésico que recebeu ou receberá. 
@@ -166,16 +198,16 @@ Sua experiência é fundamental para nós, e seu feedback nos ajudará a aprimor
 
 Pedimos, gentilmente, que responda a um breve questionário de avaliação de satisfação após a realização do procedimento anestésico. 
 
-{survey_url}
+<a href="{survey_url}">Acessar Questionário</a>
 
 Suas respostas serão tratadas com total confidencialidade e utilizadas exclusivamente para fins de melhoria do atendimento.
 
 Agradecemos antecipadamente por sua disponibilidade e colaboração. 
 
 Sua opinião é extremamente valiosa para nós."""
-                from_email = settings.DEFAULT_FROM_EMAIL
-                recipient_list = [procedure.email_paciente]
-                send_mail(subject, message, from_email, recipient_list)
+                }
+                html_message = render_to_string('email_templates/email_template.html', message_context)
+                _send_brand_email(subject, html_message, [procedure.email_paciente])
                 email_sent = True
             except Exception as e:
                 email_error = str(e)
@@ -408,27 +440,27 @@ def survey_view(request, nps_token):
             # Send email to the group with the patient's response
             group_email = procedimento.group.email
             subject = f'Coopahub - Pesquisa de Satisfação - {procedimento.nome_paciente}'
-            message = f"""
+            message_context = {
+                'logo_src': 'cid:logo_email.png',
+                'message': f"""
             Um paciente acabou de responder a pesquisa de satisfação!
 
-            Paciente: {procedimento.nome_paciente}
+            <b>Paciente:</b> {procedimento.nome_paciente}
             
-            Respostas da pesquisa:
-            1. Satisfação geral: {survey_response.get_satisfacao_geral_display()}
-            2. Clareza das informações: {survey_response.get_clareza_informacoes_display()}
-            3. Comunicação e disponibilidade: {survey_response.get_comunicacao_disponibilidade_display()}
-            4. Conforto e segurança: {survey_response.get_conforto_seguranca_display()}
+            <b>Respostas da pesquisa:</b>
+            <p>1. Satisfação geral: {survey_response.get_satisfacao_geral_display()}</p>
+            <p>2. Clareza das informações: {survey_response.get_clareza_informacoes_display()}</p>
+            <p>3. Comunicação e disponibilidade: {survey_response.get_comunicacao_disponibilidade_display()}</p>
+            <p>4. Conforto e segurança: {survey_response.get_conforto_seguranca_display()}</p>
             
-            Comentário adicional: {survey_response.comentario_adicional}
+            <p><b>Comentário adicional:</b> {survey_response.comentario_adicional}</p>
             
-            CSAT Score: {survey_response.csat_score:.2f}%
+            <p><b>CSAT Score:</b> {survey_response.csat_score:.2f}%</p>
             """
-            
-            from_email = settings.DEFAULT_FROM_EMAIL
-            recipient_list = [group_email]
-            
+            }
+            html_message = render_to_string('email_templates/email_template.html', message_context)
             try:
-                send_mail(subject, message, from_email, recipient_list)
+                _send_brand_email(subject, html_message, [group_email])
             except Exception as e:
                 print(f"Error sending email to group {group_email}: ", e)
             
