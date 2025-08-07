@@ -45,6 +45,7 @@
                 <input type="radio" id="agenda-view" name="view-toggle" checked>
                 <label for="agenda-view"><b>Agenda</b></label>
             </div>
+            <button id="open-import-modal" class="btn btn-secondary" style="margin-left: 10px;">Importar</button>
         </div>
     </div>
 
@@ -375,6 +376,22 @@
 </div>
 <div id="customAlert" class="custom-alert"></div>
 
+<!-- Import Modal -->
+<div id="import-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" id="close-import-modal">&times;</span>
+        <h2>Importar Agendamentos (.xlsx)</h2>
+        <p>Envie um arquivo Excel com as colunas: Hora inicio, Hora fim, Data do procedimento, N guia coopanest (CPSA), Paciente, Plano, Hospital, Eletivo/Urgência, CPF, Códigos, Anestesistas responsáveis, Cirurgião.</p>
+        <div class="form-group">
+            <input type="file" id="import-file" accept=".xlsx">
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary" id="run-import-btn">Importar</button>
+        </div>
+        <div id="import-results" style="margin-top: 15px; max-height: 300px; overflow: auto;"></div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -494,8 +511,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentDateRange = document.getElementById('current-date-range');
 
     let currentView = '{{ view_type }}';
-    let currentYear = {{ current_year }};
-    let currentMonth = {{ current_month }};
+    let currentYear = parseInt("{{ current_year }}");
+    let currentMonth = parseInt("{{ current_month }}");
     let currentWeekStart = new Date('{{ current_week_start|date:"Y-m-d" }}T00:00:00');
 
     const MONTH_NAMES_PT = {
@@ -519,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadView(year, month, weekStart) {
-        const base_url = '{% url 'agenda' %}';
+        const base_url = "{% url 'agenda' %}";
         const url = new URL(window.location.origin + base_url);
         url.searchParams.set('year', year);
         url.searchParams.set('month', month);
@@ -649,6 +666,101 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('procedimento-form-modal').style.display = 'none';
         showAgendarButton();
     });
+</script>
+<script>
+    // Import modal open/close
+    (function(){
+        const openBtn = document.getElementById('open-import-modal');
+        const modal = document.getElementById('import-modal');
+        const closeBtn = document.getElementById('close-import-modal');
+        const runBtn = document.getElementById('run-import-btn');
+        const fileInput = document.getElementById('import-file');
+        const resultsDiv = document.getElementById('import-results');
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function renderResults(data){
+            const parts = [];
+            parts.push(`<p><strong>Criados:</strong> ${data.created} | <strong>CPSA vinculados:</strong> ${data.financas_linked}</p>`);
+            if (data.results && data.results.length){
+                parts.push('<table class="table"><thead><tr><th>Linha</th><th>Status</th><th>Mensagens</th></tr></thead><tbody>');
+                data.results.forEach(r => {
+                    const msgs = (r.errors || r.warnings || []).join('; ');
+                    parts.push(`<tr><td>${r.row}</td><td>${r.status}</td><td>${msgs}</td></tr>`);
+                });
+                parts.push('</tbody></table>');
+            }
+            parts.push('<button id="reload-after-import" class="btn btn-secondary">Recarregar página</button>');
+            resultsDiv.innerHTML = parts.join('');
+            const reloadBtn = document.getElementById('reload-after-import');
+            reloadBtn.addEventListener('click', () => window.location.reload());
+        }
+
+        if (openBtn){
+            openBtn.addEventListener('click', function(){
+                resultsDiv.innerHTML = '';
+                fileInput.value = '';
+                modal.style.display = 'block';
+            });
+        }
+        if (closeBtn){
+            closeBtn.addEventListener('click', function(){
+                modal.style.display = 'none';
+            });
+        }
+        window.addEventListener('click', function(e){
+            if (e.target === modal){ modal.style.display = 'none'; }
+        });
+
+        if (runBtn){
+            runBtn.addEventListener('click', function(){
+                const file = fileInput.files && fileInput.files[0];
+                if (!file){
+                    showCustomAlert('Selecione um arquivo .xlsx para importar.', 'error');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', file);
+                runBtn.disabled = true;
+                runBtn.textContent = 'Importando...';
+                fetch('/agenda/import/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success){
+                        showCustomAlert(data.message || 'Falha na importação.', 'error');
+                    } else {
+                        showCustomAlert('Importação concluída.', 'success');
+                        renderResults(data);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showCustomAlert('Erro ao importar. Tente novamente.', 'error');
+                })
+                .finally(() => {
+                    runBtn.disabled = false;
+                    runBtn.textContent = 'Importar';
+                });
+            });
+        }
+    })();
 </script>
 <script>
     $(document).ready(function(){

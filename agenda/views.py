@@ -28,6 +28,10 @@ from django.utils.html import strip_tags
 from django.templatetags.static import static
 from django.core.mail import EmailMultiAlternatives
 from email.mime.image import MIMEImage
+import pandas as pd
+import unicodedata
+import io
+import re
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -746,6 +750,80 @@ def get_escala_week_dates(start_date, end_date):
     return weeks
 
 
+def _normalize_string(value: str) -> str:
+    if value is None:
+        return ''
+    if not isinstance(value, str):
+        value = str(value)
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    return value.strip().lower()
+
+
+def _parse_time(value):
+    """Parse time that might come as string 'HH:MM', pandas Timestamp, or float (Excel time)."""
+    from datetime import time as dtime
+    if pd.isna(value):
+        return None
+    try:
+        # If already a time
+        if isinstance(value, dtime):
+            return value
+        # If pandas Timestamp or datetime
+        if hasattr(value, 'to_pydatetime'):
+            dt = value.to_pydatetime()
+            return dtime(hour=dt.hour, minute=dt.minute)
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            # Accept HH:MM or H:MM
+            match = re.match(r"^(\d{1,2}):(\d{2})$", value)
+            if match:
+                h = int(match.group(1))
+                m = int(match.group(2))
+                if 0 <= h <= 23 and 0 <= m <= 59:
+                    return dtime(hour=h, minute=m)
+        # Excel time as fraction of day (float)
+        if isinstance(value, (int, float)) and 0 <= value <= 1:
+            total_minutes = int(round(value * 24 * 60))
+            h = (total_minutes // 60) % 24
+            m = total_minutes % 60
+            return dtime(hour=h, minute=m)
+    except Exception:
+        return None
+    return None
+
+
+def _parse_date(value):
+    """Parse date from excel cell to date object."""
+    from datetime import date as ddate
+    if pd.isna(value):
+        return None
+    try:
+        if isinstance(value, ddate) and not hasattr(value, 'hour'):
+            return value
+        if hasattr(value, 'to_pydatetime'):
+            return value.to_pydatetime().date()
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            # Try dayfirst parsing
+            parsed = pd.to_datetime(value, dayfirst=True, errors='coerce')
+            if pd.isna(parsed):
+                return None
+            return parsed.to_pydatetime().date()
+        # Excel serial dates as numbers
+        if isinstance(value, (int, float)):
+            parsed = pd.to_datetime(value, unit='D', origin='1899-12-30', errors='coerce')
+            if pd.isna(parsed):
+                return None
+            return parsed.to_pydatetime().date()
+    except Exception:
+        return None
+    return None
+
+
 @require_http_methods(["POST"])
 def edit_single_day_escala(request, escala_id):
     escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
@@ -793,3 +871,228 @@ def serve_protected_file(request, file_path):
             return response
     raise Http404
 
+
+@login_required
+@require_http_methods(["POST"])
+def import_procedures(request):
+    if not request.user.validado:
+        return JsonResponse({"success": False, "message": "Você não tem permissão para importar."}, status=403)
+
+    upload = request.FILES.get('file')
+    if not upload:
+        return JsonResponse({"success": False, "message": "Nenhum arquivo enviado."}, status=400)
+
+    # Only accept .xlsx for now
+    if not upload.name.lower().endswith('.xlsx'):
+        return JsonResponse({"success": False, "message": "Formato inválido. Envie um arquivo .xlsx."}, status=400)
+
+    try:
+        df = pd.read_excel(upload, engine='openpyxl')
+    except Exception as e:
+        return JsonResponse({"success": False, "message": f"Erro ao ler Excel: {e}"}, status=400)
+
+    # Normalize columns
+    normalized_columns = {}
+    for col in df.columns:
+        norm = _normalize_string(col)
+        normalized_columns[col] = norm
+
+    # mapping from normalized col to our keys
+    col_map = {}
+    for original, norm in normalized_columns.items():
+        if norm in ("hora inicio", "hora_inicio", "inicio"):
+            col_map['start_time'] = original
+        elif norm in ("hora fim", "hora_fim", "fim"):
+            col_map['end_time'] = original
+        elif norm in ("data do procedimento", "data do procedimetno", "data", "data procedimento"):
+            col_map['date'] = original
+        elif norm in ("n guia coopanest", "cpsa", "guia coopanest", "n guia"):
+            col_map['cpsa'] = original
+        elif norm == "paciente":
+            col_map['patient'] = original
+        elif norm in ("plano", "convenio", "convênio"):
+            col_map['plan'] = original
+        elif norm == "hospital":
+            col_map['hospital'] = original
+        elif norm in ("eletivo/urgencia", "eletivo/urgencia "):
+            col_map['urgency'] = original
+        elif norm == "cpf":
+            col_map['cpf'] = original
+        elif norm in ("codigos", "codigos ", "codigo", "códigos", "código"):
+            col_map['codes'] = original
+        elif norm.startswith("anestesistas"):
+            col_map['anesthesiologists'] = original
+        elif norm in ("cirurgiao", "cirurgiao...", "cirurgiao ", "cirurgiao nome", "cirurgiao(a)"):
+            col_map['surgeon'] = original
+
+    required_for_minimal = ['date', 'start_time', 'patient']
+    missing_required = [r for r in required_for_minimal if r not in col_map]
+    if missing_required:
+        return JsonResponse({
+            "success": False,
+            "message": f"Colunas obrigatórias ausentes: {', '.join(missing_required)}"
+        }, status=400)
+
+    created = 0
+    updated_financas = 0
+    row_results = []
+
+    from django.utils import timezone as dj_tz
+    from registration.models import HospitalClinic, Surgeon
+
+    for idx, row in df.iterrows():
+        row_number = idx + 2  # assuming header at row 1
+        errors = []
+        warnings = []
+
+        try:
+            # Extract values
+            date_value = row.get(col_map.get('date'))
+            start_value = row.get(col_map.get('start_time'))
+            end_value = row.get(col_map.get('end_time')) if 'end_time' in col_map else None
+            patient_name = str(row.get(col_map.get('patient')) or '').strip()
+            cpf_value = str(row.get(col_map.get('cpf')) or '').strip()
+            plan_value = str(row.get(col_map.get('plan')) or '').strip()
+            hospital_value = str(row.get(col_map.get('hospital')) or '').strip()
+            urgency_value = str(row.get(col_map.get('urgency')) or '').strip()
+            codes_value = str(row.get(col_map.get('codes')) or '').strip()
+            anesth_value = str(row.get(col_map.get('anesthesiologists')) or '').strip()
+            surgeon_value = str(row.get(col_map.get('surgeon')) or '').strip()
+            cpsa_value = str(row.get(col_map.get('cpsa')) or '').strip() if 'cpsa' in col_map else ''
+
+            # Parse date and times
+            parsed_date = _parse_date(date_value)
+            start_time = _parse_time(start_value)
+            end_time = _parse_time(end_value) if end_value is not None else None
+
+            if not parsed_date:
+                errors.append('Data inválida')
+            if not start_time:
+                errors.append('Hora início inválida')
+            if not patient_name:
+                errors.append('Paciente ausente')
+
+            if errors:
+                row_results.append({"row": row_number, "status": "error", "errors": errors})
+                continue
+
+            # Combine date and time
+            from datetime import datetime as dtdt
+            start_dt = dtdt.combine(parsed_date, start_time)
+            end_dt = dtdt.combine(parsed_date, end_time) if end_time else None
+            if end_dt and end_dt < start_dt:
+                # Assume end time is same day but later; if earlier, add 1 day
+                from datetime import timedelta as td
+                end_dt = end_dt + td(days=1)
+
+            if dj_tz.is_naive(start_dt):
+                start_dt = dj_tz.make_aware(start_dt, dj_tz.get_current_timezone())
+            if end_dt and dj_tz.is_naive(end_dt):
+                end_dt = dj_tz.make_aware(end_dt, dj_tz.get_current_timezone())
+
+            # Map urgency
+            urgency_norm = _normalize_string(urgency_value)
+            if urgency_norm.startswith('urg'):
+                tipo_procedimento = 'urgencia'
+            elif urgency_norm.startswith('ele'):
+                tipo_procedimento = 'eletiva'
+            else:
+                tipo_procedimento = None
+
+            # Convenio
+            convenio_obj = None
+            if plan_value:
+                convenio_obj, _ = Convenios.objects.get_or_create(name=plan_value)
+
+            # Hospital or outro_local
+            hospital_obj = None
+            outro_local_value = None
+            if hospital_value:
+                hospital_obj = HospitalClinic.objects.filter(group=request.user.group, name__iexact=hospital_value).first()
+                if not hospital_obj:
+                    outro_local_value = hospital_value
+
+            # Surgeon
+            surgeon_obj = None
+            surgeon_name_fallback = None
+            if surgeon_value:
+                surgeon_obj = Surgeon.objects.filter(group=request.user.group, name__iexact=surgeon_value).first()
+                if not surgeon_obj:
+                    surgeon_name_fallback = surgeon_value
+
+            # ProcedimentoDetalhes via codes
+            procedimento_principal = None
+            if codes_value:
+                split_codes = re.split(r"[+;,]", codes_value)
+                for code in split_codes:
+                    code = code.strip()
+                    if not code:
+                        continue
+                    procedimento_principal = ProcedimentoDetalhes.objects.filter(codigo_procedimento__iexact=code).first()
+                    if procedimento_principal:
+                        break
+                if not procedimento_principal:
+                    warnings.append('Código(s) não encontrado(s) em ProcedimentoDetalhes')
+
+            # Create Procedimento
+            procedimento = Procedimento(
+                group=request.user.group,
+                nome_paciente=patient_name,
+                email_paciente=None,
+                cpf_paciente=cpf_value or None,
+                convenio=convenio_obj,
+                procedimento_principal=procedimento_principal,
+                data_horario=start_dt,
+                data_horario_fim=end_dt or (start_dt + timedelta(hours=1)),
+                hospital=hospital_obj,
+                outro_local=outro_local_value,
+                cirurgiao=surgeon_obj,
+                cirurgiao_nome=surgeon_name_fallback,
+                tipo_procedimento=tipo_procedimento,
+            )
+            procedimento.save()
+
+            # Anesthesiologists (split by comma, plus, semicolon)
+            added_anesth = []
+            if anesth_value:
+                names = [n.strip() for n in re.split(r"[+,;]", anesth_value) if n.strip()]
+                for name in names:
+                    anest = Anesthesiologist.objects.filter(group=request.user.group, name__iexact=name).first()
+                    if anest:
+                        procedimento.anestesistas_responsaveis.add(anest)
+                        added_anesth.append(name)
+                    else:
+                        warnings.append(f"Anestesista não encontrado: {name}")
+
+            procedimento.save()
+
+            # Link CPSA into finances only (no other financial data)
+            if cpsa_value:
+                try:
+                    pf, _ = ProcedimentoFinancas.objects.get_or_create(
+                        procedimento=procedimento,
+                        group=request.user.group,
+                        defaults={"cpsa": cpsa_value}
+                    )
+                    if pf.cpsa != cpsa_value:
+                        pf.cpsa = cpsa_value
+                        pf.save()
+                    updated_financas += 1
+                except Exception as e:
+                    warnings.append(f"Não foi possível vincular CPSA: {str(e)}")
+
+            created += 1
+            row_results.append({
+                "row": row_number,
+                "status": "created",
+                "warnings": warnings
+            })
+        except Exception as e:
+            row_results.append({"row": row_number, "status": "error", "errors": [str(e)]})
+
+    return JsonResponse({
+        "success": True,
+        "created": created,
+        "financas_linked": updated_financas,
+        "results": row_results
+    })
