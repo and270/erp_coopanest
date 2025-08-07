@@ -1071,24 +1071,73 @@ def import_procedures(request):
                     warnings.append('Código(s) não encontrado(s) em ProcedimentoDetalhes')
             print(f"[IMPORT][Row {row_number}] Procedimento principal -> {procedimento_principal}")
 
-            # Create Procedimento
-            procedimento = Procedimento(
-                group=request.user.group,
-                nome_paciente=patient_name,
-                email_paciente=None,
-                cpf_paciente=cpf_value or None,
-                convenio=convenio_obj,
-                procedimento_principal=procedimento_principal,
-                data_horario=start_dt,
-                data_horario_fim=end_dt or (start_dt + timedelta(hours=1)),
-                hospital=hospital_obj,
-                outro_local=outro_local_value,
-                cirurgiao=surgeon_obj,
-                cirurgiao_nome=surgeon_name_fallback,
-                tipo_procedimento=tipo_procedimento,
-            )
-            procedimento.save()
-            print(f"[IMPORT][Row {row_number}] Procedimento saved id={procedimento.id} date={start_dt.date()} time={start_dt.strftime('%H:%M')}")
+            # Deduplication: Try to find existing record first
+            existing_procedimento = None
+            if cpsa_value:
+                pf_existing = ProcedimentoFinancas.objects.filter(
+                    group=request.user.group,
+                    cpsa=cpsa_value,
+                    procedimento__isnull=False
+                ).select_related('procedimento').first()
+                if pf_existing:
+                    existing_procedimento = pf_existing.procedimento
+            if existing_procedimento is None:
+                existing_procedimento = Procedimento.objects.filter(
+                    group=request.user.group,
+                    nome_paciente__iexact=patient_name,
+                    data_horario=start_dt
+                ).first()
+
+            if existing_procedimento:
+                print(f"[IMPORT][Row {row_number}] Found existing procedimento id={existing_procedimento.id}. Will not create duplicate.")
+                procedimento = existing_procedimento
+
+                # Optionally enrich existing with missing info
+                updated_fields = []
+                if not procedimento.procedimento_principal and procedimento_principal:
+                    procedimento.procedimento_principal = procedimento_principal
+                    updated_fields.append('procedimento_principal')
+                if not procedimento.convenio and convenio_obj:
+                    procedimento.convenio = convenio_obj
+                    updated_fields.append('convenio')
+                if not procedimento.hospital and hospital_obj:
+                    procedimento.hospital = hospital_obj
+                    updated_fields.append('hospital')
+                if not procedimento.outro_local and outro_local_value:
+                    procedimento.outro_local = outro_local_value
+                    updated_fields.append('outro_local')
+                if end_dt and (not procedimento.data_horario_fim or end_dt > procedimento.data_horario_fim):
+                    procedimento.data_horario_fim = end_dt
+                    updated_fields.append('data_horario_fim')
+                if cpf_value and not procedimento.cpf_paciente:
+                    procedimento.cpf_paciente = cpf_value
+                    updated_fields.append('cpf_paciente')
+                if tipo_procedimento and not procedimento.tipo_procedimento:
+                    procedimento.tipo_procedimento = tipo_procedimento
+                    updated_fields.append('tipo_procedimento')
+
+                if updated_fields:
+                    procedimento.save(update_fields=list(set(updated_fields)))
+                    print(f"[IMPORT][Row {row_number}] Updated existing procedimento fields: {updated_fields}")
+            else:
+                # Create Procedimento
+                procedimento = Procedimento(
+                    group=request.user.group,
+                    nome_paciente=patient_name,
+                    email_paciente=None,
+                    cpf_paciente=cpf_value or None,
+                    convenio=convenio_obj,
+                    procedimento_principal=procedimento_principal,
+                    data_horario=start_dt,
+                    data_horario_fim=end_dt or (start_dt + timedelta(hours=1)),
+                    hospital=hospital_obj,
+                    outro_local=outro_local_value,
+                    cirurgiao=surgeon_obj,
+                    cirurgiao_nome=surgeon_name_fallback,
+                    tipo_procedimento=tipo_procedimento,
+                )
+                procedimento.save()
+                print(f"[IMPORT][Row {row_number}] Procedimento saved id={procedimento.id} date={start_dt.date()} time={start_dt.strftime('%H:%M')}")
 
             # Anesthesiologists (split by comma, plus, semicolon)
             added_anesth = []
@@ -1120,10 +1169,12 @@ def import_procedures(request):
                 except Exception as e:
                     warnings.append(f"Não foi possível vincular CPSA: {str(e)}")
 
-            created += 1
+            status_flag = 'created' if existing_procedimento is None else 'existing'
+            if existing_procedimento is None:
+                created += 1
             row_results.append({
                 "row": row_number,
-                "status": "created",
+                "status": status_flag,
                 "warnings": warnings,
                 "id": procedimento.id,
                 "patient": patient_name,
