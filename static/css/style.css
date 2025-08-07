@@ -1916,7 +1916,29 @@ select {
     padding-bottom: 60px;
 }
 
+/* Import modal should match the same white style as procedimento modal */
+#import-modal .modal-content {
+    background-color: #ffffff;
+    color: #000000;
+    margin: 15% auto;
+    padding: 30px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    padding-bottom: 60px;
+}
+
 #procedimento-form-modal .modal-content h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A73E8;
+    margin-bottom: 5px;
+}
+
+#import-modal .modal-content h2 {
     font-size: 16px;
     font-weight: 600;
     color: #1A73E8;
@@ -1929,11 +1951,25 @@ select {
     margin-bottom: 30px;
 }
 
+#import-modal .required-field-text {
+    font-size: 10px;
+    color: #3D3D3D;
+    margin-bottom: 15px;
+}
+
 #procedimento-form-modal label {
     display: block;
     font-size: 12px;
     font-weight: 500;
     margin-bottom: 2px;
+    color: #3D3D3D;
+}
+
+#import-modal label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
     color: #3D3D3D;
 }
 
@@ -1944,11 +1980,34 @@ select {
     margin-bottom: 10px;
 }
 
+#import-modal .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
 #procedimento-form-modal input[type="text"],
 #procedimento-form-modal input[type="email"],
 #procedimento-form-modal input[type="date"],
 #procedimento-form-modal input[type="time"],
 #procedimento-form-modal textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #ffffff;
+    color: #000000;
+    box-sizing: border-box;
+}
+
+#import-modal input[type="file"],
+#import-modal input[type="text"],
+#import-modal input[type="email"],
+#import-modal input[type="date"],
+#import-modal input[type="time"],
+#import-modal textarea {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #e0e0e0;
@@ -2004,6 +2063,26 @@ select {
 }
 
 #procedimento-form-modal .cadastrar-btn:hover {
+    background-color: #1557b0;
+}
+
+#import-modal .cadastrar-btn {
+    background-color: #1A73E8;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 15px;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+}
+
+#import-modal .cadastrar-btn:hover {
     background-color: #1557b0;
 }
 

@@ -376,20 +376,22 @@
 </div>
 <div id="customAlert" class="custom-alert"></div>
 
-<!-- Import Modal -->
+<!-- Import Modal (same structure/styles as other modals) -->
 <div id="import-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <span class="close" id="close-import-modal">&times;</span>
         <h2>Importar Agendamentos (.xlsx)</h2>
-        <p>Envie um arquivo Excel com as colunas: Hora inicio, Hora fim, Data do procedimento, N guia coopanest (CPSA), Paciente, Plano, Hospital, Eletivo/Urgência, CPF, Códigos, Anestesistas responsáveis, Cirurgião.</p>
-        <div class="form-group">
-            <input type="file" id="import-file" accept=".xlsx">
-        </div>
-        <div class="form-actions">
-            <button class="btn btn-primary" id="run-import-btn">Importar</button>
-        </div>
+        <p class="required-field-text" style="margin-bottom: 10px;">Use planilha com as colunas suportadas: Hora início, Hora fim, Data do procedimento, N guia COOPANEST (CPSA), Paciente, Plano, Hospital, Eletivo/Urgência, CPF, Códigos, Anestesistas responsáveis, Cirurgião.</p>
+        <form>
+            <div class="form-group">
+                <label for="import-file">Arquivo .xlsx</label>
+                <input type="file" id="import-file" accept=".xlsx">
+            </div>
+            <button type="button" class="cadastrar-btn" id="run-import-btn">Importar</button>
+        </form>
         <div id="import-results" style="margin-top: 15px; max-height: 300px; overflow: auto;"></div>
     </div>
+    
 </div>
 
 {% endblock %}
@@ -693,20 +695,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function renderResults(data){
-            const parts = [];
-            parts.push(`<p><strong>Criados:</strong> ${data.created} | <strong>CPSA vinculados:</strong> ${data.financas_linked}</p>`);
+            const container = document.createElement('div');
+            const summary = document.createElement('p');
+            summary.innerHTML = `<strong>Criados:</strong> ${data.created} | <strong>CPSA vinculados:</strong> ${data.financas_linked}`;
+            container.appendChild(summary);
+
             if (data.results && data.results.length){
-                parts.push('<table class="table"><thead><tr><th>Linha</th><th>Status</th><th>Mensagens</th></tr></thead><tbody>');
+                const list = document.createElement('div');
                 data.results.forEach(r => {
+                    const row = document.createElement('div');
+                    row.style.padding = '6px 0';
                     const msgs = (r.errors || r.warnings || []).join('; ');
-                    parts.push(`<tr><td>${r.row}</td><td>${r.status}</td><td>${msgs}</td></tr>`);
+                    row.textContent = `Linha ${r.row} — ${r.status}${msgs ? ' — ' + msgs : ''}`;
+                    list.appendChild(row);
                 });
-                parts.push('</tbody></table>');
+                container.appendChild(list);
             }
-            parts.push('<button id="reload-after-import" class="btn btn-secondary">Recarregar página</button>');
-            resultsDiv.innerHTML = parts.join('');
-            const reloadBtn = document.getElementById('reload-after-import');
-            reloadBtn.addEventListener('click', () => window.location.reload());
+
+            const btn = document.createElement('button');
+            btn.className = 'cadastrar-btn';
+            btn.id = 'reload-after-import';
+            btn.textContent = 'Recarregar página';
+            btn.addEventListener('click', () => window.location.reload());
+            container.appendChild(btn);
+
+            resultsDiv.innerHTML = '';
+            resultsDiv.appendChild(container);
         }
 
         if (openBtn){
