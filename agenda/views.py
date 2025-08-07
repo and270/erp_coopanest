@@ -925,6 +925,9 @@ def import_procedures(request):
         elif norm in ("cirurgiao", "cirurgiao...", "cirurgiao ", "cirurgiao nome", "cirurgiao(a)"):
             col_map['surgeon'] = original
 
+    print("[IMPORT] Normalized columns:", normalized_columns)
+    print("[IMPORT] Column map:", col_map)
+
     required_for_minimal = ['date', 'start_time', 'patient']
     missing_required = [r for r in required_for_minimal if r not in col_map]
     if missing_required:
@@ -933,12 +936,37 @@ def import_procedures(request):
             "message": f"Colunas obrigatórias ausentes: {', '.join(missing_required)}"
         }, status=400)
 
+    # Skip empty rows (common in exported spreadsheets)
+    original_rows = len(df)
+    df = df.dropna(how='all')
+    after_drop_all = len(df)
+    key_cols = [col_map['date'], col_map['start_time'], col_map['patient']]
+
+    def _cell_is_empty(v):
+        if v is None:
+            return True
+        try:
+            if pd.isna(v):
+                return True
+        except Exception:
+            pass
+        if isinstance(v, str) and not v.strip():
+            return True
+        return False
+
+    mask_empty_keys = df[key_cols].apply(lambda s: all(_cell_is_empty(x) for x in s), axis=1)
+    skipped_empty_by_keys = int(mask_empty_keys.sum())
+    df = df[~mask_empty_keys].copy()
+    print(f"[IMPORT] Rows: original={original_rows}, drop_all_empty={original_rows - after_drop_all}, drop_empty_keys={skipped_empty_by_keys}, final={len(df)}")
+
     created = 0
     updated_financas = 0
     row_results = []
 
     from django.utils import timezone as dj_tz
     from registration.models import HospitalClinic, Surgeon
+
+    print("[IMPORT] Current timezone:", dj_tz.get_current_timezone())
 
     for idx, row in df.iterrows():
         row_number = idx + 2  # assuming header at row 1
@@ -960,10 +988,14 @@ def import_procedures(request):
             surgeon_value = str(row.get(col_map.get('surgeon')) or '').strip()
             cpsa_value = str(row.get(col_map.get('cpsa')) or '').strip() if 'cpsa' in col_map else ''
 
+            print(f"[IMPORT][Row {row_number}] Raw values -> date:{date_value} start:{start_value} end:{end_value} paciente:{patient_name} cpf:{cpf_value} plano:{plan_value} hospital:{hospital_value} urg:{urgency_value} codigos:{codes_value} anest:{anesth_value} cirurgiao:{surgeon_value} cpsa:{cpsa_value}")
+
             # Parse date and times
             parsed_date = _parse_date(date_value)
             start_time = _parse_time(start_value)
             end_time = _parse_time(end_value) if end_value is not None else None
+
+            print(f"[IMPORT][Row {row_number}] Parsed -> date:{parsed_date} start:{start_time} end:{end_time}")
 
             if not parsed_date:
                 errors.append('Data inválida')
@@ -973,6 +1005,7 @@ def import_procedures(request):
                 errors.append('Paciente ausente')
 
             if errors:
+                print(f"[IMPORT][Row {row_number}] ERRORS ->", errors)
                 row_results.append({"row": row_number, "status": "error", "errors": errors})
                 continue
 
@@ -982,13 +1015,14 @@ def import_procedures(request):
             end_dt = dtdt.combine(parsed_date, end_time) if end_time else None
             if end_dt and end_dt < start_dt:
                 # Assume end time is same day but later; if earlier, add 1 day
-                from datetime import timedelta as td
-                end_dt = end_dt + td(days=1)
+                end_dt = end_dt + timedelta(days=1)
 
             if dj_tz.is_naive(start_dt):
                 start_dt = dj_tz.make_aware(start_dt, dj_tz.get_current_timezone())
             if end_dt and dj_tz.is_naive(end_dt):
                 end_dt = dj_tz.make_aware(end_dt, dj_tz.get_current_timezone())
+
+            print(f"[IMPORT][Row {row_number}] Aware datetimes -> start:{start_dt} end:{end_dt}")
 
             # Map urgency
             urgency_norm = _normalize_string(urgency_value)
@@ -1011,6 +1045,7 @@ def import_procedures(request):
                 hospital_obj = HospitalClinic.objects.filter(group=request.user.group, name__iexact=hospital_value).first()
                 if not hospital_obj:
                     outro_local_value = hospital_value
+            print(f"[IMPORT][Row {row_number}] Hospital -> obj:{hospital_obj} outro_local:{outro_local_value}")
 
             # Surgeon
             surgeon_obj = None
@@ -1019,6 +1054,7 @@ def import_procedures(request):
                 surgeon_obj = Surgeon.objects.filter(group=request.user.group, name__iexact=surgeon_value).first()
                 if not surgeon_obj:
                     surgeon_name_fallback = surgeon_value
+            print(f"[IMPORT][Row {row_number}] Surgeon -> obj:{surgeon_obj} fallback_name:{surgeon_name_fallback}")
 
             # ProcedimentoDetalhes via codes
             procedimento_principal = None
@@ -1033,6 +1069,7 @@ def import_procedures(request):
                         break
                 if not procedimento_principal:
                     warnings.append('Código(s) não encontrado(s) em ProcedimentoDetalhes')
+            print(f"[IMPORT][Row {row_number}] Procedimento principal -> {procedimento_principal}")
 
             # Create Procedimento
             procedimento = Procedimento(
@@ -1051,6 +1088,7 @@ def import_procedures(request):
                 tipo_procedimento=tipo_procedimento,
             )
             procedimento.save()
+            print(f"[IMPORT][Row {row_number}] Procedimento saved id={procedimento.id} date={start_dt.date()} time={start_dt.strftime('%H:%M')}")
 
             # Anesthesiologists (split by comma, plus, semicolon)
             added_anesth = []
@@ -1063,6 +1101,7 @@ def import_procedures(request):
                         added_anesth.append(name)
                     else:
                         warnings.append(f"Anestesista não encontrado: {name}")
+            print(f"[IMPORT][Row {row_number}] Anestesistas adicionados -> {added_anesth}")
 
             procedimento.save()
 
@@ -1085,9 +1124,16 @@ def import_procedures(request):
             row_results.append({
                 "row": row_number,
                 "status": "created",
-                "warnings": warnings
+                "warnings": warnings,
+                "id": procedimento.id,
+                "patient": patient_name,
+                "date": start_dt.astimezone(dj_tz.get_current_timezone()).strftime('%d/%m/%Y'),
+                "start": start_dt.astimezone(dj_tz.get_current_timezone()).strftime('%H:%M'),
+                "end": (end_dt.astimezone(dj_tz.get_current_timezone()).strftime('%H:%M') if end_dt else None),
             })
+            print(f"[IMPORT][Row {row_number}] DONE with warnings={warnings}")
         except Exception as e:
+            print(f"[IMPORT][Row {row_number}] UNEXPECTED ERROR ->", repr(e))
             row_results.append({"row": row_number, "status": "error", "errors": [str(e)]})
 
     return JsonResponse({

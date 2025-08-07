@@ -111,7 +111,7 @@
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
                             {% with local_time=procedimento.data_horario|localtime %}
-                            {% if local_time.date == date.day.date %}
+                            {% if local_time|date:'Y-m-d' == date.day|date:'Y-m-d' %}
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ local_time|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
