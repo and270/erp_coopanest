@@ -107,7 +107,22 @@
             </div>
 
             <div class="metric-card">
-                <h3>Valores Totais</h3>
+                <div class="header-row">
+                    <h3>Valores Totais</h3>
+                    <div class="procedure-filter">
+                        <select id="anestesistaFilterTotals" class="filter-select anestesista-filter">
+                            {% if active_role == GESTOR_USER %}
+                                <option value="">Por Anestesista</option>
+                                {% for anestesista in anestesistas %}
+                                    <option value="{{ anestesista.id }}"
+                                            {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ anestesista.name }}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
                 <div class="status-bar">
                     <div>
                         <span>Pago</span>
@@ -172,7 +187,7 @@
                                 <div class="section-title">Por Anestesista</div>
                                 <div class="section-value">R$ <span id="anestesistaValue">{{ anestesista_total|format_currency }}</span></div>
                             </div>
-                            <select id="anestesistaFilter" class="filter-select">
+                            <select id="anestesistaFilter" class="filter-select anestesista-filter">
                                 {% if active_role == GESTOR_USER %}
                                     {# Gestor/Admin View: "Por Anestesista" and All Options #}
                                     <option value="">Por Anestesista</option>
@@ -460,16 +475,18 @@ document.getElementById('graphTypeSelector').addEventListener('change', function
     window.location.href = currentUrl.toString();
 });
 
-// Anestesista filter
-document.getElementById('anestesistaFilter').addEventListener('change', function() {
-    const selectedValue = this.value;
-    const currentUrl = new URL(window.location.href);
-    if (selectedValue) {
-        currentUrl.searchParams.set('anestesista', selectedValue);
-    } else {
-        currentUrl.searchParams.delete('anestesista');
-    }
-    window.location.href = currentUrl.toString();
+// Anestesista filter (both selectors)
+document.querySelectorAll('.anestesista-filter').forEach(function(selectEl) {
+    selectEl.addEventListener('change', function() {
+        const selectedValue = this.value;
+        const currentUrl = new URL(window.location.href);
+        if (selectedValue) {
+            currentUrl.searchParams.set('anestesista', selectedValue);
+        } else {
+            currentUrl.searchParams.delete('anestesista');
+        }
+        window.location.href = currentUrl.toString();
+    });
 });
 
 // Valores Recebidos stacked bar chart
