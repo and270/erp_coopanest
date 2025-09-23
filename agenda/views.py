@@ -824,6 +824,56 @@ def _parse_date(value):
     return None
 
 
+def _parse_decimal_value(value):
+    """Parse decimal value from Excel cell, handling various formats."""
+    from decimal import Decimal, InvalidOperation
+    if pd.isna(value) or value is None:
+        return None
+    try:
+        if isinstance(value, (int, float)):
+            return Decimal(str(value))
+        if isinstance(value, str):
+            # Remove common currency symbols and formatting
+            cleaned = value.strip().replace('R$', '').replace('$', '').replace(',', '').replace(' ', '')
+            if not cleaned:
+                return None
+            return Decimal(cleaned)
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError) as e:
+        print(f"Error parsing decimal value '{value}': {e}")
+        return None
+
+
+def _map_payment_type(payment_type_str):
+    """Map payment type string to ProcedimentoFinancas choices."""
+    if not payment_type_str:
+        return None
+    
+    payment_type_norm = _normalize_string(payment_type_str)
+    
+    # Map to DIRECT_PAYMENT_CHOICES
+    if any(term in payment_type_norm for term in ['cartao', 'cartão', 'card']):
+        return 'cartao'
+    elif any(term in payment_type_norm for term in ['cheque']):
+        return 'cheque'
+    elif any(term in payment_type_norm for term in ['dinheiro', 'cash', 'especie']):
+        return 'dinheiro'
+    elif any(term in payment_type_norm for term in ['pix']):
+        return 'pix'
+    elif any(term in payment_type_norm for term in ['transferencia', 'transferência', 'transfer']):
+        return 'transferencia'
+    elif any(term in payment_type_norm for term in ['boleto']):
+        return 'boleto'
+    elif any(term in payment_type_norm for term in ['cooperativa', 'coop']):
+        return 'cooperativa'
+    elif any(term in payment_type_norm for term in ['hospital']):
+        return 'hospital'
+    elif any(term in payment_type_norm for term in ['particular', 'direta', 'direct']):
+        return 'particular'
+    
+    return None
+
+
 @require_http_methods(["POST"])
 def edit_single_day_escala(request, escala_id):
     escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
@@ -900,35 +950,57 @@ def import_procedures(request):
     # mapping from normalized col to our keys
     col_map = {}
     for original, norm in normalized_columns.items():
+        # Time columns
         if norm in ("hora inicio", "hora_inicio", "inicio"):
             col_map['start_time'] = original
         elif norm in ("hora fim", "hora_fim", "fim"):
             col_map['end_time'] = original
+        # Date columns  
         elif norm in ("data do procedimento", "data do procedimetno", "data", "data procedimento"):
             col_map['date'] = original
-        elif norm in ("n guia coopanest", "cpsa", "guia coopanest", "n guia"):
+        # CPSA/N° CPSA columns
+        elif norm in ("n guia coopanest", "cpsa", "guia coopanest", "n guia", "n° cpsa", "n cpsa", "numero cpsa"):
             col_map['cpsa'] = original
-        elif norm == "paciente":
+        # Patient name columns
+        elif norm in ("paciente", "nome do paciente"):
             col_map['patient'] = original
-        elif norm in ("plano", "convenio", "convênio"):
+        # Insurance/Plan columns
+        elif norm in ("plano", "convenio", "convênio", "plano de saude", "plano de saúde"):
             col_map['plan'] = original
-        elif norm == "hospital":
+        # Hospital/Clinic columns
+        elif norm in ("hospital", "clinica", "clínica"):
             col_map['hospital'] = original
+        # Urgency columns
         elif norm in ("eletivo/urgencia", "eletivo/urgencia "):
             col_map['urgency'] = original
+        # CPF columns
         elif norm == "cpf":
             col_map['cpf'] = original
-        elif norm in ("codigos", "codigos ", "codigo", "códigos", "código"):
+        # Procedure codes columns
+        elif norm in ("codigos", "codigos ", "codigo", "códigos", "código", "cirurgia"):
             col_map['codes'] = original
-        elif norm.startswith("anestesistas"):
+        # Anesthesiologist columns
+        elif norm.startswith("anestesistas") or norm in ("anestesista", "cooperado"):
             col_map['anesthesiologists'] = original
+        # Surgeon columns
         elif norm in ("cirurgiao", "cirurgiao...", "cirurgiao ", "cirurgiao nome", "cirurgiao(a)"):
             col_map['surgeon'] = original
+        # Financial columns - new additions
+        elif norm in ("forma pagamento", "forma de pagamento", "tipo pagamento"):
+            col_map['payment_type'] = original
+        elif norm in ("valor", "valor faturado"):
+            col_map['billed_value'] = original
+        elif norm in ("data recebimento", "data de recebimento", "data pagamento"):
+            col_map['payment_date'] = original
+        elif norm in ("valor recebido coopanest", "valor recebido", "recebido"):
+            col_map['received_value'] = original
+        elif norm in ("checagem miyuki", "checagem", "observacao", "observação"):
+            col_map['observations'] = original
 
     print("[IMPORT] Normalized columns:", normalized_columns)
     print("[IMPORT] Column map:", col_map)
 
-    required_for_minimal = ['date', 'start_time', 'patient']
+    required_for_minimal = ['date', 'patient']
     missing_required = [r for r in required_for_minimal if r not in col_map]
     if missing_required:
         return JsonResponse({
@@ -940,7 +1012,9 @@ def import_procedures(request):
     original_rows = len(df)
     df = df.dropna(how='all')
     after_drop_all = len(df)
-    key_cols = [col_map['date'], col_map['start_time'], col_map['patient']]
+    key_cols = [col_map['date'], col_map['patient']]
+    if 'start_time' in col_map:
+        key_cols.append(col_map['start_time'])
 
     def _cell_is_empty(v):
         if v is None:
@@ -987,20 +1061,36 @@ def import_procedures(request):
             anesth_value = str(row.get(col_map.get('anesthesiologists')) or '').strip()
             surgeon_value = str(row.get(col_map.get('surgeon')) or '').strip()
             cpsa_value = str(row.get(col_map.get('cpsa')) or '').strip() if 'cpsa' in col_map else ''
+            
+            # Financial data - new columns
+            payment_type_value = str(row.get(col_map.get('payment_type')) or '').strip() if 'payment_type' in col_map else ''
+            billed_value_raw = row.get(col_map.get('billed_value')) if 'billed_value' in col_map else None
+            payment_date_value = row.get(col_map.get('payment_date')) if 'payment_date' in col_map else None
+            received_value_raw = row.get(col_map.get('received_value')) if 'received_value' in col_map else None
+            observations_value = str(row.get(col_map.get('observations')) or '').strip() if 'observations' in col_map else ''
 
-            print(f"[IMPORT][Row {row_number}] Raw values -> date:{date_value} start:{start_value} end:{end_value} paciente:{patient_name} cpf:{cpf_value} plano:{plan_value} hospital:{hospital_value} urg:{urgency_value} codigos:{codes_value} anest:{anesth_value} cirurgiao:{surgeon_value} cpsa:{cpsa_value}")
+            print(f"[IMPORT][Row {row_number}] Raw values -> date:{date_value} start:{start_value} end:{end_value} paciente:{patient_name} cpf:{cpf_value} plano:{plan_value} hospital:{hospital_value} urg:{urgency_value} codigos:{codes_value} anest:{anesth_value} cirurgiao:{surgeon_value} cpsa:{cpsa_value} payment_type:{payment_type_value} billed:{billed_value_raw} received:{received_value_raw} pay_date:{payment_date_value}")
 
             # Parse date and times
             parsed_date = _parse_date(date_value)
-            start_time = _parse_time(start_value)
+            start_time = _parse_time(start_value) if start_value is not None else None
             end_time = _parse_time(end_value) if end_value is not None else None
+
+            # Provide default times if missing
+            if not start_time:
+                from datetime import time as dtime
+                start_time = dtime(9, 0)  # Default to 09:00
+                warnings.append('Hora início não informada, usando padrão: 09:00')
+            
+            if not end_time:
+                from datetime import time as dtime
+                end_time = dtime(10, 0)  # Default to 10:00
+                warnings.append('Hora fim não informada, usando padrão: 10:00')
 
             print(f"[IMPORT][Row {row_number}] Parsed -> date:{parsed_date} start:{start_time} end:{end_time}")
 
             if not parsed_date:
                 errors.append('Data inválida')
-            if not start_time:
-                errors.append('Hora início inválida')
             if not patient_name:
                 errors.append('Paciente ausente')
 
@@ -1032,6 +1122,14 @@ def import_procedures(request):
                 tipo_procedimento = 'eletiva'
             else:
                 tipo_procedimento = None
+
+            # Parse financial data
+            billed_value = _parse_decimal_value(billed_value_raw)
+            received_value = _parse_decimal_value(received_value_raw)
+            payment_date = _parse_date(payment_date_value)
+            mapped_payment_type = _map_payment_type(payment_type_value)
+            
+            print(f"[IMPORT][Row {row_number}] Financial data -> billed:{billed_value} received:{received_value} payment_date:{payment_date} payment_type:{mapped_payment_type}")
 
             # Convenio
             convenio_obj = None
@@ -1154,20 +1252,66 @@ def import_procedures(request):
 
             procedimento.save()
 
-            # Link CPSA into finances only (no other financial data)
-            if cpsa_value:
+            # Link financial data (CPSA and new financial fields)
+            if cpsa_value or billed_value or received_value or payment_date or mapped_payment_type:
                 try:
-                    pf, _ = ProcedimentoFinancas.objects.get_or_create(
+                    # Build defaults with all available financial data
+                    defaults = {}
+                    if cpsa_value:
+                        defaults["cpsa"] = cpsa_value
+                    if billed_value:
+                        defaults["valor_faturado"] = billed_value
+                    if received_value:
+                        defaults["valor_recebido"] = received_value
+                    if payment_date:
+                        defaults["data_pagamento"] = payment_date
+                    if mapped_payment_type:
+                        # Determine tipo_cobranca vs tipo_pagamento_direto
+                        if mapped_payment_type in ['cooperativa', 'hospital', 'particular']:
+                            defaults["tipo_cobranca"] = mapped_payment_type
+                        else:
+                            defaults["tipo_pagamento_direto"] = mapped_payment_type
+                            defaults["tipo_cobranca"] = 'particular'  # Assume direct payment is particular
+                    
+                    pf, created_pf = ProcedimentoFinancas.objects.get_or_create(
                         procedimento=procedimento,
                         group=request.user.group,
-                        defaults={"cpsa": cpsa_value}
+                        defaults=defaults
                     )
-                    if pf.cpsa != cpsa_value:
-                        pf.cpsa = cpsa_value
-                        pf.save()
+                    
+                    # Update existing record with new financial data if available
+                    if not created_pf:
+                        updated_fields = []
+                        if cpsa_value and pf.cpsa != cpsa_value:
+                            pf.cpsa = cpsa_value
+                            updated_fields.append('cpsa')
+                        if billed_value and not pf.valor_faturado:
+                            pf.valor_faturado = billed_value
+                            updated_fields.append('valor_faturado')
+                        if received_value and not pf.valor_recebido:
+                            pf.valor_recebido = received_value
+                            updated_fields.append('valor_recebido')
+                        if payment_date and not pf.data_pagamento:
+                            pf.data_pagamento = payment_date
+                            updated_fields.append('data_pagamento')
+                        if mapped_payment_type:
+                            if mapped_payment_type in ['cooperativa', 'hospital', 'particular'] and not pf.tipo_cobranca:
+                                pf.tipo_cobranca = mapped_payment_type
+                                updated_fields.append('tipo_cobranca')
+                            elif mapped_payment_type not in ['cooperativa', 'hospital', 'particular'] and not pf.tipo_pagamento_direto:
+                                pf.tipo_pagamento_direto = mapped_payment_type
+                                updated_fields.append('tipo_pagamento_direto')
+                                if not pf.tipo_cobranca:
+                                    pf.tipo_cobranca = 'particular'
+                                    updated_fields.append('tipo_cobranca')
+                        
+                        if updated_fields:
+                            pf.save(update_fields=updated_fields)
+                            print(f"[IMPORT][Row {row_number}] Updated financial fields: {updated_fields}")
+                    
                     updated_financas += 1
                 except Exception as e:
-                    warnings.append(f"Não foi possível vincular CPSA: {str(e)}")
+                    warnings.append(f"Não foi possível vincular dados financeiros: {str(e)}")
 
             status_flag = 'created' if existing_procedimento is None else 'existing'
             if existing_procedimento is None:
