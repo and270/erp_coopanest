@@ -9,6 +9,8 @@ class ProcedimentoFinancas(models.Model):
         ('cooperativa', 'Cooperativa'),
         ('hospital', 'Hospital'),
         ('particular', 'Direta'),
+        ('via_cirurgiao', 'Via Cirurgião'),
+        ('cortesia', 'Cortesia'),
     ]
 
     DIRECT_PAYMENT_CHOICES = [

@@ -436,7 +436,13 @@ def financas_dashboard_view(request):
     if view_type == 'daily':
         # Prepare a daily map
         date_map = {
-            single_day.date(): {'cooperativa': 0, 'hospital': 0, 'particular': 0}
+            single_day.date(): {
+                'cooperativa': 0,
+                'hospital': 0,
+                'particular': 0,
+                'via_cirurgiao': 0,
+                'cortesia': 0,
+            }
             for single_day in date_range
         }
 
@@ -454,7 +460,7 @@ def financas_dashboard_view(request):
         for item in daily_data:
             if item['date'] in date_map and item['tipo_cobranca']:
                 tipo = item['tipo_cobranca']
-                if tipo in ['cooperativa', 'hospital', 'particular']:
+                if tipo in ['cooperativa', 'hospital', 'particular', 'via_cirurgiao', 'cortesia']:
                     date_map[item['date']][tipo] = float(item['total_recebido_periodo'] or 0)
 
         sorted_dates = sorted(date_map.keys())
@@ -463,6 +469,8 @@ def financas_dashboard_view(request):
         coopanest_values = [date_map[d]['cooperativa'] for d in sorted_dates]
         hospital_values = [date_map[d]['hospital'] for d in sorted_dates]
         direta_values = [date_map[d]['particular'] for d in sorted_dates]
+        via_cirurgiao_values = [date_map[d]['via_cirurgiao'] for d in sorted_dates]
+        cortesia_values = [date_map[d]['cortesia'] for d in sorted_dates]
 
         # Calculate daily tickets and revenues
         daily_tickets = []
@@ -486,7 +494,9 @@ def financas_dashboard_view(request):
             month_map[key] = {
                 'cooperativa': 0,
                 'hospital': 0,
-                'particular': 0
+                'particular': 0,
+                'via_cirurgiao': 0,
+                'cortesia': 0,
             }
 
         monthly_data = queryset.annotate(
@@ -511,6 +521,10 @@ def financas_dashboard_view(request):
                         month_map[key]['hospital'] = float(item['total_recebido_periodo'] or 0)
                     elif tipo == 'particular':
                         month_map[key]['particular'] = float(item['total_recebido_periodo'] or 0)
+                    elif tipo == 'via_cirurgiao':
+                        month_map[key]['via_cirurgiao'] = float(item['total_recebido_periodo'] or 0)
+                    elif tipo == 'cortesia':
+                        month_map[key]['cortesia'] = float(item['total_recebido_periodo'] or 0)
 
         # Sort by actual date
         sorted_months = sorted(date_range)
@@ -525,6 +539,8 @@ def financas_dashboard_view(request):
         coopanest_values = [month_map[m.strftime("%Y-%m")]['cooperativa'] for m in sorted_months]
         hospital_values = [month_map[m.strftime("%Y-%m")]['hospital'] for m in sorted_months]
         direta_values = [month_map[m.strftime("%Y-%m")]['particular'] for m in sorted_months]
+        via_cirurgiao_values = [month_map[m.strftime("%Y-%m")]['via_cirurgiao'] for m in sorted_months]
+        cortesia_values = [month_map[m.strftime("%Y-%m")]['cortesia'] for m in sorted_months]
 
         # monthly tickets & revenues
         monthly_tickets = []
@@ -547,11 +563,15 @@ def financas_dashboard_view(request):
     total_coopanest = sum(coopanest_values)
     total_hospital = sum(hospital_values)
     total_direta = sum(direta_values)
-    total_all = total_coopanest + total_hospital + total_direta
+    total_via_cirurgiao = sum(via_cirurgiao_values)
+    total_cortesia = sum(cortesia_values)
+    total_all = total_coopanest + total_hospital + total_direta + total_via_cirurgiao + total_cortesia
 
     coopanest_pct = (total_coopanest / total_all * 100) if total_all > 0 else 0
     hospital_pct = (total_hospital / total_all * 100) if total_all > 0 else 0
     direta_pct = (total_direta / total_all * 100) if total_all > 0 else 0
+    via_cirurgiao_pct = (total_via_cirurgiao / total_all * 100) if total_all > 0 else 0
+    cortesia_pct = (total_cortesia / total_all * 100) if total_all > 0 else 0
 
     # -----------------------------------------------------------------------
     # 6) Additional filters (procedimentos, anestesistas)
@@ -631,6 +651,8 @@ def financas_dashboard_view(request):
         'coopanest_values': coopanest_values,
         'hospital_values': hospital_values,
         'direta_values': direta_values,
+        'via_cirurgiao_values': via_cirurgiao_values,
+        'cortesia_values': cortesia_values,
 
         'selected_period': selected_period,  # could be int or 'custom'
         'custom_start_date': start_date_str,
@@ -646,6 +668,8 @@ def financas_dashboard_view(request):
         'coopanest_pct': coopanest_pct,
         'hospital_pct': hospital_pct,
         'direta_pct': direta_pct,
+        'via_cirurgiao_pct': via_cirurgiao_pct,
+        'cortesia_pct': cortesia_pct,
 
         'procedimentos': procedimentos,
         'selected_procedimento': procedimento,

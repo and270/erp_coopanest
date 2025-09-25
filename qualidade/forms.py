@@ -298,8 +298,13 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 # This can happen when conciliation creates multiple CPSAs for the same procedure
                 financas = ProcedimentoFinancas.objects.filter(procedimento=qualidade_instance.procedimento).first()
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
-            financas.valor_faturado = self.cleaned_data['valor_faturado']
-            financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
+            if self.cleaned_data['tipo_cobranca'] == 'cortesia':
+                financas.valor_faturado = 0
+                financas.valor_recebido = 0
+                financas.valor_recuperado = 0
+            else:
+                financas.valor_faturado = self.cleaned_data['valor_faturado']
+            financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto'] if self.cleaned_data['tipo_cobranca'] == 'particular' else None
             data_pagamento = self.cleaned_data.get('data_pagamento')
             financas.data_pagamento = data_pagamento
 
@@ -400,7 +405,12 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 if field in self.errors:
                     del self.errors[field]
 
-        if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_faturado'):
+        # Handle special charging types
+        if tipo_cobranca == 'cortesia':
+            cleaned_data['valor_faturado'] = 0
+            cleaned_data['tipo_pagamento_direto'] = None
+        # Require value for Hospital, Direta (particular) and Via Cirurgião
+        if tipo_cobranca in ['hospital', 'particular', 'via_cirurgiao'] and not cleaned_data.get('valor_faturado'):
             self.add_error('valor_faturado', 'Este campo é obrigatório para este tipo de cobrança.')
 
         if eventos_adversos_graves and not eventos_adversos_graves_desc:

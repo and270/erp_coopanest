@@ -70,7 +70,7 @@
                 <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
                 <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
 
-                <div id="customRangeContainer" class="custom-range" style="{% if selected_period != 'custom' %}display: none;{% endif %}"> {# Show if custom selected #}
+                <div id="customRangeContainer" class="custom-range" {% if selected_period != 'custom' %}style="display: none;"{% endif %}> {# Show if custom selected #}
                     <label for="customStart">Início:</label>
                     <input type="date" id="customStart" value="{{ custom_start_date }}" />
                     <label for="customEnd">Fim:</label>
@@ -321,6 +321,8 @@
                         <option value="cooperativa">Cooperativa</option>
                         <option value="hospital">Hospital</option>
                         <option value="particular">Direta</option>
+                        <option value="via_cirurgiao">Via Cirurgião</option>
+                        <option value="cortesia">Cortesia</option>
                     </select>
                 </div>
                 <div class="form-group" id="data-pagamento-group">
@@ -467,6 +469,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show Payment Type only if 'particular'
         else if (tipoCobranca === 'particular' && tipoPagamentoDiretoGroup) {
              tipoPagamentoDiretoGroup.style.display = 'block';
+        } else if (tipoCobranca === 'cortesia') {
+             if (tipoPagamentoDiretoGroup) tipoPagamentoDiretoGroup.style.display = 'none';
+             // Ensure valores are zero for cortesia where applicable in UI
+             ['valor_faturado','valor_recebido','valor_recuperado','valor_acatado'].forEach(id => {
+                 const el = document.getElementById(id);
+                 if (el?.maskRef) { el.maskRef.unmaskedValue = '0'; }
+                 else if (el) { el.value = '0'; }
+             });
         }
         
         // Show/hide CPF group based on linked status (only relevant when editing)
@@ -649,7 +659,7 @@ document.addEventListener('DOMContentLoaded', function() {
                               unlinkedInfoPanel.style.display = 'none';
                          }
 
-                         // Trigger visibility updates AFTER populating
+        // Trigger visibility updates AFTER populating
                          toggleReceitaFieldsVisibility();
                          toggleDataPagamentoVisibility(); 
 

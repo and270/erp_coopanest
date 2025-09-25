@@ -645,14 +645,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
             if (dataPagamentoInput) dataPagamentoInput.value = ''; // Clear data_pagamento if cooperativa
             // valorFaturadoInput is hidden, its value is managed by IMask & submit handler
-        } else { // hospital or particular
+        } else if (selectedValue === 'cortesia') {
+            // Hide value and date, ensure value is zero
+            if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+            if (dataPagamentoInput) dataPagamentoInput.value = '';
+            if (moneyMask && valorFaturadoInput) {
+                moneyMask.typedValue = 0;
+                valorFaturadoInput.value = '0.00';
+            }
+        } else { // hospital, particular, via_cirurgiao
             if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'block';
-            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'block'; // Show for hospital & particular
+            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'block'; // Show for hospital/particular/via_cirurgiao
 
             if (tipoPagamentoDiretoContainer) {
                 tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
             }
-            if (selectedValue !== 'particular') { // If hospital
+            if (selectedValue !== 'particular') { // hospital or via_cirurgiao
                 if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = ''; // Clear tipo_pagamento_direto
             }
         }

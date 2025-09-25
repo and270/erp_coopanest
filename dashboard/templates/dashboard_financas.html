@@ -212,6 +212,8 @@
                     <div><span style="background:#90E0EF;"></span>Coopanest</div>
                     <div><span style="background:#09ABCB;"></span>Direta</div>
                     <div><span style="background:#023E8A;"></span>Hospital</div>
+                    <div><span style="background:#8E44AD;"></span>Via Cirurgião</div>
+                    <div><span style="background:#95A5A6;"></span>Cortesia</div>
                 </div>
                 <div>
                     <canvas id="valoresRecebidosChart"></canvas>
@@ -264,6 +266,38 @@
                             <div class="value">{{ hospital_pct|floatformat:0 }}%</div>
                         </div>
                         <span>Hospital</span>
+                    </div>
+                    <div class="percent-indicator">
+                        <div class="circle-progress">
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if via_cirurgiao_pct > 0 %}
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#8E44AD" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ via_cirurgiao_pct|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                                {% endif %}
+                            </svg>
+                            <div class="value">{{ via_cirurgiao_pct|floatformat:0 }}%</div>
+                        </div>
+                        <span>Via Cirurgião</span>
+                    </div>
+                    <div class="percent-indicator">
+                        <div class="circle-progress">
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if cortesia_pct > 0 %}
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#95A5A6" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ cortesia_pct|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                                {% endif %}
+                            </svg>
+                            <div class="value">{{ cortesia_pct|floatformat:0 }}%</div>
+                        </div>
+                        <span>Cortesia</span>
                     </div>
                 </div>
             </div>
@@ -534,6 +568,18 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
                 label: 'Hospital',
                 data: {{ hospital_values|safe }},
                 backgroundColor: '#023E8A',
+                stack: 'stack1'
+            },
+            {
+                label: 'Via Cirurgião',
+                data: {{ via_cirurgiao_values|safe }},
+                backgroundColor: '#8E44AD',
+                stack: 'stack1'
+            },
+            {
+                label: 'Cortesia',
+                data: {{ cortesia_values|safe }},
+                backgroundColor: '#95A5A6',
                 stack: 'stack1'
             }
         ]
