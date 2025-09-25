@@ -126,7 +126,7 @@
                                         <span class="close-modal">&times;</span>
                                         <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
                                         <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
-                                        <p><span class="modal-start-time">{{ local_time|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span></p>
+                                        <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                         <br>
                                         <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                         <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
@@ -208,7 +208,7 @@
                                                 <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
                                                 <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
-                                                <p><span class="modal-start-time">{{ local_time|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span></p>
+                                                <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                                 <br>
                                                 <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
                                                 <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
@@ -280,7 +280,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}<span class="required-asterisk">*</span></label>
+                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}</label>
                     {{ form.end_time }}
                 </div>
             </div>
@@ -381,7 +381,7 @@
     <div class="modal-content">
         <span class="close" id="close-import-modal">&times;</span>
         <h2>Importar Agendamentos (.xlsx)</h2>
-        <p class="required-field-text" style="margin-bottom: 10px;">Use planilha com as colunas suportadas: <strong>Obrigatórias:</strong> Data, Paciente. <strong>Opcionais:</strong> Hora início, Hora fim, N° CPSA, Plano de saúde, Hospital/Clínica, Eletivo/Urgência, CPF, Cirurgia/Códigos, Anestesista/Cooperado, Cirurgião, Forma Pagamento, Valor, Data Recebimento, Valor Recebido, Observação. <em>Se hora não informada, será usado padrão: 09:00-10:00.</em></p>
+        <p class="required-field-text" style="margin-bottom: 10px;">Use planilha com as colunas suportadas: <strong>Obrigatórias:</strong> Data, Paciente. <strong>Opcionais:</strong> Hora início, Hora fim, N° CPSA, Plano de saúde, Hospital/Clínica, Eletivo/Urgência, CPF, Cirurgia/Códigos, Anestesista/Cooperado, Cirurgião, Forma Pagamento, Valor, Data Recebimento, Valor Recebido, Observação.</p>
         <form>
             <div class="form-group">
                 <label for="import-file">Arquivo .xlsx</label>

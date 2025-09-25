@@ -66,7 +66,7 @@ class Procedimento(models.Model):
         verbose_name='Procedimento Principal'
     )
     data_horario = models.DateTimeField(verbose_name='Data e Horário Marcados', default=timezone.now)
-    data_horario_fim = models.DateTimeField(verbose_name='Previsão de Término', default=timezone.now().replace(hour=20, minute=0, second=0, microsecond=0))
+    data_horario_fim = models.DateTimeField(verbose_name='Previsão de Término', null=True, blank=True)
     hospital = models.ForeignKey(HospitalClinic, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hospital/Clínica')
     outro_local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Outro Local')
     cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião (selecionar se cadastrado no sistema)')

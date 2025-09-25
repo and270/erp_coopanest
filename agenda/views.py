@@ -254,13 +254,13 @@ def get_procedure(request, procedure_id):
     # Convert UTC times to local time
     local_tz = timezone.get_current_timezone()
     start_time = procedure.data_horario.astimezone(local_tz)
-    end_time = procedure.data_horario_fim.astimezone(local_tz)
+    end_time = procedure.data_horario_fim.astimezone(local_tz) if procedure.data_horario_fim else None
 
     data = {
         'procedimento_type': procedure.procedimento_type,
         'data': start_time.date().strftime('%d/%m/%Y'),
         'time': start_time.strftime('%H:%M'),
-        'end_time': end_time.strftime('%H:%M'),
+        'end_time': end_time.strftime('%H:%M') if end_time else '',
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
         'convenio': {
@@ -1082,10 +1082,7 @@ def import_procedures(request):
                 start_time = dtime(9, 0)  # Default to 09:00
                 warnings.append('Hora início não informada, usando padrão: 09:00')
             
-            if not end_time:
-                from datetime import time as dtime
-                end_time = dtime(10, 0)  # Default to 10:00
-                warnings.append('Hora fim não informada, usando padrão: 10:00')
+            # Do not enforce default end_time; allow None
 
             print(f"[IMPORT][Row {row_number}] Parsed -> date:{parsed_date} start:{start_time} end:{end_time}")
 
@@ -1227,7 +1224,7 @@ def import_procedures(request):
                     convenio=convenio_obj,
                     procedimento_principal=procedimento_principal,
                     data_horario=start_dt,
-                    data_horario_fim=end_dt or (start_dt + timedelta(hours=1)),
+                    data_horario_fim=end_dt,
                     hospital=hospital_obj,
                     outro_local=outro_local_value,
                     cirurgiao=surgeon_obj,

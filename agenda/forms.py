@@ -55,7 +55,8 @@ class ProcedimentoForm(forms.ModelForm):
     end_time = forms.TimeField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'hh:mm'}),
         input_formats=['%H:%M'],
-        label="Previsão de Término"
+        label="Previsão de Término",
+        required=False
     )
 
     cpf_paciente = forms.CharField(
@@ -130,9 +131,9 @@ class ProcedimentoForm(forms.ModelForm):
         instance = super().save(commit=False)
         date = self.cleaned_data['data']
         time = self.cleaned_data['time']
-        end_time = self.cleaned_data['end_time']
+        end_time = self.cleaned_data.get('end_time')
         instance.data_horario = datetime.combine(date, time)
-        instance.data_horario_fim = datetime.combine(date, end_time)
+        instance.data_horario_fim = datetime.combine(date, end_time) if end_time else None
 
         # Auto-classify procedure type
         procedimento_principal = self.cleaned_data.get('procedimento_principal')
