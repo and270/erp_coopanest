@@ -1,7 +1,7 @@
 from django import forms
 from datetime import timedelta # Import timedelta
 
-from constants import STATUS_FINISHED
+from constants import STATUS_FINISHED, CLINIC_TYPE_CHOICES
 from .models import BPS_DESCRIPTIONS, EVA_DESCRIPTIONS, FLACC_DESCRIPTIONS, PAINAD_B_DESCRIPTIONS, AvaliacaoRPA, ProcedimentoQualidade
 from financas.models import ProcedimentoFinancas
 import pytz
@@ -92,6 +92,12 @@ class AvaliacaoRPAForm(forms.ModelForm):
 
 class ProcedimentoFinalizacaoForm(forms.ModelForm):
     # Add financial fields
+    procedimento_tipo_clinica = forms.ChoiceField(
+        choices=[('', '--- Selecione a Clínica ---')] + CLINIC_TYPE_CHOICES,
+        required=False,
+        label='Clínica (Perfil Cirúrgico)',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     tipo_cobranca = forms.ChoiceField(
         choices=ProcedimentoFinancas.COBRANCA_CHOICES,
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
@@ -122,6 +128,13 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Prefill clinic type from linked Procedimento if available
+        try:
+            procedimento = self.instance.procedimento
+            if procedimento and procedimento.tipo_clinica:
+                self.initial['procedimento_tipo_clinica'] = procedimento.tipo_clinica
+        except Exception:
+            pass
         self.EVA_DESCRIPTIONS = EVA_DESCRIPTIONS
         self.FLACC_DESCRIPTIONS = FLACC_DESCRIPTIONS
         self.BPS_DESCRIPTIONS = BPS_DESCRIPTIONS
@@ -320,6 +333,10 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             # Update Procedimento status
             procedimento = qualidade_instance.procedimento
             procedimento.status = STATUS_FINISHED
+            # Update optional clinic type if provided
+            clinic_value = self.cleaned_data.get('procedimento_tipo_clinica')
+            if clinic_value:
+                procedimento.tipo_clinica = clinic_value
             procedimento.save()
 
         return qualidade_instance

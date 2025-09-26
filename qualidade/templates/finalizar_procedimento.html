@@ -82,6 +82,20 @@
             </div>
 
             <div class="radio-group">
+                <label for="{{ form.procedimento_tipo_clinica.id_for_label }}">{{ form.procedimento_tipo_clinica.label }}</label>
+                <div class="input-width-280">
+                    {{ form.procedimento_tipo_clinica }}
+                    {% if form.procedimento_tipo_clinica.errors %}
+                    <div class="error-message">
+                        {% for error in form.procedimento_tipo_clinica.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="radio-group">
                 <label>{{ form.dor_pos_operatoria.label }}</label>
                 <div class="radio-options-container">
                     {% for radio in form.dor_pos_operatoria %}

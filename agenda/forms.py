@@ -91,7 +91,8 @@ class ProcedimentoForm(forms.ModelForm):
             'anestesistas_responsaveis', # Keep the hidden field
             'visita_pre_anestesica',
             'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita',
-            'tipo_procedimento' # Added new field
+            'tipo_procedimento', # Added new field
+            'tipo_clinica' # New clinic type field (optional)
         ]
 
     def __init__(self, *args, **kwargs):
@@ -120,6 +121,9 @@ class ProcedimentoForm(forms.ModelForm):
         # self.fields['anestesistas_responsaveis'].label = ''
         self.fields['tipo_procedimento'].widget.attrs.update({'class': 'form-control'})
         self.fields['tipo_procedimento'].empty_label = "--- Selecione o Tipo ---"
+        # Style for optional clinic type selector
+        if 'tipo_clinica' in self.fields:
+            self.fields['tipo_clinica'].widget.attrs.update({'class': 'form-control'})
 
 
     def save(self, commit=True):

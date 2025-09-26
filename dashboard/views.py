@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.db.models import Avg, Count, Case, When, F, Q, Sum, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, TruncMonth, TruncDate, Cast
-from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, CLINIC_TYPE_CHOICES
 # import numpy as np # No longer needed here, it's in utils
 from .utils import calculate_iqr_filtered_average_seconds # Import the function
 from financas.models import ProcedimentoFinancas
@@ -240,6 +240,7 @@ def financas_dashboard_view(request):
     selected_anestesista_id = request.GET.get('anestesista') # Keep as string for comparison
     procedimento = request.GET.get('procedimento')
     selected_graph_type = request.GET.get('graph_type', 'ticket')
+    clinic = request.GET.get('clinic')
 
     # Base queryset with effective_date for filtering
     queryset = (
@@ -254,6 +255,10 @@ def financas_dashboard_view(request):
         .select_related('procedimento', 'procedimento__procedimento_principal', 'group')
         .filter(group=user_group) # Filter on ProcedimentoFinancas.group itself
     )
+
+    # Apply clinic filter only to linked procedures
+    if clinic:
+        queryset = queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
 
     # --- Anestesista Filtering Logic ---
     anestesistas_all = Anesthesiologist.objects.filter(group=user_group).order_by('name')
@@ -624,10 +629,14 @@ def financas_dashboard_view(request):
 
             if selected_graph_type == 'ticket':
                 # Average ticket for the whole group in the period
+                 if clinic:
+                    unfiltered_by_anest_queryset = unfiltered_by_anest_queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
                  group_period_total_avg = unfiltered_by_anest_queryset.aggregate(avg_valor=Avg('valor_faturado'))['avg_valor'] or 0
                  anestesista_total = group_period_total_avg # When "all" is selected, show group average ticket
             else: # 'receitas'
                  # Average revenue per anesthesiologist for the whole group in the period
+                 if clinic:
+                    unfiltered_by_anest_queryset = unfiltered_by_anest_queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
                  group_period_total_sum = unfiltered_by_anest_queryset.aggregate(total=Sum('valor_faturado'))['total'] or 0
                  anestesista_total = group_period_total_sum / num_anestesistas if num_anestesistas > 0 else 0
          else:
@@ -680,6 +689,8 @@ def financas_dashboard_view(request):
         'anestesista_total': anestesista_total,
         'selected_graph_type': selected_graph_type,
         'active_role': request.user.get_active_role(),
+        'clinic_choices': CLINIC_TYPE_CHOICES,
+        'selected_clinic': clinic,
     }
 
     return render(request, 'dashboard_financas.html', context)
@@ -717,6 +728,7 @@ def export_financas_excel(request):
     end_date_str = request.GET.get('end_date', '')
     selected_anestesista_id = request.GET.get('anestesista')
     procedimento_filter_name = request.GET.get('procedimento') # Renamed to avoid clash
+    clinic = request.GET.get('clinic')
 
     # Base queryset with annotation
     queryset = (
@@ -731,6 +743,9 @@ def export_financas_excel(request):
         .select_related('procedimento', 'procedimento__procedimento_principal', 'group')
         .filter(group=user_group) # Filter on ProcedimentoFinancas.group
     )
+
+    if clinic:
+        queryset = queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
 
     # Apply Anestesista Filter based on user type
     #Apesar de anestesista não terem acesso ao dashboard, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte

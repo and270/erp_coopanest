@@ -63,6 +63,14 @@
                     </div>
                 </div>
             </div>
+            <div class="period-filter" style="margin-left: 12px;">
+                <select id="clinicFilter" class="filter-select">
+                    <option value="">Todas as Clínicas</option>
+                    {% for value,label in clinic_choices %}
+                        <option value="{{ value }}" {% if selected_clinic == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <button class="export-btn" id="exportBtn">
                 <i class="fas fa-download"></i>
                 Exportar
@@ -318,6 +326,18 @@ document.getElementById('procedimentoFilter').addEventListener('change', functio
         currentUrl.searchParams.set('procedimento', selectedValue);
     } else {
         currentUrl.searchParams.delete('procedimento');
+    }
+    window.location.href = currentUrl.toString();
+});
+
+// Clinic filter
+document.getElementById('clinicFilter').addEventListener('change', function() {
+    const selectedValue = this.value;
+    const currentUrl = new URL(window.location.href);
+    if (selectedValue) {
+        currentUrl.searchParams.set('clinic', selectedValue);
+    } else {
+        currentUrl.searchParams.delete('clinic');
     }
     window.location.href = currentUrl.toString();
 });

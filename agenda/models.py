@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.db import models
 from constants import (
     PLANTONISTA_ESCALA, STATUS_FINISHED, STATUS_PENDING, SUBSTITUTO_ESCALA, FERIAS_ESCALA,
-    CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
+    CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO, CLINIC_TYPE_CHOICES
 )
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
 import uuid
@@ -89,6 +89,15 @@ class Procedimento(models.Model):
         verbose_name='Eletiva ou Urgência',
         default='eletiva', # Default to 'eletiva' or choose another appropriate default
         null=True, blank=True # Allow null and blank temporarily if procedures can exist without this info initially
+    )
+
+    # New optional field for surgical profile clinic type
+    tipo_clinica = models.CharField(
+        max_length=50,
+        choices=CLINIC_TYPE_CHOICES,
+        verbose_name='Clínica (Perfil Cirúrgico)',
+        null=True,
+        blank=True
     )
 
     class Meta:
