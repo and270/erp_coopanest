@@ -100,6 +100,7 @@
                         <th>Valor Recuperado</th>
                         <th>Valor a Recuperar</th>
                         <th>Fonte Pagadora</th>
+                        <th>Forma de Pagamento</th>
                         <th>CPSA</th>
                         <th>Anestesistas</th>
                         <th>Situação</th>
@@ -151,6 +152,13 @@
                             <td>{% if item.valor_recuperado is not None %}R$ {{ item.valor_recuperado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.valor_acatado is not None %}R$ {{ item.valor_acatado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{{ item.get_tipo_cobranca_display|default:"--" }}</td>
+                            <td>
+                                {% if item.tipo_cobranca == 'particular' %}
+                                    {{ item.get_tipo_pagamento_direto_display|default:"--" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
                             <td>{{ item.get_cpsa_display|default:"--" }}</td>
                             <td>
                                 {% if item.procedimento and item.procedimento.anestesistas_responsaveis.exists %}
@@ -214,9 +222,9 @@
                         {% endif %}
                     </tr>
                 {% empty %}
-                 <tr>
-                    <td colspan="{% if view_type == 'receitas' %}14{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
-                 </tr>
+                <tr>
+                   <td colspan="{% if view_type == 'receitas' %}15{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
