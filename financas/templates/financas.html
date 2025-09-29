@@ -102,6 +102,7 @@
                         <th>Fonte Pagadora</th>
                         <th>Forma de Pagamento</th>
                         <th>CPSA</th>
+                        <th>Cooperado</th>
                         <th>Anestesistas</th>
                         <th>Situação</th>
                         <th>Data Pagamento</th>
@@ -161,12 +162,17 @@
                             </td>
                             <td>{{ item.get_cpsa_display|default:"--" }}</td>
                             <td>
-                                {% if item.procedimento and item.procedimento.anestesistas_responsaveis.exists %}
-                                    {% for anest in item.procedimento.anestesistas_responsaveis.all %}
-                                        {{ anest.name }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
+                                {% if item.procedimento and item.procedimento.cooperado %}
+                                    {{ item.procedimento.cooperado.name }}
                                 {% else %}
-                                    {{ item.api_cooperado_nome|default:"--" }} {# Show API cooperado if unlinked #}
+                                    {{ item.api_cooperado_nome|default:"--" }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.procedimento %}
+                                    {{ item.procedimento.anestesistas_livres|default:"--" }}
+                                {% else %}
+                                    --
                                 {% endif %}
                             </td>
                             <td>{{ item.get_status_pagamento_display|default:"--" }}</td>
@@ -341,6 +347,14 @@
                     <label for="cpsa">CPSA</label>
                     <input type="text" id="cpsa" name="cpsa">
                 </div>
+                <div class="form-group" id="cooperado-group">
+                    <label for="cooperado">Cooperado</label>
+                    <input type="text" id="cooperado" name="cooperado" placeholder="Se vinculado, exibido como leitura">
+                </div>
+                <div class="form-group" id="anest-livres-group" style="display: none;">
+                    <label for="anestesistas_livres">Anestesistas (livre)</label>
+                    <input type="text" id="anestesistas_livres" name="anestesistas_livres" placeholder="Separar por vírgula">
+                </div>
                 <div class="form-group" id="tipo-pagamento-direto-group" style="display: none;">
                     <label for="tipo_pagamento_direto">Tipo de Pagamento (Direta)</label>
                     <select id="tipo_pagamento_direto" name="tipo_pagamento_direto">
@@ -465,10 +479,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const tipoPagamentoDiretoGroup = document.getElementById('tipo-pagamento-direto-group');
         const isLinked = document.getElementById('is_linked').value === 'true'; // Check linked status
         const isNew = document.getElementById('is_new').value === 'true'; // Check if adding new
+            const anestLivresGroup = document.getElementById('anest-livres-group');
 
         // Hide specific groups by default
         if (cpsaGroup) cpsaGroup.style.display = 'none';
         if (tipoPagamentoDiretoGroup) tipoPagamentoDiretoGroup.style.display = 'none';
+            if (anestLivresGroup) anestLivresGroup.style.display = 'none';
         
         // Show CPSA only if 'cooperativa'
         if (tipoCobranca === 'cooperativa' && cpsaGroup) {
@@ -492,6 +508,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (cpfGroup) {
              cpfGroup.style.display = isLinked && !isNew ? 'block' : 'none';
         }
+
+            // Show free-text anestesistas only when linked (editing linked procedure)
+            if (anestLivresGroup) {
+                anestLivresGroup.style.display = isLinked && !isNew ? 'block' : 'none';
+            }
 
         // Show/hide Manual fields based on isNew status (relevant when adding)
         const manualFieldsDiv = document.getElementById('manual-receita-fields');
@@ -665,6 +686,18 @@ document.addEventListener('DOMContentLoaded', function() {
                              document.getElementById('unlinked-data').textContent = data.data_cirurgia ? new Date(data.data_cirurgia + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
                          } else {
                               unlinkedInfoPanel.style.display = 'none';
+                         }
+
+                         // Populate cooperado/anestesistas livres for display/edit
+                         const coopInput = document.getElementById('cooperado');
+                         const livresInput = document.getElementById('anestesistas_livres');
+                         if (coopInput) {
+                             coopInput.value = data.cooperado || '';
+                             // If linked, we can make it readonly to avoid confusion for now
+                             coopInput.readOnly = isLinked;
+                         }
+                         if (livresInput) {
+                             livresInput.value = data.anestesistas_livres || '';
                          }
 
         // Trigger visibility updates AFTER populating

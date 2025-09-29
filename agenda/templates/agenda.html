@@ -115,10 +115,9 @@
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ local_time|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
-                                    <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
-                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
-                                        {% endfor %}
+                                    <span class="procedure-anesthesiologist">
+                                        {% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% endif %}
+                                        {% if procedimento.anestesistas_livres %}{% if procedimento.cooperado %}, {% endif %}{{ procedimento.anestesistas_livres }}{% endif %}
                                     </span>
                                 </div>
                                 <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
@@ -140,13 +139,8 @@
                                                 {{ procedimento.cirurgiao_nome|default:"Não informado" }}
                                             {% endif %}
                                         </span></strong></p>
-                                        <p>Anestesistas: <strong>
-                                            <span class="modal-anesthesiologists">
-                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            </span>
-                                        </strong></p>
+                                        <p>Cooperado: <strong><span class="modal-cooperado">{% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% else %}--{% endif %}</span></strong></p>
+                                        <p>Anestesistas: <strong><span class="modal-anesthesiologists">{{ procedimento.anestesistas_livres|default:"--" }}</span></strong></p>
                                         <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                         <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                         <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -198,9 +192,8 @@
                                             </div>
                                             <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:15 }}</span>
                                             <span class="procedure-anesthesiologist">
-                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                                    {{ anestesista.name|truncatechars:15 }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
+                                                {% if procedimento.cooperado %}{{ procedimento.cooperado.name|truncatechars:15 }}{% endif %}
+                                                {% if procedimento.anestesistas_livres %}{% if procedimento.cooperado %}, {% endif %}{{ procedimento.anestesistas_livres|truncatechars:30 }}{% endif %}
                                             </span>
                                         </div>
                                         <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
@@ -222,13 +215,8 @@
                                                         {{ procedimento.cirurgiao_nome|default:"Não informado" }}
                                                     {% endif %}
                                                 </span></strong></p>
-                                                <p>Anestesistas: <strong>
-                                                    <span class="modal-anesthesiologists">
-                                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
-                                                        {% endfor %}
-                                                    </span>
-                                                </strong></p>
+                                                <p>Cooperado: <strong><span class="modal-cooperado">{% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% else %}--{% endif %}</span></strong></p>
+                                                <p>Anestesistas: <strong><span class="modal-anesthesiologists">{{ procedimento.anestesistas_livres|default:"--" }}</span></strong></p>
                                                 <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                                 <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                                 <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -344,15 +332,24 @@
                     {{ form.cirurgiao_nome }}
                 </div>
             </div>
-            
+
             <div class="form-group">
-                <label for="{{ form.anestesista_selector.id_for_label }}">{{ form.anestesista_selector.label }}</label>
-                {{ form.anestesista_selector }}
-                <button type="button" id="add-anesthesiologist" class="btn btn-secondary btn-sm mt-2">+ Adicionar Anestesista</button>
+                <label for="{{ form.cooperado.id_for_label }}">{{ form.cooperado.label }}</label>
+                {{ form.cooperado }}
             </div>
-            
+
+            <div class="form-group">
+                <label>Anestesista(s)</label>
+                <div class="input-group">
+                    <input type="text" id="anest-free-input" class="form-control" placeholder="Nome do anestesista">
+                    <button type="button" id="add-free-anest" class="btn btn-secondary btn-sm mt-2">+ Adicionar</button>
+                </div>
+                {{ form.anestesistas_livres }}
+                
+            </div>
+
             <div id="selected-anesthesiologists-container" class="mt-2">
-                <!-- Selected anesthesiologists will be added here -->
+                <!-- Free-text anesthesiologists will be added here -->
             </div>
             
             <div class="form-group-inline">
@@ -824,63 +821,56 @@ document.addEventListener('DOMContentLoaded', function() {
     const procedureFormModal = document.getElementById('procedimento-form-modal');
     const formSubmitBtn = document.getElementById('form-submit-btn');
     const procedimentoForm = document.getElementById('procedimento-form');
-    const addAnesthesiologistBtn = document.getElementById('add-anesthesiologist');
-    const anesthesiologistSelector = document.getElementById('id_anestesista_selector');
-    const hiddenAnesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
     const selectedAnesthesiologistsContainer = document.getElementById('selected-anesthesiologists-container');
+    const anestFreeInput = document.getElementById('anest-free-input');
+    const addFreeAnestBtn = document.getElementById('add-free-anest');
+    const hiddenAnestLivres = document.getElementById('id_anestesistas_livres');
 
-    // Function to add an anesthesiologist visually and update the hidden select
-    function addAnesthesiologistToList(id, name) {
-        console.log("ADDING ANESTHESIOLOGIST", id, name);
-        // Check if already added
-        const existing = selectedAnesthesiologistsContainer.querySelector(`[data-id="${id}"]`);
-        if (existing || !id) {
-            if (!id) showCustomAlert('Selecione um anestesista para adicionar.', 'error');
-            else showCustomAlert(`${name} já foi adicionado.`, 'error');
-            return; // Don't add if empty or already exists
-        }
-
-        // Create the visual element with hidden input
-        const newDiv = document.createElement('div');
-        newDiv.className = 'selected-anesthesiologist';
-        newDiv.dataset.id = id; // Store the ID
-        newDiv.innerHTML = `
-            ${name}
-            <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist" data-id="${id}">Remover</button>
-            <input type="hidden" name="anestesistas_responsaveis" value="${id}">
-        `;
-        selectedAnesthesiologistsContainer.appendChild(newDiv);
-        console.log("Added anesthesiologist with ID:", id, name);
+    function syncHiddenFromChips() {
+        const names = Array.from(selectedAnesthesiologistsContainer.querySelectorAll('.selected-anesthesiologist'))
+            .map(div => div.dataset.name)
+            .filter(Boolean);
+        hiddenAnestLivres.value = names.join(', ');
     }
 
-    // Function to remove an anesthesiologist visually and update the hidden select
-    function removeAnesthesiologistFromList(id) {
-        const divToRemove = selectedAnesthesiologistsContainer.querySelector(`[data-id="${id}"]`);
-        if (divToRemove) {
-            divToRemove.remove();
-            console.log("Removed anesthesiologist with ID:", id);
+    function addFreeAnesthesiologist(name) {
+        const trimmed = (name || '').trim();
+        if (!trimmed) {
+            showCustomAlert('Digite o nome do anestesista para adicionar.', 'error');
+            return;
+        }
+        const exists = selectedAnesthesiologistsContainer.querySelector(`[data-name="${trimmed}"]`);
+        if (exists) {
+            showCustomAlert(`${trimmed} já foi adicionado.`, 'error');
+            return;
+        }
+        const div = document.createElement('div');
+        div.className = 'selected-anesthesiologist';
+        div.dataset.name = trimmed;
+        div.innerHTML = `${trimmed} <button type="button" class="btn btn-danger btn-sm remove-free-anest" data-name="${trimmed}">Remover</button>`;
+        selectedAnesthesiologistsContainer.appendChild(div);
+        anestFreeInput.value = '';
+        syncHiddenFromChips();
+    }
+
+    function removeFreeAnesthesiologist(name) {
+        const div = selectedAnesthesiologistsContainer.querySelector(`[data-name="${name}"]`);
+        if (div) {
+            div.remove();
+            syncHiddenFromChips();
         }
     }
 
-    // Event listener for the Add button
-    addAnesthesiologistBtn.addEventListener('click', function() {
-        const selectedOption = anesthesiologistSelector.options[anesthesiologistSelector.selectedIndex];
-        const selectedId = selectedOption.value;
-        const selectedName = selectedOption.text;
+    if (addFreeAnestBtn) {
+        addFreeAnestBtn.addEventListener('click', function() {
+            addFreeAnesthesiologist(anestFreeInput.value);
+        });
+    }
 
-        if (selectedId) {
-            addAnesthesiologistToList(selectedId, selectedName);
-            anesthesiologistSelector.value = ''; // Optionally reset the dropdown
-        } else {
-            showCustomAlert('Selecione um anestesista para adicionar.', 'error');
-        }
-    });
-
-    // Event listener for Remove buttons (using event delegation)
     selectedAnesthesiologistsContainer.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('remove-anesthesiologist')) {
-            const anesthesiologistId = e.target.dataset.id;
-            removeAnesthesiologistFromList(anesthesiologistId);
+        if (e.target && e.target.classList.contains('remove-free-anest')) {
+            const name = e.target.dataset.name;
+            removeFreeAnesthesiologist(name);
         }
     });
     
@@ -1065,14 +1055,56 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('#id_convenio').empty().append(newOption).trigger('change');
                 }
 
-                // Fix for anestesistas_responsaveis
-                // Clear previous selections
-                selectedAnesthesiologistsContainer.innerHTML = '';
+                // Populate Cooperado (ensure option exists and is selected)
+                (function populateCooperado() {
+                    const coopSelect = document.getElementById('id_cooperado');
+                    console.log('Cooperado select element:', coopSelect);
+                    console.log('Data cooperado:', data.cooperado);
+                    if (!coopSelect) {
+                        console.error('Cooperado select not found!');
+                        return;
+                    }
 
-                // Add each anesthesiologist to the list
-                data.anestesistas_responsaveis.forEach(anestesista => {
-                    addAnesthesiologistToList(anestesista.id, anestesista.name);
-                });
+                    console.log('Current options count:', coopSelect.options.length);
+                    for (let i = 0; i < coopSelect.options.length; i++) {
+                        console.log(`Option ${i}: value="${coopSelect.options[i].value}", text="${coopSelect.options[i].text}"`);
+                    }
+
+                    if (data.cooperado && data.cooperado.id) {
+                        const targetValue = String(data.cooperado.id);
+                        console.log('Target cooperado value:', targetValue);
+                        let hasOption = false;
+                        for (let i = 0; i < coopSelect.options.length; i++) {
+                            if (coopSelect.options[i].value === targetValue) { 
+                                hasOption = true; 
+                                console.log('Found existing option at index', i);
+                                break; 
+                            }
+                        }
+                        if (!hasOption) {
+                            console.log('Option not found, adding new option');
+                            const opt = document.createElement('option');
+                            opt.value = targetValue;
+                            opt.text = data.cooperado.name || `ID ${targetValue}`;
+                            coopSelect.appendChild(opt);
+                        }
+                        coopSelect.value = targetValue;
+                        console.log('Set cooperado select value to:', coopSelect.value);
+                    } else {
+                        console.log('No cooperado data, clearing selection');
+                        coopSelect.value = '';
+                    }
+                })();
+
+                // Populate Anestesistas Livres
+                selectedAnesthesiologistsContainer.innerHTML = '';
+                hiddenAnestLivres.value = '';
+                if (data.anestesistas_livres) {
+                    data.anestesistas_livres.split(',').forEach(n => {
+                        const name = n.trim();
+                        if (name) addFreeAnesthesiologist(name);
+                    });
+                }
 
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Salvar Alterações';
@@ -1141,10 +1173,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear Select2 fields
         $('#id_procedimento_principal').val(null).trigger('change');
         $('#id_convenio').val(null).trigger('change');
-        // Clear anesthesiologists
-        selectedAnesthesiologistsContainer.innerHTML = '';
-        Array.from(hiddenAnesthesiologistSelect.options).forEach(opt => opt.selected = false);
-        anesthesiologistSelector.value = '';
+        // Clear anesthesiologists free-text list and cooperado
+        const selectedAnesthesiologistsContainer = document.getElementById('selected-anesthesiologists-container');
+        if (selectedAnesthesiologistsContainer) selectedAnesthesiologistsContainer.innerHTML = '';
+        const hiddenAnestLivres = document.getElementById('id_anestesistas_livres');
+        if (hiddenAnestLivres) hiddenAnestLivres.value = '';
+        const coopSelect = document.getElementById('id_cooperado');
+        if (coopSelect) coopSelect.value = '';
 
         document.getElementById('procedure_id').value = '';
         formSubmitBtn.textContent = 'Criar Agendamento';

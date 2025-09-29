@@ -85,18 +85,7 @@ def update_procedure(request, procedure_id):
             print(f"{key}: {value}")
         
         updated_procedure = form.save()
-        
-        # Debug: Check if anestesistas_responsaveis is in cleaned_data
-        if 'anestesistas_responsaveis' in form.cleaned_data:
-            print("SETTING ANESTHESIOLOGISTS:", form.cleaned_data['anestesistas_responsaveis'])
-            updated_procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
-        else:
-            print("WARNING: anestesistas_responsaveis not in cleaned_data!")
-        
         updated_procedure.save()
-        
-        # Debug: Print the final list of anesthesiologists
-        print("FINAL ANESTHESIOLOGISTS:", list(updated_procedure.anestesistas_responsaveis.all().values_list('id', 'name')))
         
         email_try = False
         email_sent = False
@@ -168,19 +157,7 @@ def create_procedure(request):
             
         procedure = form.save(commit=False)
         procedure.group = request.user.group
-        procedure.save() 
-
-        # Debug: Check if anestesistas_responsaveis is in cleaned_data
-        if 'anestesistas_responsaveis' in form.cleaned_data:
-            print("SETTING ANESTHESIOLOGISTS:", form.cleaned_data['anestesistas_responsaveis'])
-            procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
-        else:
-            print("WARNING: anestesistas_responsaveis not in cleaned_data!")
-        
-        procedure.save() 
-
-        # Debug: Print the final list of anesthesiologists
-        print("FINAL ANESTHESIOLOGISTS:", list(procedure.anestesistas_responsaveis.all().values_list('id', 'name')))
+        procedure.save()
         
         email_sent = False
         email_error = None
@@ -277,10 +254,8 @@ def get_procedure(request, procedure_id):
         'outro_local': procedure.outro_local,
         'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
         'cirurgiao_nome': procedure.cirurgiao_nome or '',
-        'anestesistas_responsaveis': [
-            {'id': anestesista.id, 'name': anestesista.name}
-            for anestesista in procedure.anestesistas_responsaveis.all()
-        ],
+        'cooperado': {'id': procedure.cooperado.id, 'name': procedure.cooperado.name} if procedure.cooperado else None,
+        'anestesistas_livres': procedure.anestesistas_livres or '',
         'visita_pre_anestesica': procedure.visita_pre_anestesica,
         'data_visita_pre_anestesica': procedure.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedure.data_visita_pre_anestesica else '',
         'nome_responsavel_visita': procedure.nome_responsavel_visita,

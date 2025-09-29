@@ -71,11 +71,26 @@ class Procedimento(models.Model):
     outro_local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Outro Local')
     cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião (selecionar se cadastrado no sistema)')
     cirurgiao_nome = models.CharField(max_length=255, blank=True, null=True, verbose_name='Nome do Cirurgião (Se não cadastrado)')
+    # Legacy relation kept for backward compatibility. New model fields below handle
+    # a single Cooperado and a free-text list of Anestesistas.
     anestesistas_responsaveis = models.ManyToManyField(
         Anesthesiologist,
         related_name='procedimentos',
         blank=True,
         verbose_name='Anestesistas Responsáveis'
+    )
+    cooperado = models.ForeignKey(
+        Anesthesiologist,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='procedimentos_como_cooperado',
+        verbose_name='Cooperado'
+    )
+    anestesistas_livres = models.TextField(
+        default='',
+        blank=True,
+        verbose_name='Anestesistas (livre)'
     )
     nps_token = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True, null=True, blank=True)
     visita_pre_anestesica = models.BooleanField(default=False, verbose_name='Visita Pré-Anestésica Realizada')
