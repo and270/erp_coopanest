@@ -85,7 +85,7 @@
                     <h3>Total de Anestesias</h3>
                     <div class="procedure-filter">
                         <select id="procedimentoFilter">
-                            <option value="">Todos</option>
+                            <option value="">Todos os Procedimentos</option>
                             {% for proc in procedimentos %}
                                 <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
                                     {{ proc.name|truncatechars:25 }}
@@ -93,9 +93,34 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="procedure-filter">
+                        <select id="anestesistaFilterAnestesias" class="filter-select anestesista-filter">
+                            {% if active_role == GESTOR_USER %}
+                                <option value="">Todos os Anestesistas</option>
+                                {% for anestesista in anestesistas %}
+                                    <option value="{{ anestesista.id }}" {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ anestesista.name }}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
                 </div>
-                <div class="metric-value">{{ anestesias_count }}</div>
+                <div class="metric-value">
+                    {% if anestesias_view == 'por_anestesista' %}
+                        {{ anestesias_value|floatformat:1 }}
+                    {% else %}
+                        {{ anestesias_value }}
+                    {% endif %}
+                </div>
                 <div class="metric-label">
+                    <div style="margin-bottom: 6px;">
+                        <label for="anestesiasView" style="font-weight: 600; margin-right: 6px;">Exibir:</label>
+                        <select id="anestesiasView" class="filter-select">
+                            <option value="total" {% if anestesias_view != 'por_anestesista' %}selected{% endif %}>Total</option>
+                            <option value="por_anestesista" {% if anestesias_view == 'por_anestesista' %}selected{% endif %}>Por Anestesista</option>
+                        </select>
+                    </div>
                     {% if selected_period %}
                         {% if selected_period == 'custom' %}
                             (Período Personalizado)
@@ -120,7 +145,7 @@
                     <div class="procedure-filter">
                         <select id="anestesistaFilterTotals" class="filter-select anestesista-filter">
                             {% if active_role == GESTOR_USER %}
-                                <option value="">Por Anestesista</option>
+                                <option value="">Todos os Anestesistas</option>
                                 {% for anestesista in anestesistas %}
                                     <option value="{{ anestesista.id }}"
                                             {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
@@ -198,7 +223,7 @@
                             <select id="anestesistaFilter" class="filter-select anestesista-filter">
                                 {% if active_role == GESTOR_USER %}
                                     {# Gestor/Admin View: "Por Anestesista" and All Options #}
-                                    <option value="">Por Anestesista</option>
+                                    <option value="">Todos os Anestesistas</option>
                                     {% for anestesista in anestesistas %}
                                         <option value="{{ anestesista.id }}"
                                                 {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}> {# Compare as string #}
@@ -526,6 +551,13 @@ const ticketMedioChart = new Chart(ticketMedioCtx, {
 document.getElementById('graphTypeSelector').addEventListener('change', function() {
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set('graph_type', this.value);
+    window.location.href = currentUrl.toString();
+});
+
+// Anestesias view selector (Total vs Por Anestesista)
+document.getElementById('anestesiasView').addEventListener('change', function() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('anestesias_view', this.value);
     window.location.href = currentUrl.toString();
 });
 
