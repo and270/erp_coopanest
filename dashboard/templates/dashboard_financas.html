@@ -157,6 +157,24 @@
                     </div>
                 </div>
                 <div class="status-bar">
+                    <div style="display:flex; gap: 12px; align-items:center; margin-bottom: 8px; flex-wrap: wrap;">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbCooperativa" {% if include_cooperativa %}checked{% endif %}>
+                            Coopanest
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbDireta" {% if include_particular %}checked{% endif %}>
+                            Direta
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbHospital" {% if include_hospital %}checked{% endif %}>
+                            Hospitalar
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbViaCirurgiao" {% if include_via_cirurgiao %}checked{% endif %}>
+                            Via Cirurgião
+                        </label>
+                    </div>
                     <div>
                         <span>Pago</span>
                         <div class="bar">
@@ -645,6 +663,21 @@ document.getElementById('exportBtn').addEventListener('click', function() {
     const params = new URLSearchParams(currentUrl.search);
     const exportUrl = "{% url 'export_financas_excel' %}?" + params.toString();
     window.location.href = exportUrl;
+});
+
+// Charge type checkboxes -> update query params and reload
+function updateChargeTypeFilters() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('include_cooperativa', document.getElementById('cbCooperativa').checked ? '1' : '0');
+    currentUrl.searchParams.set('include_particular', document.getElementById('cbDireta').checked ? '1' : '0');
+    currentUrl.searchParams.set('include_hospital', document.getElementById('cbHospital').checked ? '1' : '0');
+    currentUrl.searchParams.set('include_via_cirurgiao', document.getElementById('cbViaCirurgiao').checked ? '1' : '0');
+    window.location.href = currentUrl.toString();
+}
+
+['cbCooperativa','cbDireta','cbHospital','cbViaCirurgiao'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', updateChargeTypeFilters);
 });
 
 // Switch between Finanças/Qualidade

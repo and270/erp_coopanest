@@ -242,6 +242,11 @@ def financas_dashboard_view(request):
     selected_graph_type = request.GET.get('graph_type', 'ticket')
     clinic = request.GET.get('clinic')
     anestesias_view = request.GET.get('anestesias_view', 'total')  # 'total' | 'por_anestesista'
+    # Charge type filters for Valores Totais card (defaults to include all)
+    include_cooperativa = request.GET.get('include_cooperativa', '1')
+    include_particular = request.GET.get('include_particular', '1')
+    include_hospital = request.GET.get('include_hospital', '1')
+    include_via_cirurgiao = request.GET.get('include_via_cirurgiao', '1')
 
     # Base queryset with effective_date for filtering
     queryset = (
@@ -381,8 +386,22 @@ def financas_dashboard_view(request):
     else:
         anestesias_value = anestesias_count
 
-    # Summations by status_pagamento using the new fields and statuses
-    totals_by_status = queryset.values('status_pagamento').annotate(
+    # Apply charge type filters ONLY for the Valores Totais card
+    totals_queryset = queryset
+    included_charge_types = []
+    if include_cooperativa != '0':
+        included_charge_types.append('cooperativa')
+    if include_particular != '0':
+        included_charge_types.append('particular')
+    if include_hospital != '0':
+        included_charge_types.append('hospital')
+    if include_via_cirurgiao != '0':
+        included_charge_types.append('via_cirurgiao')
+    if len(included_charge_types) > 0 and len(included_charge_types) < 4:
+        totals_queryset = totals_queryset.filter(tipo_cobranca__in=included_charge_types)
+
+    # Summations by status_pagamento using the new fields and statuses (filtered by selected charge types)
+    totals_by_status = totals_queryset.values('status_pagamento').annotate(
         total=Sum('valor_faturado')
     )
     total_valor = sum(
@@ -390,7 +409,7 @@ def financas_dashboard_view(request):
     ) if totals_by_status else 0
 
     # Calculate values based on the new business logic
-    valor_pago = queryset.filter(
+    valor_pago = totals_queryset.filter(
         status_pagamento__in=['processo_finalizado', 'recurso_de_glosa']
     ).aggregate(
         total=Sum(
@@ -399,13 +418,13 @@ def financas_dashboard_view(request):
         )
     )['total'] or 0
     
-    valor_pendente = queryset.filter(
+    valor_pendente = totals_queryset.filter(
         status_pagamento__in=['em_processamento', 'aguardando_pagamento']
     ).aggregate(
         total=Sum('valor_faturado')
     )['total'] or 0
     
-    valor_glosa = queryset.filter(
+    valor_glosa = totals_queryset.filter(
         status_pagamento__in=['processo_finalizado', 'recurso_de_glosa']
     ).aggregate(
         total=Sum(
@@ -705,6 +724,10 @@ def financas_dashboard_view(request):
         'active_role': request.user.get_active_role(),
         'clinic_choices': CLINIC_TYPE_CHOICES,
         'selected_clinic': clinic,
+        'include_cooperativa': include_cooperativa != '0',
+        'include_particular': include_particular != '0',
+        'include_hospital': include_hospital != '0',
+        'include_via_cirurgiao': include_via_cirurgiao != '0',
     }
 
     return render(request, 'dashboard_financas.html', context)
