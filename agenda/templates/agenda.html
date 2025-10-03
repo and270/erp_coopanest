@@ -1029,7 +1029,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
                 document.getElementById('id_tipo_procedimento').value = data.tipo_procedimento;
-                document.getElementById('id_tipo_clinica').value = data.tipo_clinica || '';
+                // Ensure tipo_clinica is set and option exists
+                (function populateTipoClinica(){
+                    const select = document.getElementById('id_tipo_clinica');
+                    if (!select) return;
+                    const key = data.tipo_clinica || '';
+                    const label = data.tipo_clinica_label || '';
+                    if (key){
+                        let hasOption = false;
+                        for (let i=0;i<select.options.length;i++){
+                            if (select.options[i].value === key){ hasOption = true; break; }
+                        }
+                        if (!hasOption){
+                            const opt = document.createElement('option');
+                            opt.value = key;
+                            opt.text = label || key;
+                            select.appendChild(opt);
+                        }
+                        select.value = key;
+                    } else {
+                        select.value = '';
+                    }
+                })();
                 
                 // Fix for procedimento_principal (Select2)
                 if (data.procedimento_principal) {
