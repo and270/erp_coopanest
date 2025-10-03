@@ -7,7 +7,7 @@ from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange, weekday
 from datetime import datetime, timedelta, date
-from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA
+from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, PLANTONISTA_ESCALA, SUBSTITUTO_ESCALA, FERIAS_ESCALA, CLINIC_TYPE_CHOICES
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 from django.http import JsonResponse, HttpResponseForbidden
@@ -32,6 +32,7 @@ import pandas as pd
 import unicodedata
 import io
 import re
+from difflib import get_close_matches
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -85,18 +86,7 @@ def update_procedure(request, procedure_id):
             print(f"{key}: {value}")
         
         updated_procedure = form.save()
-        
-        # Debug: Check if anestesistas_responsaveis is in cleaned_data
-        if 'anestesistas_responsaveis' in form.cleaned_data:
-            print("SETTING ANESTHESIOLOGISTS:", form.cleaned_data['anestesistas_responsaveis'])
-            updated_procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
-        else:
-            print("WARNING: anestesistas_responsaveis not in cleaned_data!")
-        
         updated_procedure.save()
-        
-        # Debug: Print the final list of anesthesiologists
-        print("FINAL ANESTHESIOLOGISTS:", list(updated_procedure.anestesistas_responsaveis.all().values_list('id', 'name')))
         
         email_try = False
         email_sent = False
@@ -168,19 +158,7 @@ def create_procedure(request):
             
         procedure = form.save(commit=False)
         procedure.group = request.user.group
-        procedure.save() 
-
-        # Debug: Check if anestesistas_responsaveis is in cleaned_data
-        if 'anestesistas_responsaveis' in form.cleaned_data:
-            print("SETTING ANESTHESIOLOGISTS:", form.cleaned_data['anestesistas_responsaveis'])
-            procedure.anestesistas_responsaveis.set(form.cleaned_data['anestesistas_responsaveis'])
-        else:
-            print("WARNING: anestesistas_responsaveis not in cleaned_data!")
-        
-        procedure.save() 
-
-        # Debug: Print the final list of anesthesiologists
-        print("FINAL ANESTHESIOLOGISTS:", list(procedure.anestesistas_responsaveis.all().values_list('id', 'name')))
+        procedure.save()
         
         email_sent = False
         email_error = None
@@ -254,13 +232,16 @@ def get_procedure(request, procedure_id):
     # Convert UTC times to local time
     local_tz = timezone.get_current_timezone()
     start_time = procedure.data_horario.astimezone(local_tz)
-    end_time = procedure.data_horario_fim.astimezone(local_tz)
+    end_time = procedure.data_horario_fim.astimezone(local_tz) if procedure.data_horario_fim else None
+
+    # Map clinic key to human label for UI preselection
+    clinic_label_map = {key: label for key, label in CLINIC_TYPE_CHOICES}
 
     data = {
         'procedimento_type': procedure.procedimento_type,
         'data': start_time.date().strftime('%d/%m/%Y'),
         'time': start_time.strftime('%H:%M'),
-        'end_time': end_time.strftime('%H:%M'),
+        'end_time': end_time.strftime('%H:%M') if end_time else '',
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
         'convenio': {
@@ -277,14 +258,14 @@ def get_procedure(request, procedure_id):
         'outro_local': procedure.outro_local,
         'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
         'cirurgiao_nome': procedure.cirurgiao_nome or '',
-        'anestesistas_responsaveis': [
-            {'id': anestesista.id, 'name': anestesista.name}
-            for anestesista in procedure.anestesistas_responsaveis.all()
-        ],
+        'cooperado': {'id': procedure.cooperado.id, 'name': procedure.cooperado.name} if procedure.cooperado else None,
+        'anestesistas_livres': procedure.anestesistas_livres or '',
         'visita_pre_anestesica': procedure.visita_pre_anestesica,
         'data_visita_pre_anestesica': procedure.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedure.data_visita_pre_anestesica else '',
         'nome_responsavel_visita': procedure.nome_responsavel_visita,
         'tipo_procedimento': procedure.tipo_procedimento,
+        'tipo_clinica': procedure.tipo_clinica,
+        'tipo_clinica_label': clinic_label_map.get(procedure.tipo_clinica, procedure.tipo_clinica or ''),
     }
     return JsonResponse(data)
 
@@ -874,6 +855,52 @@ def _map_payment_type(payment_type_str):
     return None
 
 
+def _to_choice_key(label: str) -> str:
+    if not label:
+        return ''
+    norm = _normalize_string(label)
+    # Replace any non-alphanumeric with single underscore and trim
+    key = re.sub(r'[^a-z0-9]+', '_', norm).strip('_')
+    return key
+
+
+def _map_clinic_type(clinic_label):
+    """Return the key for tipo_clinica based on CLINIC_TYPE_CHOICES.
+    If not present, extend CLINIC_TYPE_CHOICES at runtime and return the new key.
+    """
+    if not clinic_label:
+        return None
+
+    label_norm = _normalize_string(clinic_label)
+    try:
+        # Fast lookups
+        existing_keys = {key for key, _ in CLINIC_TYPE_CHOICES}
+        label_to_key = {_normalize_string(lbl): key for key, lbl in CLINIC_TYPE_CHOICES}
+    except Exception:
+        existing_keys = set()
+        label_to_key = {}
+
+    # Match by existing label
+    if label_norm in label_to_key:
+        return label_to_key[label_norm]
+
+    # Fuzzy match by label
+    existing_labels_norm = list(label_to_key.keys())
+    if existing_labels_norm:
+        close = get_close_matches(label_norm, existing_labels_norm, n=1, cutoff=0.75)
+        if close:
+            return label_to_key[close[0]]
+
+    # Match or propose by key
+    proposed_key = _to_choice_key(clinic_label)
+    if proposed_key in existing_keys:
+        return proposed_key
+
+    # Dynamically extend choices (in-memory)
+    CLINIC_TYPE_CHOICES.append((proposed_key, clinic_label.strip()))
+    return proposed_key
+
+
 @require_http_methods(["POST"])
 def edit_single_day_escala(request, escala_id):
     escala = get_object_or_404(EscalaAnestesiologista, id=escala_id)
@@ -949,6 +976,7 @@ def import_procedures(request):
 
     # mapping from normalized col to our keys
     col_map = {}
+    normalized_set = set(normalized_columns.values())
     for original, norm in normalized_columns.items():
         # Time columns
         if norm in ("hora inicio", "hora_inicio", "inicio"):
@@ -967,9 +995,20 @@ def import_procedures(request):
         # Insurance/Plan columns
         elif norm in ("plano", "convenio", "convênio", "plano de saude", "plano de saúde"):
             col_map['plan'] = original
-        # Hospital/Clinic columns
-        elif norm in ("hospital", "clinica", "clínica"):
+        # Hospital column
+        elif norm == "hospital":
             col_map['hospital'] = original
+        # Clínica can mean hospital in older sheets or clinic profile in newer ones.
+        # If we already have a hospital column mapped, treat this as clinic type.
+        elif norm in ("clinica", "clínica"):
+            # Use presence in normalized_set to avoid order dependency
+            if "hospital" in normalized_set:
+                col_map['clinic_type'] = original
+            else:
+                col_map['hospital'] = original
+        # Explicit clinic type synonyms
+        elif norm in ("tipo clinica", "tipo_clinica", "perfil cirurgico", "perfil cirúrgico", "clinica (perfil)", "clinica perfil", "perfil"):
+            col_map['clinic_type'] = original
         # Urgency columns
         elif norm in ("eletivo/urgencia", "eletivo/urgencia "):
             col_map['urgency'] = original
@@ -979,9 +1018,12 @@ def import_procedures(request):
         # Procedure codes columns
         elif norm in ("codigos", "codigos ", "codigo", "códigos", "código", "cirurgia"):
             col_map['codes'] = original
-        # Anesthesiologist columns
-        elif norm.startswith("anestesistas") or norm in ("anestesista", "cooperado"):
-            col_map['anesthesiologists'] = original
+        # Cooperado column
+        elif norm in ("cooperado", "nome do cooperado", "cooperado nome"):
+            col_map['cooperado'] = original
+        # Anestesista columns (can be single or multiple names)
+        elif norm.startswith("anestesistas") or norm in ("anestesista", "anestesista(s)"):
+            col_map['anesth'] = original
         # Surgeon columns
         elif norm in ("cirurgiao", "cirurgiao...", "cirurgiao ", "cirurgiao nome", "cirurgiao(a)"):
             col_map['surgeon'] = original
@@ -1042,6 +1084,43 @@ def import_procedures(request):
 
     print("[IMPORT] Current timezone:", dj_tz.get_current_timezone())
 
+    # Preload ProcedimentoDetalhes for fuzzy matching
+    detalhes_all = list(ProcedimentoDetalhes.objects.all())
+    detalhes_codes = {((d.codigo_procedimento or '').strip().lower()): d for d in detalhes_all if d.codigo_procedimento}
+    detalhes_name_norm_map = { _normalize_string(d.name): d for d in detalhes_all if d.name }
+    detalhes_name_norms = list(detalhes_name_norm_map.keys())
+
+    def _find_best_procedimento_detalhe(value_text: str):
+        if not value_text:
+            return None
+        # Split into tokens in case spreadsheet has multiple items
+        tokens = [t.strip() for t in re.split(r"[+;,]", value_text) if (t and t.strip())]
+        for token in tokens:
+            # 1) Exact by code
+            code_key = token.strip().lower()
+            if code_key in detalhes_codes:
+                return detalhes_codes[code_key]
+            # 2) Exact by name (case-insensitive)
+            exact = ProcedimentoDetalhes.objects.filter(name__iexact=token).first()
+            if exact:
+                return exact
+            # 3) Contains by name
+            contains = ProcedimentoDetalhes.objects.filter(name__icontains=token).first()
+            if contains:
+                return contains
+            # 3.5) Normalized substring containment (accent-insensitive)
+            token_norm = _normalize_string(token)
+            for d in detalhes_all:
+                if not d.name:
+                    continue
+                if token_norm and token_norm in _normalize_string(d.name):
+                    return d
+            # 4) Fuzzy by normalized name (lower cutoff)
+            close = get_close_matches(token_norm, detalhes_name_norms, n=1, cutoff=0.6)
+            if close:
+                return detalhes_name_norm_map[close[0]]
+        return None
+
     for idx, row in df.iterrows():
         row_number = idx + 2  # assuming header at row 1
         errors = []
@@ -1058,9 +1137,11 @@ def import_procedures(request):
             hospital_value = str(row.get(col_map.get('hospital')) or '').strip()
             urgency_value = str(row.get(col_map.get('urgency')) or '').strip()
             codes_value = str(row.get(col_map.get('codes')) or '').strip()
-            anesth_value = str(row.get(col_map.get('anesthesiologists')) or '').strip()
+            anesth_value = str(row.get(col_map.get('anesth')) or row.get(col_map.get('anesthesiologists')) or '').strip()
             surgeon_value = str(row.get(col_map.get('surgeon')) or '').strip()
             cpsa_value = str(row.get(col_map.get('cpsa')) or '').strip() if 'cpsa' in col_map else ''
+            cooperado_value = str(row.get(col_map.get('cooperado')) or '').strip() if 'cooperado' in col_map else ''
+            clinic_value = str(row.get(col_map.get('clinic_type')) or '').strip() if 'clinic_type' in col_map else ''
             
             # Financial data - new columns
             payment_type_value = str(row.get(col_map.get('payment_type')) or '').strip() if 'payment_type' in col_map else ''
@@ -1082,10 +1163,7 @@ def import_procedures(request):
                 start_time = dtime(9, 0)  # Default to 09:00
                 warnings.append('Hora início não informada, usando padrão: 09:00')
             
-            if not end_time:
-                from datetime import time as dtime
-                end_time = dtime(10, 0)  # Default to 10:00
-                warnings.append('Hora fim não informada, usando padrão: 10:00')
+            # Do not enforce default end_time; allow None
 
             print(f"[IMPORT][Row {row_number}] Parsed -> date:{parsed_date} start:{start_time} end:{end_time}")
 
@@ -1154,9 +1232,10 @@ def import_procedures(request):
                     surgeon_name_fallback = surgeon_value
             print(f"[IMPORT][Row {row_number}] Surgeon -> obj:{surgeon_obj} fallback_name:{surgeon_name_fallback}")
 
-            # ProcedimentoDetalhes via codes
+            # ProcedimentoDetalhes via codes or name with fuzzy fallback
             procedimento_principal = None
             if codes_value:
+                # Try by code list first (existing behavior)
                 split_codes = re.split(r"[+;,]", codes_value)
                 for code in split_codes:
                     code = code.strip()
@@ -1165,9 +1244,34 @@ def import_procedures(request):
                     procedimento_principal = ProcedimentoDetalhes.objects.filter(codigo_procedimento__iexact=code).first()
                     if procedimento_principal:
                         break
+                # Fallback: best-effort match by name (fuzzy)
                 if not procedimento_principal:
-                    warnings.append('Código(s) não encontrado(s) em ProcedimentoDetalhes')
+                    best = _find_best_procedimento_detalhe(codes_value)
+                    if best:
+                        procedimento_principal = best
+                        warnings.append(f"Procedimento mapeado por aproximação para '{best.name}'")
+                    else:
+                        warnings.append('Código(s)/Nome não encontrado(s) em ProcedimentoDetalhes')
             print(f"[IMPORT][Row {row_number}] Procedimento principal -> {procedimento_principal}")
+
+            # Clinic type mapping
+            tipo_clinica_key = _map_clinic_type(clinic_value) if clinic_value else None
+
+            # Cooperado resolution
+            has_cooperado_col = 'cooperado' in col_map
+            cooperado_obj = None
+            if has_cooperado_col and cooperado_value:
+                cooperado_obj = Anesthesiologist.objects.filter(group=request.user.group, name__iexact=cooperado_value).first()
+                if not cooperado_obj:
+                    warnings.append(f"Cooperado não encontrado: {cooperado_value}")
+            elif not has_cooperado_col and anesth_value:
+                # Try to derive cooperado from anesth list (take first matching)
+                possible_names = [n.strip() for n in re.split(r"[+,;]", anesth_value) if n.strip()]
+                for n in possible_names:
+                    found = Anesthesiologist.objects.filter(group=request.user.group, name__iexact=n).first()
+                    if found:
+                        cooperado_obj = found
+                        break
 
             # Deduplication: Try to find existing record first
             existing_procedimento = None
@@ -1213,6 +1317,15 @@ def import_procedures(request):
                 if tipo_procedimento and not procedimento.tipo_procedimento:
                     procedimento.tipo_procedimento = tipo_procedimento
                     updated_fields.append('tipo_procedimento')
+                if tipo_clinica_key and not procedimento.tipo_clinica:
+                    procedimento.tipo_clinica = tipo_clinica_key
+                    updated_fields.append('tipo_clinica')
+                if cooperado_obj and not procedimento.cooperado:
+                    procedimento.cooperado = cooperado_obj
+                    updated_fields.append('cooperado')
+                if has_cooperado_col and anesth_value and not procedimento.anestesistas_livres:
+                    procedimento.anestesistas_livres = anesth_value
+                    updated_fields.append('anestesistas_livres')
 
                 if updated_fields:
                     procedimento.save(update_fields=list(set(updated_fields)))
@@ -1227,19 +1340,23 @@ def import_procedures(request):
                     convenio=convenio_obj,
                     procedimento_principal=procedimento_principal,
                     data_horario=start_dt,
-                    data_horario_fim=end_dt or (start_dt + timedelta(hours=1)),
+                    data_horario_fim=end_dt,
                     hospital=hospital_obj,
                     outro_local=outro_local_value,
                     cirurgiao=surgeon_obj,
                     cirurgiao_nome=surgeon_name_fallback,
                     tipo_procedimento=tipo_procedimento,
+                    tipo_clinica=tipo_clinica_key,
+                    cooperado=cooperado_obj,
+                    anestesistas_livres=(anesth_value if ('cooperado' in col_map and anesth_value) else ''),
                 )
                 procedimento.save()
                 print(f"[IMPORT][Row {row_number}] Procedimento saved id={procedimento.id} date={start_dt.date()} time={start_dt.strftime('%H:%M')}")
 
             # Anesthesiologists (split by comma, plus, semicolon)
             added_anesth = []
-            if anesth_value:
+            # If a Cooperado column exists, treat Anestesista column as free-text only
+            if anesth_value and 'cooperado' not in col_map:
                 names = [n.strip() for n in re.split(r"[+,;]", anesth_value) if n.strip()]
                 for name in names:
                     anest = Anesthesiologist.objects.filter(group=request.user.group, name__iexact=name).first()

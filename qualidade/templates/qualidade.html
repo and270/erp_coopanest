@@ -186,7 +186,8 @@
                                                 <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
                                                 <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
-                                                <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
+                                                <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span>{% endif %}</p>
+                                                <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span>{% endif %}</p>
                                                 <br>
                                                 <p>Status: <strong><span class="modal-status">{{ procedimento.get_status_display }}</span></strong></p>
                                                 <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>

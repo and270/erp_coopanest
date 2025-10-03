@@ -1,7 +1,7 @@
 from django import forms
 from datetime import timedelta # Import timedelta
 
-from constants import STATUS_FINISHED
+from constants import STATUS_FINISHED, CLINIC_TYPE_CHOICES
 from .models import BPS_DESCRIPTIONS, EVA_DESCRIPTIONS, FLACC_DESCRIPTIONS, PAINAD_B_DESCRIPTIONS, AvaliacaoRPA, ProcedimentoQualidade
 from financas.models import ProcedimentoFinancas
 import pytz
@@ -92,6 +92,12 @@ class AvaliacaoRPAForm(forms.ModelForm):
 
 class ProcedimentoFinalizacaoForm(forms.ModelForm):
     # Add financial fields
+    procedimento_tipo_clinica = forms.ChoiceField(
+        choices=[('', '--- Selecione a Clínica ---')] + CLINIC_TYPE_CHOICES,
+        required=False,
+        label='Clínica (Perfil Cirúrgico)',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     tipo_cobranca = forms.ChoiceField(
         choices=ProcedimentoFinancas.COBRANCA_CHOICES,
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
@@ -122,6 +128,13 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Prefill clinic type from linked Procedimento if available
+        try:
+            procedimento = self.instance.procedimento
+            if procedimento and procedimento.tipo_clinica:
+                self.initial['procedimento_tipo_clinica'] = procedimento.tipo_clinica
+        except Exception:
+            pass
         self.EVA_DESCRIPTIONS = EVA_DESCRIPTIONS
         self.FLACC_DESCRIPTIONS = FLACC_DESCRIPTIONS
         self.BPS_DESCRIPTIONS = BPS_DESCRIPTIONS
@@ -298,8 +311,13 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 # This can happen when conciliation creates multiple CPSAs for the same procedure
                 financas = ProcedimentoFinancas.objects.filter(procedimento=qualidade_instance.procedimento).first()
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
-            financas.valor_faturado = self.cleaned_data['valor_faturado']
-            financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
+            if self.cleaned_data['tipo_cobranca'] == 'cortesia':
+                financas.valor_faturado = 0
+                financas.valor_recebido = 0
+                financas.valor_recuperado = 0
+            else:
+                financas.valor_faturado = self.cleaned_data['valor_faturado']
+            financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto'] if self.cleaned_data['tipo_cobranca'] == 'particular' else None
             data_pagamento = self.cleaned_data.get('data_pagamento')
             financas.data_pagamento = data_pagamento
 
@@ -315,6 +333,10 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             # Update Procedimento status
             procedimento = qualidade_instance.procedimento
             procedimento.status = STATUS_FINISHED
+            # Update optional clinic type if provided
+            clinic_value = self.cleaned_data.get('procedimento_tipo_clinica')
+            if clinic_value:
+                procedimento.tipo_clinica = clinic_value
             procedimento.save()
 
         return qualidade_instance
@@ -400,7 +422,12 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 if field in self.errors:
                     del self.errors[field]
 
-        if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_faturado'):
+        # Handle special charging types
+        if tipo_cobranca == 'cortesia':
+            cleaned_data['valor_faturado'] = 0
+            cleaned_data['tipo_pagamento_direto'] = None
+        # Require value for Hospital, Direta (particular) and Via Cirurgião
+        if tipo_cobranca in ['hospital', 'particular', 'via_cirurgiao'] and not cleaned_data.get('valor_faturado'):
             self.add_error('valor_faturado', 'Este campo é obrigatório para este tipo de cobrança.')
 
         if eventos_adversos_graves and not eventos_adversos_graves_desc:

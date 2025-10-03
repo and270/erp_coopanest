@@ -9,6 +9,8 @@ class ProcedimentoFinancas(models.Model):
         ('cooperativa', 'Cooperativa'),
         ('hospital', 'Hospital'),
         ('particular', 'Direta'),
+        ('via_cirurgiao', 'Via Cirurgião'),
+        ('cortesia', 'Cortesia'),
     ]
 
     DIRECT_PAYMENT_CHOICES = [
@@ -124,6 +126,18 @@ class ProcedimentoFinancas(models.Model):
         max_length=255, 
         verbose_name='Cooperado (API)', 
         null=True, 
+        blank=True
+    )
+    matricula = models.CharField(
+        max_length=255,
+        verbose_name='Matrícula',
+        null=True,
+        blank=True
+    )
+    senha = models.CharField(
+        max_length=255,
+        verbose_name='Senha',
+        null=True,
         blank=True
     )
 

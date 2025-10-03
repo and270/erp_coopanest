@@ -2218,6 +2218,7 @@ select {
     border-radius: 3px;
     overflow: hidden; /* Prevent any content from overflowing */
     word-wrap: break-word; /* Break long words */
+    height: 48px; /* Fixed standard height for week view cards */
 }
 
 .procedure-card:hover {

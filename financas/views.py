@@ -100,7 +100,7 @@ def financas_view(request):
     if view_type == 'receitas':
         base_qs = ProcedimentoFinancas.objects.filter(
             Q(procedimento__group=user_group) | Q(group=user_group) # Linked via procedure OR directly via group FK
-        ).select_related('procedimento', 'procedimento__hospital').prefetch_related('procedimento__anestesistas_responsaveis')
+        ).select_related('procedimento', 'procedimento__hospital', 'procedimento__cooperado').prefetch_related('procedimento__anestesistas_responsaveis')
 
         # Filter for user type
         active_role = user.get_active_role()
@@ -126,7 +126,7 @@ def financas_view(request):
                 Q(procedimento__nome_paciente__icontains=search_query) |
                 Q(procedimento__cpf_paciente__icontains=search_query) |
                 Q(cpsa__icontains=search_query) |
-                Q(procedimento__anestesistas_responsaveis__name__icontains=search_query) |
+                Q(procedimento__cooperado__name__icontains=search_query) |
                 Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) |
                 Q(procedimento__isnull=True, api_cooperado_nome__icontains=search_query)
             )
@@ -257,11 +257,16 @@ def get_finance_item(request, type, id):
                 'cpsa': item.cpsa,
                 'tipo_cobranca': item.tipo_cobranca,
                 'tipo_pagamento_direto': item.tipo_pagamento_direto,
+                'matricula': item.matricula,
+                'senha': item.senha,
                 # Get data from procedure if linked, otherwise from api_* fields
                 'paciente_nome': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome,
                 'cpf': item.procedimento.cpf_paciente if item.procedimento else None, # CPF only available if linked
                  'data_cirurgia': (item.procedimento.data_horario.strftime('%Y-%m-%d') if item.procedimento and item.procedimento.data_horario else 
                                   item.api_data_cirurgia.strftime('%Y-%m-%d') if item.api_data_cirurgia else None),
+                 # New: expose cooperado and anestesistas livres for editing in modal (if needed later)
+                 'cooperado': (item.procedimento.cooperado.name if item.procedimento and item.procedimento.cooperado else item.api_cooperado_nome),
+                 'anestesistas_livres': (item.procedimento.anestesistas_livres if item.procedimento else ''),
                  # Add other fields as needed by the frontend modal
             }
         elif type == 'despesas':
@@ -350,12 +355,18 @@ def update_finance_item(request):
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
             item.cpsa = data.get('cpsa') or None
+            item.matricula = data.get('matricula') or None
+            item.senha = data.get('senha') or None
             item.tipo_cobranca = data.get('tipo_cobranca')
             item.tipo_pagamento_direto = data.get('tipo_pagamento_direto') if data.get('tipo_cobranca') == 'particular' else None
 
             # Update procedure fields ONLY if linked
             if item.procedimento:
                 item.procedimento.cpf_paciente = data.get('cpf') or None
+                # Persist free-text anesthesiologists field from Finanças modal when linked
+                anest_livres = data.get('anestesistas_livres')
+                if anest_livres is not None:
+                    item.procedimento.anestesistas_livres = anest_livres.strip()
                 # Maybe update patient name too? item.procedimento.nome_paciente = data.get('paciente_nome')
                 item.procedimento.save()
             else:
@@ -476,6 +487,8 @@ def create_receita_item(request):
             status_pagamento=status_pagamento,
             data_pagamento=data_pagamento,
             cpsa=cpsa or None,
+            matricula=data.get('matricula') or None,
+            senha=data.get('senha') or None,
             tipo_cobranca=tipo_cobranca,
             tipo_pagamento_direto=data.get('tipo_pagamento_direto') if tipo_cobranca == 'particular' else None
         )
@@ -628,6 +641,8 @@ def export_finances(request):
                 'Valor a Recuperar': float(item.valor_acatado) if item.valor_acatado is not None else 0.0, # Glosa?
                 'Fonte Pagadora': item.get_tipo_cobranca_display() or '',
                 'CPSA': item.get_cpsa_display() or '',
+                'Matrícula': item.matricula or '',
+                'Senha': item.senha or '',
                 'Anestesista': anest_name,
                 'Situação': item.get_status_pagamento_display() or '',
                 'Data do Pagamento': item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '-',
@@ -820,6 +835,31 @@ def parse_api_time(time_str):
         print(f"Warning: Could not parse time '{time_str}'")
         return None
 
+def find_or_create_anesthesiologist(group, anesthesiologist_name):
+    """Find existing anesthesiologist by similarity in the group or create a new one."""
+    if not anesthesiologist_name or not str(anesthesiologist_name).strip():
+        return None
+
+    name = str(anesthesiologist_name).strip()
+    # Try exact (case-insensitive) match first
+    exact = Anesthesiologist.objects.filter(group=group, name__iexact=name).first()
+    if exact:
+        return exact
+
+    best_match = None
+    highest_sim = 0.7
+    for candidate in Anesthesiologist.objects.filter(group=group):
+        if candidate.name:
+            sim_score = similar(name, candidate.name)
+            if sim_score > highest_sim:
+                highest_sim = sim_score
+                best_match = candidate
+    if best_match:
+        return best_match
+
+    # Create new when no good match found
+    return Anesthesiologist.objects.create(name=name, group=group)
+
 def find_or_create_surgeon(group, surgeon_name, surgeon_crm=None):
     """Find existing surgeon or create new one based on name and CRM."""
     if not surgeon_name or not surgeon_name.strip():
@@ -903,6 +943,14 @@ def update_procedimento_with_api_data(procedimento, guia, group):
         )
         if not procedimento.hospital or procedimento.hospital.id != hospital_obj.id:
             procedimento.hospital = hospital_obj
+            updated = True
+
+    # Sync Cooperado on Procedimento from API 'cooperado'
+    api_cooperado_name = guia.get('cooperado')
+    if api_cooperado_name:
+        anest = find_or_create_anesthesiologist(group, api_cooperado_name)
+        if anest and (not procedimento.cooperado or procedimento.cooperado_id != anest.id):
+            procedimento.cooperado = anest
             updated = True
 
     # Update ProcedimentoDetalhes (procedimento_principal)
@@ -1174,6 +1222,10 @@ def conciliar_financas(request):
                         financa.api_hospital_nome = guia.get('hospital'); updated = True
                     if financa.api_cooperado_nome != guia.get('cooperado'):
                         financa.api_cooperado_nome = guia.get('cooperado'); updated = True
+                    if financa.matricula != guia.get('matricula'):
+                        financa.matricula = guia.get('matricula'); updated = True
+                    if financa.senha != guia.get('senha'):
+                        financa.senha = guia.get('senha'); updated = True
                     
                     guia_api_date_parsed = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
                     if financa.api_data_cirurgia != guia_api_date_parsed:
@@ -1234,7 +1286,9 @@ def conciliar_financas(request):
                         api_paciente_nome=guia.get('paciente'),
                         api_data_cirurgia=guia_date, # Use parsed guia_date
                         api_hospital_nome=guia.get('hospital'),
-                        api_cooperado_nome=guia.get('cooperado')
+                        api_cooperado_nome=guia.get('cooperado'),
+                        matricula=guia.get('matricula'),
+                        senha=guia.get('senha')
                     )
                     financas_to_create.append(new_financa)
                     newly_created_count += 1 # For ProcedimentoFinancas
@@ -1265,7 +1319,9 @@ def conciliar_financas(request):
                              api_paciente_nome=guia.get('paciente'),
                              api_data_cirurgia=guia_date, # Use parsed guia_date
                              api_hospital_nome=guia.get('hospital'),
-                             api_cooperado_nome=guia.get('cooperado')
+                             api_cooperado_nome=guia.get('cooperado'),
+                             matricula=guia.get('matricula'),
+                             senha=guia.get('senha')
                         )
                         financas_to_create.append(new_financa)
                         newly_created_count += 1 # For ProcedimentoFinancas
@@ -1433,28 +1489,11 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
     # Handle anesthesiologist
     guia_cooperado = guia.get('cooperado')
     if guia_cooperado:
-        anest_user_qs = Anesthesiologist.objects.filter(group=group)
-        best_match_anest = None
-        highest_sim = 0.7
-        for an_in_group in anest_user_qs:
-            if an_in_group.name: # Ensure name is not empty for comparison
-                sim_score = similar(guia_cooperado.lower(), an_in_group.name.lower())
-                if sim_score > highest_sim:
-                    highest_sim = sim_score
-                    best_match_anest = an_in_group
-        
-        anest_final = None
-        if best_match_anest:
-            anest_final = best_match_anest
-        else:
-            anest_final = Anesthesiologist.objects.create(
-                name=guia_cooperado,
-                group=group
-            )
-            print(f"Created new Anesthesiologist '{anest_final.name}' for cooperado '{guia_cooperado}'")
-        
+        anest_final = find_or_create_anesthesiologist(group, guia_cooperado)
         if anest_final:
-            newly_created_procedimento.anestesistas_responsaveis.add(anest_final)
+            # Set as Cooperado (primary)
+            newly_created_procedimento.cooperado = anest_final
+            newly_created_procedimento.save(update_fields=['cooperado'])
 
     return newly_created_procedimento
 

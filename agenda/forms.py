@@ -55,7 +55,8 @@ class ProcedimentoForm(forms.ModelForm):
     end_time = forms.TimeField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'hh:mm'}),
         input_formats=['%H:%M'],
-        label="Previsão de Término"
+        label="Previsão de Término",
+        required=False
     )
 
     cpf_paciente = forms.CharField(
@@ -64,20 +65,16 @@ class ProcedimentoForm(forms.ModelForm):
         required=False
     )
 
-    # This field will be hidden in the template but used for form submission
-    anestesistas_responsaveis = forms.ModelMultipleChoiceField(
-        queryset=Anesthesiologist.objects.all(),
-        widget=forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'display: none;'}), # Hidden widget
-        required=False,
-        label="Anestesistas Responsáveis (Hidden)" # Label changed for clarity, won't be visible
-    )
-
-    # This field will be the visible dropdown for selecting one anesthesiologist at a time
-    anestesista_selector = forms.ModelChoiceField(
+    cooperado = forms.ModelChoiceField(
         queryset=Anesthesiologist.objects.all(),
         widget=forms.Select(attrs={'class': 'form-control'}),
         required=False,
-        label="Selecionar Anestesista" # New label for the dropdown
+        label='Cooperado'
+    )
+    anestesistas_livres = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
+        label='Anestesistas (livre)'
     )
 
     class Meta:
@@ -86,11 +83,12 @@ class ProcedimentoForm(forms.ModelForm):
             'nome_paciente', 'email_paciente', 'cpf_paciente',
             'convenio', 'convenio_nome_novo', 'procedimento_principal', 'hospital', 'outro_local',
             'cirurgiao', 'cirurgiao_nome',
-            'anestesista_selector', # Add the selector field
-            'anestesistas_responsaveis', # Keep the hidden field
+            'cooperado',
+            'anestesistas_livres',
             'visita_pre_anestesica',
             'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita',
-            'tipo_procedimento' # Added new field
+            'tipo_procedimento', # Added new field
+            'tipo_clinica' # New clinic type field (optional)
         ]
 
     def __init__(self, *args, **kwargs):
@@ -101,8 +99,7 @@ class ProcedimentoForm(forms.ModelForm):
             anesthesiologist_qs = Anesthesiologist.objects.filter(group=user.group).order_by('name')
             self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
-            self.fields['anestesistas_responsaveis'].queryset = anesthesiologist_qs # Populate hidden field queryset
-            self.fields['anestesista_selector'].queryset = anesthesiologist_qs # Populate selector field queryset
+            self.fields['cooperado'].queryset = anesthesiologist_qs
             self.fields['convenio'].queryset = Convenios.objects.all().order_by('name')
             self.fields['procedimento_principal'].queryset = ProcedimentoDetalhes.objects.all().order_by('name')
 
@@ -113,26 +110,24 @@ class ProcedimentoForm(forms.ModelForm):
             'class': 'form-control',
             'placeholder': 'Digite o nome do cirurgião não cadastrado'
         })
-        # Add placeholder to the selector
-        self.fields['anestesista_selector'].empty_label = "--- Selecione ---"
+        # Add placeholder to cooperado selector
+        self.fields['cooperado'].empty_label = "--- Selecione ---"
         # Hide the label for the original field in the template using JS/CSS might be better
         # self.fields['anestesistas_responsaveis'].label = ''
         self.fields['tipo_procedimento'].widget.attrs.update({'class': 'form-control'})
         self.fields['tipo_procedimento'].empty_label = "--- Selecione o Tipo ---"
+        # Style for optional clinic type selector
+        if 'tipo_clinica' in self.fields:
+            self.fields['tipo_clinica'].widget.attrs.update({'class': 'form-control'})
 
 
     def save(self, commit=True):
-        # Remove anestesista_selector from cleaned_data before saving the model instance
-        # as it's not part of the Procedimento model
-        if 'anestesista_selector' in self.cleaned_data:
-            del self.cleaned_data['anestesista_selector']
-
         instance = super().save(commit=False)
         date = self.cleaned_data['data']
         time = self.cleaned_data['time']
-        end_time = self.cleaned_data['end_time']
+        end_time = self.cleaned_data.get('end_time')
         instance.data_horario = datetime.combine(date, time)
-        instance.data_horario_fim = datetime.combine(date, end_time)
+        instance.data_horario_fim = datetime.combine(date, end_time) if end_time else None
 
         # Auto-classify procedure type
         procedimento_principal = self.cleaned_data.get('procedimento_principal')
@@ -152,13 +147,9 @@ class ProcedimentoForm(forms.ModelForm):
         # If neither is provided, instance.convenio remains what it was (or None if new)
         # as 'convenio' field is not required.
 
-        # The 'anestesistas_responsaveis' field (now hidden) will be correctly
-        # populated by the form submission thanks to the updated JS.
-        # We just need to handle the ManyToMany relation *after* saving the instance.
         if commit:
             instance.save()
-            # The standard ModelForm save_m2m() handles the ManyToMany field
-            self.save_m2m() # Ensure M2M relations are saved
+            self.save_m2m()
 
         return instance
 

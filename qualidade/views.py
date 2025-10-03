@@ -322,10 +322,30 @@ def finalizar_procedimento_view(request, procedimento_id):
             return redirect('qualidade')
     else:
         initial_data = {
-            'tipo_cobranca': financas.tipo_cobranca,
+            # Finance defaults
+            'tipo_cobranca': financas.tipo_cobranca or 'cooperativa',
             'valor_faturado': financas.valor_faturado,
             'tipo_pagamento_direto': financas.tipo_pagamento_direto,
-            'data_pagamento': financas.data_pagamento, # Add this line
+            'data_pagamento': financas.data_pagamento,
+
+            # Quality form defaults (pre-fill like the provided screenshot)
+            # Pain and scales
+            'dor_pos_operatoria': False,
+            'abreviacao_jejum': False,
+
+            # Safety/protocol adherence
+            'adesao_checklist': True,
+            'uso_tecnicas_assepticas': True,
+            'conformidade_diretrizes': True,
+            'adesao_profilaxia_antibiotica': True,
+            'adesao_prevencao_tvp_tep': True,
+
+            # Adverse events & outcomes
+            'eventos_adversos_graves': False,
+            'reacao_alergica_grave': False,
+            'encaminhamento_uti': False,
+            'evento_adverso_evitavel': False,
+            'ponv': False,
         }
         
         # Pre-fill effective start and end times from the Procedimento object

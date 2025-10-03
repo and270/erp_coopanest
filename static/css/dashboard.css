@@ -138,6 +138,11 @@
     vertical-align: middle;
 }
 
+/* Add slight spacing between adjacent filters in the anestesias card header */
+.financas-dashboard .metric-card.anestesias .header-row .procedure-filter + .procedure-filter {
+    margin-left: 10px;
+}
+
 .filter-container {
     display: none;
 }

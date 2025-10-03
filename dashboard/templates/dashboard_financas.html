@@ -63,6 +63,14 @@
                     </div>
                 </div>
             </div>
+            <div class="period-filter" style="margin-left: 12px;">
+                <select id="clinicFilter" class="filter-select">
+                    <option value="">Todas as Clínicas</option>
+                    {% for value,label in clinic_choices %}
+                        <option value="{{ value }}" {% if selected_clinic == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <button class="export-btn" id="exportBtn">
                 <i class="fas fa-download"></i>
                 Exportar
@@ -77,7 +85,7 @@
                     <h3>Total de Anestesias</h3>
                     <div class="procedure-filter">
                         <select id="procedimentoFilter">
-                            <option value="">Todos</option>
+                            <option value="">Todos os Procedimentos</option>
                             {% for proc in procedimentos %}
                                 <option value="{{ proc.name }}" {% if selected_procedimento == proc.name %}selected{% endif %}>
                                     {{ proc.name|truncatechars:25 }}
@@ -85,9 +93,34 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="procedure-filter">
+                        <select id="anestesistaFilterAnestesias" class="filter-select anestesista-filter">
+                            {% if active_role == GESTOR_USER %}
+                                <option value="">Todos os Anestesistas</option>
+                                {% for anestesista in anestesistas %}
+                                    <option value="{{ anestesista.id }}" {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ anestesista.name }}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
                 </div>
-                <div class="metric-value">{{ anestesias_count }}</div>
+                <div class="metric-value">
+                    {% if anestesias_view == 'por_anestesista' %}
+                        {{ anestesias_value|floatformat:1 }}
+                    {% else %}
+                        {{ anestesias_value }}
+                    {% endif %}
+                </div>
                 <div class="metric-label">
+                    <div style="margin-bottom: 6px;">
+                        <label for="anestesiasView" style="font-weight: 600; margin-right: 6px;">Exibir:</label>
+                        <select id="anestesiasView" class="filter-select">
+                            <option value="total" {% if anestesias_view != 'por_anestesista' %}selected{% endif %}>Total</option>
+                            <option value="por_anestesista" {% if anestesias_view == 'por_anestesista' %}selected{% endif %}>Por Anestesista</option>
+                        </select>
+                    </div>
                     {% if selected_period %}
                         {% if selected_period == 'custom' %}
                             (Período Personalizado)
@@ -112,7 +145,7 @@
                     <div class="procedure-filter">
                         <select id="anestesistaFilterTotals" class="filter-select anestesista-filter">
                             {% if active_role == GESTOR_USER %}
-                                <option value="">Por Anestesista</option>
+                                <option value="">Todos os Anestesistas</option>
                                 {% for anestesista in anestesistas %}
                                     <option value="{{ anestesista.id }}"
                                             {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
@@ -124,6 +157,24 @@
                     </div>
                 </div>
                 <div class="status-bar">
+                    <div style="display:flex; gap: 12px; align-items:center; margin-bottom: 8px; flex-wrap: wrap;">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbCooperativa" {% if include_cooperativa %}checked{% endif %}>
+                            Coopanest
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbDireta" {% if include_particular %}checked{% endif %}>
+                            Direta
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbHospital" {% if include_hospital %}checked{% endif %}>
+                            Hospitalar
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#3D3D3D;">
+                            <input type="checkbox" id="cbViaCirurgiao" {% if include_via_cirurgiao %}checked{% endif %}>
+                            Via Cirurgião
+                        </label>
+                    </div>
                     <div>
                         <span>Pago</span>
                         <div class="bar">
@@ -190,7 +241,7 @@
                             <select id="anestesistaFilter" class="filter-select anestesista-filter">
                                 {% if active_role == GESTOR_USER %}
                                     {# Gestor/Admin View: "Por Anestesista" and All Options #}
-                                    <option value="">Por Anestesista</option>
+                                    <option value="">Todos os Anestesistas</option>
                                     {% for anestesista in anestesistas %}
                                         <option value="{{ anestesista.id }}"
                                                 {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}> {# Compare as string #}
@@ -212,6 +263,8 @@
                     <div><span style="background:#90E0EF;"></span>Coopanest</div>
                     <div><span style="background:#09ABCB;"></span>Direta</div>
                     <div><span style="background:#023E8A;"></span>Hospital</div>
+                    <div><span style="background:#8E44AD;"></span>Via Cirurgião</div>
+                    <div><span style="background:#95A5A6;"></span>Cortesia</div>
                 </div>
                 <div>
                     <canvas id="valoresRecebidosChart"></canvas>
@@ -265,6 +318,38 @@
                         </div>
                         <span>Hospital</span>
                     </div>
+                    <div class="percent-indicator">
+                        <div class="circle-progress">
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if via_cirurgiao_pct > 0 %}
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#8E44AD" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ via_cirurgiao_pct|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                                {% endif %}
+                            </svg>
+                            <div class="value">{{ via_cirurgiao_pct|floatformat:0 }}%</div>
+                        </div>
+                        <span>Via Cirurgião</span>
+                    </div>
+                    <div class="percent-indicator">
+                        <div class="circle-progress">
+                            <svg width="48" height="48" viewBox="0 0 48 48">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E6E6E6" stroke-width="4"/>
+                                {% if cortesia_pct > 0 %}
+                                <circle cx="24" cy="24" r="20" fill="none" 
+                                        stroke="#95A5A6" 
+                                        stroke-width="4"
+                                        stroke-dasharray="{{ cortesia_pct|multiply:1.256 }} 126"
+                                        transform="rotate(-90 24 24)"/>
+                                {% endif %}
+                            </svg>
+                            <div class="value">{{ cortesia_pct|floatformat:0 }}%</div>
+                        </div>
+                        <span>Cortesia</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -284,6 +369,18 @@ document.getElementById('procedimentoFilter').addEventListener('change', functio
         currentUrl.searchParams.set('procedimento', selectedValue);
     } else {
         currentUrl.searchParams.delete('procedimento');
+    }
+    window.location.href = currentUrl.toString();
+});
+
+// Clinic filter
+document.getElementById('clinicFilter').addEventListener('change', function() {
+    const selectedValue = this.value;
+    const currentUrl = new URL(window.location.href);
+    if (selectedValue) {
+        currentUrl.searchParams.set('clinic', selectedValue);
+    } else {
+        currentUrl.searchParams.delete('clinic');
     }
     window.location.href = currentUrl.toString();
 });
@@ -475,6 +572,13 @@ document.getElementById('graphTypeSelector').addEventListener('change', function
     window.location.href = currentUrl.toString();
 });
 
+// Anestesias view selector (Total vs Por Anestesista)
+document.getElementById('anestesiasView').addEventListener('change', function() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('anestesias_view', this.value);
+    window.location.href = currentUrl.toString();
+});
+
 // Anestesista filter (both selectors)
 document.querySelectorAll('.anestesista-filter').forEach(function(selectEl) {
     selectEl.addEventListener('change', function() {
@@ -535,6 +639,18 @@ const valoresRecebidosChart = new Chart(valoresRecebidosCtx, {
                 data: {{ hospital_values|safe }},
                 backgroundColor: '#023E8A',
                 stack: 'stack1'
+            },
+            {
+                label: 'Via Cirurgião',
+                data: {{ via_cirurgiao_values|safe }},
+                backgroundColor: '#8E44AD',
+                stack: 'stack1'
+            },
+            {
+                label: 'Cortesia',
+                data: {{ cortesia_values|safe }},
+                backgroundColor: '#95A5A6',
+                stack: 'stack1'
             }
         ]
     },
@@ -547,6 +663,21 @@ document.getElementById('exportBtn').addEventListener('click', function() {
     const params = new URLSearchParams(currentUrl.search);
     const exportUrl = "{% url 'export_financas_excel' %}?" + params.toString();
     window.location.href = exportUrl;
+});
+
+// Charge type checkboxes -> update query params and reload
+function updateChargeTypeFilters() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('include_cooperativa', document.getElementById('cbCooperativa').checked ? '1' : '0');
+    currentUrl.searchParams.set('include_particular', document.getElementById('cbDireta').checked ? '1' : '0');
+    currentUrl.searchParams.set('include_hospital', document.getElementById('cbHospital').checked ? '1' : '0');
+    currentUrl.searchParams.set('include_via_cirurgiao', document.getElementById('cbViaCirurgiao').checked ? '1' : '0');
+    window.location.href = currentUrl.toString();
+}
+
+['cbCooperativa','cbDireta','cbHospital','cbViaCirurgiao'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', updateChargeTypeFilters);
 });
 
 // Switch between Finanças/Qualidade

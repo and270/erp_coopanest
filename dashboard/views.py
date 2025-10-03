@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.db.models import Avg, Count, Case, When, F, Q, Sum, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, TruncMonth, TruncDate, Cast
-from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER
+from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, CLINIC_TYPE_CHOICES
 # import numpy as np # No longer needed here, it's in utils
 from .utils import calculate_iqr_filtered_average_seconds # Import the function
 from financas.models import ProcedimentoFinancas
@@ -240,6 +240,13 @@ def financas_dashboard_view(request):
     selected_anestesista_id = request.GET.get('anestesista') # Keep as string for comparison
     procedimento = request.GET.get('procedimento')
     selected_graph_type = request.GET.get('graph_type', 'ticket')
+    clinic = request.GET.get('clinic')
+    anestesias_view = request.GET.get('anestesias_view', 'total')  # 'total' | 'por_anestesista'
+    # Charge type filters for Valores Totais card (defaults to include all)
+    include_cooperativa = request.GET.get('include_cooperativa', '1')
+    include_particular = request.GET.get('include_particular', '1')
+    include_hospital = request.GET.get('include_hospital', '1')
+    include_via_cirurgiao = request.GET.get('include_via_cirurgiao', '1')
 
     # Base queryset with effective_date for filtering
     queryset = (
@@ -255,6 +262,10 @@ def financas_dashboard_view(request):
         .filter(group=user_group) # Filter on ProcedimentoFinancas.group itself
     )
 
+    # Apply clinic filter only to linked procedures
+    if clinic:
+        queryset = queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
+
     # --- Anestesista Filtering Logic ---
     anestesistas_all = Anesthesiologist.objects.filter(group=user_group).order_by('name')
     anestesistas_for_template = anestesistas_all # Default for GESTOR/ADMIN
@@ -268,7 +279,7 @@ def financas_dashboard_view(request):
             
             # Apply filter only if the selected ID matches the logged-in anesthesiologist
             if selected_anestesista_id and str(current_user_anesthesiologist.id) == selected_anestesista_id:
-                 queryset = queryset.filter(procedimento__anestesistas_responsaveis=current_user_anesthesiologist.id)
+                 queryset = queryset.filter(procedimento__cooperado=current_user_anesthesiologist.id)
             # If an ID is selected but doesn't match, or no ID is selected, don't filter by anesthesiologist
             # (implicitly shows 'all' relevant to the user's group)
             else:
@@ -282,7 +293,7 @@ def financas_dashboard_view(request):
     elif user.get_active_role() in [GESTOR_USER, ADMIN_USER]:
         # Gestor/Admin can filter by any anesthesiologist
         if selected_anestesista_id:
-            queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id)
+            queryset = queryset.filter(procedimento__cooperado=selected_anestesista_id)
         # Keep anestesistas_for_template as anestesistas_all
 
     # Filter by procedimento if given (applies after anesthesiologist filter)
@@ -363,9 +374,34 @@ def financas_dashboard_view(request):
 
     # Distinct procedures
     anestesias_count = queryset.values('procedimento').distinct().count()
+    distinct_cooperados_count = queryset.filter(procedimento__cooperado__isnull=False)\
+        .values('procedimento__cooperado').distinct().count()
 
-    # Summations by status_pagamento using the new fields and statuses
-    totals_by_status = queryset.values('status_pagamento').annotate(
+    # Determine value to display for anestesias based on view toggle
+    if anestesias_view == 'por_anestesista':
+        if selected_anestesista_id:
+            anestesias_value = anestesias_count  # already filtered by selected anesthesiologist (cooperado)
+        else:
+            anestesias_value = (anestesias_count / distinct_cooperados_count) if distinct_cooperados_count > 0 else 0
+    else:
+        anestesias_value = anestesias_count
+
+    # Apply charge type filters ONLY for the Valores Totais card
+    totals_queryset = queryset
+    included_charge_types = []
+    if include_cooperativa != '0':
+        included_charge_types.append('cooperativa')
+    if include_particular != '0':
+        included_charge_types.append('particular')
+    if include_hospital != '0':
+        included_charge_types.append('hospital')
+    if include_via_cirurgiao != '0':
+        included_charge_types.append('via_cirurgiao')
+    if len(included_charge_types) > 0 and len(included_charge_types) < 4:
+        totals_queryset = totals_queryset.filter(tipo_cobranca__in=included_charge_types)
+
+    # Summations by status_pagamento using the new fields and statuses (filtered by selected charge types)
+    totals_by_status = totals_queryset.values('status_pagamento').annotate(
         total=Sum('valor_faturado')
     )
     total_valor = sum(
@@ -373,7 +409,7 @@ def financas_dashboard_view(request):
     ) if totals_by_status else 0
 
     # Calculate values based on the new business logic
-    valor_pago = queryset.filter(
+    valor_pago = totals_queryset.filter(
         status_pagamento__in=['processo_finalizado', 'recurso_de_glosa']
     ).aggregate(
         total=Sum(
@@ -382,13 +418,13 @@ def financas_dashboard_view(request):
         )
     )['total'] or 0
     
-    valor_pendente = queryset.filter(
+    valor_pendente = totals_queryset.filter(
         status_pagamento__in=['em_processamento', 'aguardando_pagamento']
     ).aggregate(
         total=Sum('valor_faturado')
     )['total'] or 0
     
-    valor_glosa = queryset.filter(
+    valor_glosa = totals_queryset.filter(
         status_pagamento__in=['processo_finalizado', 'recurso_de_glosa']
     ).aggregate(
         total=Sum(
@@ -436,7 +472,13 @@ def financas_dashboard_view(request):
     if view_type == 'daily':
         # Prepare a daily map
         date_map = {
-            single_day.date(): {'cooperativa': 0, 'hospital': 0, 'particular': 0}
+            single_day.date(): {
+                'cooperativa': 0,
+                'hospital': 0,
+                'particular': 0,
+                'via_cirurgiao': 0,
+                'cortesia': 0,
+            }
             for single_day in date_range
         }
 
@@ -454,7 +496,7 @@ def financas_dashboard_view(request):
         for item in daily_data:
             if item['date'] in date_map and item['tipo_cobranca']:
                 tipo = item['tipo_cobranca']
-                if tipo in ['cooperativa', 'hospital', 'particular']:
+                if tipo in ['cooperativa', 'hospital', 'particular', 'via_cirurgiao', 'cortesia']:
                     date_map[item['date']][tipo] = float(item['total_recebido_periodo'] or 0)
 
         sorted_dates = sorted(date_map.keys())
@@ -463,6 +505,8 @@ def financas_dashboard_view(request):
         coopanest_values = [date_map[d]['cooperativa'] for d in sorted_dates]
         hospital_values = [date_map[d]['hospital'] for d in sorted_dates]
         direta_values = [date_map[d]['particular'] for d in sorted_dates]
+        via_cirurgiao_values = [date_map[d]['via_cirurgiao'] for d in sorted_dates]
+        cortesia_values = [date_map[d]['cortesia'] for d in sorted_dates]
 
         # Calculate daily tickets and revenues
         daily_tickets = []
@@ -486,7 +530,9 @@ def financas_dashboard_view(request):
             month_map[key] = {
                 'cooperativa': 0,
                 'hospital': 0,
-                'particular': 0
+                'particular': 0,
+                'via_cirurgiao': 0,
+                'cortesia': 0,
             }
 
         monthly_data = queryset.annotate(
@@ -511,6 +557,10 @@ def financas_dashboard_view(request):
                         month_map[key]['hospital'] = float(item['total_recebido_periodo'] or 0)
                     elif tipo == 'particular':
                         month_map[key]['particular'] = float(item['total_recebido_periodo'] or 0)
+                    elif tipo == 'via_cirurgiao':
+                        month_map[key]['via_cirurgiao'] = float(item['total_recebido_periodo'] or 0)
+                    elif tipo == 'cortesia':
+                        month_map[key]['cortesia'] = float(item['total_recebido_periodo'] or 0)
 
         # Sort by actual date
         sorted_months = sorted(date_range)
@@ -525,6 +575,8 @@ def financas_dashboard_view(request):
         coopanest_values = [month_map[m.strftime("%Y-%m")]['cooperativa'] for m in sorted_months]
         hospital_values = [month_map[m.strftime("%Y-%m")]['hospital'] for m in sorted_months]
         direta_values = [month_map[m.strftime("%Y-%m")]['particular'] for m in sorted_months]
+        via_cirurgiao_values = [month_map[m.strftime("%Y-%m")]['via_cirurgiao'] for m in sorted_months]
+        cortesia_values = [month_map[m.strftime("%Y-%m")]['cortesia'] for m in sorted_months]
 
         # monthly tickets & revenues
         monthly_tickets = []
@@ -547,11 +599,15 @@ def financas_dashboard_view(request):
     total_coopanest = sum(coopanest_values)
     total_hospital = sum(hospital_values)
     total_direta = sum(direta_values)
-    total_all = total_coopanest + total_hospital + total_direta
+    total_via_cirurgiao = sum(via_cirurgiao_values)
+    total_cortesia = sum(cortesia_values)
+    total_all = total_coopanest + total_hospital + total_direta + total_via_cirurgiao + total_cortesia
 
     coopanest_pct = (total_coopanest / total_all * 100) if total_all > 0 else 0
     hospital_pct = (total_hospital / total_all * 100) if total_all > 0 else 0
     direta_pct = (total_direta / total_all * 100) if total_all > 0 else 0
+    via_cirurgiao_pct = (total_via_cirurgiao / total_all * 100) if total_all > 0 else 0
+    cortesia_pct = (total_cortesia / total_all * 100) if total_all > 0 else 0
 
     # -----------------------------------------------------------------------
     # 6) Additional filters (procedimentos, anestesistas)
@@ -604,10 +660,14 @@ def financas_dashboard_view(request):
 
             if selected_graph_type == 'ticket':
                 # Average ticket for the whole group in the period
+                 if clinic:
+                    unfiltered_by_anest_queryset = unfiltered_by_anest_queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
                  group_period_total_avg = unfiltered_by_anest_queryset.aggregate(avg_valor=Avg('valor_faturado'))['avg_valor'] or 0
                  anestesista_total = group_period_total_avg # When "all" is selected, show group average ticket
             else: # 'receitas'
                  # Average revenue per anesthesiologist for the whole group in the period
+                 if clinic:
+                    unfiltered_by_anest_queryset = unfiltered_by_anest_queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
                  group_period_total_sum = unfiltered_by_anest_queryset.aggregate(total=Sum('valor_faturado'))['total'] or 0
                  anestesista_total = group_period_total_sum / num_anestesistas if num_anestesistas > 0 else 0
          else:
@@ -618,6 +678,8 @@ def financas_dashboard_view(request):
     # -----------------------------------------------------------------------
     context = {
         'anestesias_count': anestesias_count,
+        'anestesias_value': anestesias_value,
+        'anestesias_view': anestesias_view,
         'valor_pago': valor_pago,
         'valor_pendente': valor_pendente,
         'valor_glosa': valor_glosa,
@@ -631,6 +693,8 @@ def financas_dashboard_view(request):
         'coopanest_values': coopanest_values,
         'hospital_values': hospital_values,
         'direta_values': direta_values,
+        'via_cirurgiao_values': via_cirurgiao_values,
+        'cortesia_values': cortesia_values,
 
         'selected_period': selected_period,  # could be int or 'custom'
         'custom_start_date': start_date_str,
@@ -646,6 +710,8 @@ def financas_dashboard_view(request):
         'coopanest_pct': coopanest_pct,
         'hospital_pct': hospital_pct,
         'direta_pct': direta_pct,
+        'via_cirurgiao_pct': via_cirurgiao_pct,
+        'cortesia_pct': cortesia_pct,
 
         'procedimentos': procedimentos,
         'selected_procedimento': procedimento,
@@ -656,6 +722,12 @@ def financas_dashboard_view(request):
         'anestesista_total': anestesista_total,
         'selected_graph_type': selected_graph_type,
         'active_role': request.user.get_active_role(),
+        'clinic_choices': CLINIC_TYPE_CHOICES,
+        'selected_clinic': clinic,
+        'include_cooperativa': include_cooperativa != '0',
+        'include_particular': include_particular != '0',
+        'include_hospital': include_hospital != '0',
+        'include_via_cirurgiao': include_via_cirurgiao != '0',
     }
 
     return render(request, 'dashboard_financas.html', context)
@@ -693,6 +765,7 @@ def export_financas_excel(request):
     end_date_str = request.GET.get('end_date', '')
     selected_anestesista_id = request.GET.get('anestesista')
     procedimento_filter_name = request.GET.get('procedimento') # Renamed to avoid clash
+    clinic = request.GET.get('clinic')
 
     # Base queryset with annotation
     queryset = (
@@ -708,20 +781,23 @@ def export_financas_excel(request):
         .filter(group=user_group) # Filter on ProcedimentoFinancas.group
     )
 
+    if clinic:
+        queryset = queryset.filter(procedimento__isnull=False, procedimento__tipo_clinica=clinic)
+
     # Apply Anestesista Filter based on user type
     #Apesar de anestesista não terem acesso ao dashboard, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
     if user.get_active_role() == ANESTESISTA_USER:
         try:
             current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)
             if selected_anestesista_id and str(current_user_anesthesiologist.id) == selected_anestesista_id:
-                 queryset = queryset.filter(procedimento__anestesistas_responsaveis=current_user_anesthesiologist.id)
+                 queryset = queryset.filter(procedimento__cooperado=current_user_anesthesiologist.id)
             # else: No filtering by anesthesiologist if "Todos" or invalid ID selected by anesthesiologist
         except Anesthesiologist.DoesNotExist:
             pass # Don't filter if profile is missing
 
     elif user.get_active_role() in [GESTOR_USER, ADMIN_USER]:
         if selected_anestesista_id:
-            queryset = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id)
+            queryset = queryset.filter(procedimento__cooperado=selected_anestesista_id)
 
     # Apply Procedure Filter
     if procedimento_filter_name:

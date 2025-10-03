@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.db import models
 from constants import (
     PLANTONISTA_ESCALA, STATUS_FINISHED, STATUS_PENDING, SUBSTITUTO_ESCALA, FERIAS_ESCALA,
-    CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
+    CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO, CLINIC_TYPE_CHOICES
 )
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
 import uuid
@@ -66,16 +66,31 @@ class Procedimento(models.Model):
         verbose_name='Procedimento Principal'
     )
     data_horario = models.DateTimeField(verbose_name='Data e Horário Marcados', default=timezone.now)
-    data_horario_fim = models.DateTimeField(verbose_name='Previsão de Término', default=timezone.now().replace(hour=20, minute=0, second=0, microsecond=0))
+    data_horario_fim = models.DateTimeField(verbose_name='Previsão de Término', null=True, blank=True)
     hospital = models.ForeignKey(HospitalClinic, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Hospital/Clínica')
     outro_local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Outro Local')
     cirurgiao = models.ForeignKey(Surgeon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Cirurgião (selecionar se cadastrado no sistema)')
     cirurgiao_nome = models.CharField(max_length=255, blank=True, null=True, verbose_name='Nome do Cirurgião (Se não cadastrado)')
+    # Legacy relation kept for backward compatibility. New model fields below handle
+    # a single Cooperado and a free-text list of Anestesistas.
     anestesistas_responsaveis = models.ManyToManyField(
         Anesthesiologist,
         related_name='procedimentos',
         blank=True,
         verbose_name='Anestesistas Responsáveis'
+    )
+    cooperado = models.ForeignKey(
+        Anesthesiologist,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='procedimentos_como_cooperado',
+        verbose_name='Cooperado'
+    )
+    anestesistas_livres = models.TextField(
+        default='',
+        blank=True,
+        verbose_name='Anestesistas (livre)'
     )
     nps_token = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True, null=True, blank=True)
     visita_pre_anestesica = models.BooleanField(default=False, verbose_name='Visita Pré-Anestésica Realizada')
@@ -89,6 +104,15 @@ class Procedimento(models.Model):
         verbose_name='Eletiva ou Urgência',
         default='eletiva', # Default to 'eletiva' or choose another appropriate default
         null=True, blank=True # Allow null and blank temporarily if procedures can exist without this info initially
+    )
+
+    # New optional field for surgical profile clinic type
+    tipo_clinica = models.CharField(
+        max_length=50,
+        choices=CLINIC_TYPE_CHOICES,
+        verbose_name='Clínica (Perfil Cirúrgico)',
+        null=True,
+        blank=True
     )
 
     class Meta:
