@@ -257,6 +257,8 @@ def get_finance_item(request, type, id):
                 'cpsa': item.cpsa,
                 'tipo_cobranca': item.tipo_cobranca,
                 'tipo_pagamento_direto': item.tipo_pagamento_direto,
+                'matricula': item.matricula,
+                'senha': item.senha,
                 # Get data from procedure if linked, otherwise from api_* fields
                 'paciente_nome': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome,
                 'cpf': item.procedimento.cpf_paciente if item.procedimento else None, # CPF only available if linked
@@ -353,6 +355,8 @@ def update_finance_item(request):
             item.status_pagamento = data.get('status_pagamento')
             item.data_pagamento = data.get('data_pagamento') or None
             item.cpsa = data.get('cpsa') or None
+            item.matricula = data.get('matricula') or None
+            item.senha = data.get('senha') or None
             item.tipo_cobranca = data.get('tipo_cobranca')
             item.tipo_pagamento_direto = data.get('tipo_pagamento_direto') if data.get('tipo_cobranca') == 'particular' else None
 
@@ -483,6 +487,8 @@ def create_receita_item(request):
             status_pagamento=status_pagamento,
             data_pagamento=data_pagamento,
             cpsa=cpsa or None,
+            matricula=data.get('matricula') or None,
+            senha=data.get('senha') or None,
             tipo_cobranca=tipo_cobranca,
             tipo_pagamento_direto=data.get('tipo_pagamento_direto') if tipo_cobranca == 'particular' else None
         )
@@ -635,6 +641,8 @@ def export_finances(request):
                 'Valor a Recuperar': float(item.valor_acatado) if item.valor_acatado is not None else 0.0, # Glosa?
                 'Fonte Pagadora': item.get_tipo_cobranca_display() or '',
                 'CPSA': item.get_cpsa_display() or '',
+                'Matrícula': item.matricula or '',
+                'Senha': item.senha or '',
                 'Anestesista': anest_name,
                 'Situação': item.get_status_pagamento_display() or '',
                 'Data do Pagamento': item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '-',
@@ -1214,6 +1222,10 @@ def conciliar_financas(request):
                         financa.api_hospital_nome = guia.get('hospital'); updated = True
                     if financa.api_cooperado_nome != guia.get('cooperado'):
                         financa.api_cooperado_nome = guia.get('cooperado'); updated = True
+                    if financa.matricula != guia.get('matricula'):
+                        financa.matricula = guia.get('matricula'); updated = True
+                    if financa.senha != guia.get('senha'):
+                        financa.senha = guia.get('senha'); updated = True
                     
                     guia_api_date_parsed = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
                     if financa.api_data_cirurgia != guia_api_date_parsed:
@@ -1274,7 +1286,9 @@ def conciliar_financas(request):
                         api_paciente_nome=guia.get('paciente'),
                         api_data_cirurgia=guia_date, # Use parsed guia_date
                         api_hospital_nome=guia.get('hospital'),
-                        api_cooperado_nome=guia.get('cooperado')
+                        api_cooperado_nome=guia.get('cooperado'),
+                        matricula=guia.get('matricula'),
+                        senha=guia.get('senha')
                     )
                     financas_to_create.append(new_financa)
                     newly_created_count += 1 # For ProcedimentoFinancas
@@ -1305,7 +1319,9 @@ def conciliar_financas(request):
                              api_paciente_nome=guia.get('paciente'),
                              api_data_cirurgia=guia_date, # Use parsed guia_date
                              api_hospital_nome=guia.get('hospital'),
-                             api_cooperado_nome=guia.get('cooperado')
+                             api_cooperado_nome=guia.get('cooperado'),
+                             matricula=guia.get('matricula'),
+                             senha=guia.get('senha')
                         )
                         financas_to_create.append(new_financa)
                         newly_created_count += 1 # For ProcedimentoFinancas

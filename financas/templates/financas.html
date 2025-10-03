@@ -102,6 +102,8 @@
                         <th>Fonte Pagadora</th>
                         <th>Forma de Pagamento</th>
                         <th>CPSA</th>
+                        <th>Matrícula</th>
+                        <th>Senha</th>
                         <th>Cooperado</th>
                         <th>Anestesistas</th>
                         <th>Situação</th>
@@ -161,6 +163,8 @@
                                 {% endif %}
                             </td>
                             <td>{{ item.get_cpsa_display|default:"--" }}</td>
+                            <td>{{ item.matricula|default:"--" }}</td>
+                            <td>{{ item.senha|default:"--" }}</td>
                             <td>
                                 {% if item.procedimento and item.procedimento.cooperado %}
                                     {{ item.procedimento.cooperado.name }}
@@ -229,7 +233,7 @@
                     </tr>
                 {% empty %}
                 <tr>
-                   <td colspan="{% if view_type == 'receitas' %}15{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                   <td colspan="{% if view_type == 'receitas' %}17{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -346,6 +350,14 @@
                 <div class="form-group" id="cpsa-group">
                     <label for="cpsa">CPSA</label>
                     <input type="text" id="cpsa" name="cpsa">
+                </div>
+                <div class="form-group" id="matricula-group">
+                    <label for="matricula">Matrícula</label>
+                    <input type="text" id="matricula" name="matricula">
+                </div>
+                <div class="form-group" id="senha-group">
+                    <label for="senha">Senha</label>
+                    <input type="text" id="senha" name="senha">
                 </div>
                 <div class="form-group" id="cooperado-group">
                     <label for="cooperado">Cooperado</label>
@@ -670,6 +682,8 @@ document.addEventListener('DOMContentLoaded', function() {
                          document.getElementById('data_pagamento').value = data.data_pagamento || '';
                          document.getElementById('tipo_cobranca').value = data.tipo_cobranca || 'cooperativa';
                          document.getElementById('cpsa').value = data.cpsa || '';
+                         document.getElementById('matricula').value = data.matricula || '';
+                         document.getElementById('senha').value = data.senha || '';
                          document.getElementById('cpf').value = data.cpf || ''; // Populate CPF if available
                          
                          if (data.tipo_pagamento_direto) {
@@ -765,6 +779,8 @@ document.addEventListener('DOMContentLoaded', function() {
          document.getElementById('status_pagamento').value = 'em_processamento'; // Default status
          document.getElementById('tipo_cobranca').value = 'cooperativa'; // Default type? Or blank?
          document.getElementById('cpsa').value = ''; 
+         document.getElementById('matricula').value = '';
+         document.getElementById('senha').value = '';
          document.getElementById('data_pagamento').value = '';
          document.getElementById('tipo_pagamento_direto').value = 'cartao'; // Reset direct payment too
 

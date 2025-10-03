@@ -128,6 +128,18 @@ class ProcedimentoFinancas(models.Model):
         null=True, 
         blank=True
     )
+    matricula = models.CharField(
+        max_length=255,
+        verbose_name='Matrícula',
+        null=True,
+        blank=True
+    )
+    senha = models.CharField(
+        max_length=255,
+        verbose_name='Senha',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = "Financeiro do Procedimento"
