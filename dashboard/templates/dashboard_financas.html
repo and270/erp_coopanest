@@ -21,6 +21,26 @@
             <label for="qualidade-view"><b>Qualidade</b></label>
         </div>
         <div class="dashboard-actions">
+            <div class="period-filter" style="margin-left: 12px;">
+                <select id="clinicFilter" class="filter-select">
+                    <option value="">Todas as Clínicas</option>
+                    {% for value,label in clinic_choices %}
+                        <option value="{{ value }}" {% if selected_clinic == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="period-filter" style="margin-left: 12px;">
+                <select id="anestesistaFilter" class="filter-select anestesista-filter">
+                    {% if active_role == GESTOR_USER %}
+                        <option value="">Todos os Anestesistas</option>
+                        {% for anestesista in anestesistas %}
+                            <option value="{{ anestesista.id }}" {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
+                                {{ anestesista.name }}
+                            </option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
             <div class="period-filter">
                 <button class="filter-btn" id="periodFilterBtn">
                     <i class="fas fa-calendar"></i>
@@ -63,14 +83,6 @@
                     </div>
                 </div>
             </div>
-            <div class="period-filter" style="margin-left: 12px;">
-                <select id="clinicFilter" class="filter-select">
-                    <option value="">Todas as Clínicas</option>
-                    {% for value,label in clinic_choices %}
-                        <option value="{{ value }}" {% if selected_clinic == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
             <button class="export-btn" id="exportBtn">
                 <i class="fas fa-download"></i>
                 Exportar
@@ -93,34 +105,11 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="procedure-filter">
-                        <select id="anestesistaFilterAnestesias" class="filter-select anestesista-filter">
-                            {% if active_role == GESTOR_USER %}
-                                <option value="">Todos os Anestesistas</option>
-                                {% for anestesista in anestesistas %}
-                                    <option value="{{ anestesista.id }}" {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ anestesista.name }}
-                                    </option>
-                                {% endfor %}
-                            {% endif %}
-                        </select>
-                    </div>
                 </div>
                 <div class="metric-value">
-                    {% if anestesias_view == 'por_anestesista' %}
-                        {{ anestesias_value|floatformat:1 }}
-                    {% else %}
-                        {{ anestesias_value }}
-                    {% endif %}
+                    {{ anestesias_count }}
                 </div>
                 <div class="metric-label">
-                    <div style="margin-bottom: 6px;">
-                        <label for="anestesiasView" style="font-weight: 600; margin-right: 6px;">Exibir:</label>
-                        <select id="anestesiasView" class="filter-select">
-                            <option value="total" {% if anestesias_view != 'por_anestesista' %}selected{% endif %}>Total</option>
-                            <option value="por_anestesista" {% if anestesias_view == 'por_anestesista' %}selected{% endif %}>Por Anestesista</option>
-                        </select>
-                    </div>
                     {% if selected_period %}
                         {% if selected_period == 'custom' %}
                             (Período Personalizado)
@@ -142,19 +131,6 @@
             <div class="metric-card">
                 <div class="header-row">
                     <h3>Valores Totais</h3>
-                    <div class="procedure-filter">
-                        <select id="anestesistaFilterTotals" class="filter-select anestesista-filter">
-                            {% if active_role == GESTOR_USER %}
-                                <option value="">Todos os Anestesistas</option>
-                                {% for anestesista in anestesistas %}
-                                    <option value="{{ anestesista.id }}"
-                                            {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ anestesista.name }}
-                                    </option>
-                                {% endfor %}
-                            {% endif %}
-                        </select>
-                    </div>
                 </div>
                 <div class="status-bar">
                     <div style="display:flex; gap: 12px; align-items:center; margin-bottom: 8px; flex-wrap: wrap;">
@@ -238,18 +214,6 @@
                                 <div class="section-title">Por Anestesista</div>
                                 <div class="section-value">R$ <span id="anestesistaValue">{{ anestesista_total|format_currency }}</span></div>
                             </div>
-                            <select id="anestesistaFilter" class="filter-select anestesista-filter">
-                                {% if active_role == GESTOR_USER %}
-                                    {# Gestor/Admin View: "Por Anestesista" and All Options #}
-                                    <option value="">Todos os Anestesistas</option>
-                                    {% for anestesista in anestesistas %}
-                                        <option value="{{ anestesista.id }}"
-                                                {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}> {# Compare as string #}
-                                            {{ anestesista.name }}
-                                        </option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
                         </div>
                     </div>
                 </div>
@@ -572,25 +536,16 @@ document.getElementById('graphTypeSelector').addEventListener('change', function
     window.location.href = currentUrl.toString();
 });
 
-// Anestesias view selector (Total vs Por Anestesista)
-document.getElementById('anestesiasView').addEventListener('change', function() {
+// Anestesista filter
+document.getElementById('anestesistaFilter').addEventListener('change', function() {
+    const selectedValue = this.value;
     const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('anestesias_view', this.value);
+    if (selectedValue) {
+        currentUrl.searchParams.set('anestesista', selectedValue);
+    } else {
+        currentUrl.searchParams.delete('anestesista');
+    }
     window.location.href = currentUrl.toString();
-});
-
-// Anestesista filter (both selectors)
-document.querySelectorAll('.anestesista-filter').forEach(function(selectEl) {
-    selectEl.addEventListener('change', function() {
-        const selectedValue = this.value;
-        const currentUrl = new URL(window.location.href);
-        if (selectedValue) {
-            currentUrl.searchParams.set('anestesista', selectedValue);
-        } else {
-            currentUrl.searchParams.delete('anestesista');
-        }
-        window.location.href = currentUrl.toString();
-    });
 });
 
 // Valores Recebidos stacked bar chart

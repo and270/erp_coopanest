@@ -241,7 +241,6 @@ def financas_dashboard_view(request):
     procedimento = request.GET.get('procedimento')
     selected_graph_type = request.GET.get('graph_type', 'ticket')
     clinic = request.GET.get('clinic')
-    anestesias_view = request.GET.get('anestesias_view', 'total')  # 'total' | 'por_anestesista'
     # Charge type filters for Valores Totais card (defaults to include all)
     include_cooperativa = request.GET.get('include_cooperativa', '1')
     include_particular = request.GET.get('include_particular', '1')
@@ -279,7 +278,11 @@ def financas_dashboard_view(request):
             
             # Apply filter only if the selected ID matches the logged-in anesthesiologist
             if selected_anestesista_id and str(current_user_anesthesiologist.id) == selected_anestesista_id:
-                 queryset = queryset.filter(procedimento__cooperado=current_user_anesthesiologist.id)
+                 # Filter by both cooperado and anestesistas_responsaveis fields
+                 queryset = queryset.filter(
+                     Q(procedimento__cooperado=current_user_anesthesiologist.id) |
+                     Q(procedimento__anestesistas_responsaveis=current_user_anesthesiologist.id)
+                 ).distinct()
             # If an ID is selected but doesn't match, or no ID is selected, don't filter by anesthesiologist
             # (implicitly shows 'all' relevant to the user's group)
             else:
@@ -293,7 +296,15 @@ def financas_dashboard_view(request):
     elif user.get_active_role() in [GESTOR_USER, ADMIN_USER]:
         # Gestor/Admin can filter by any anesthesiologist
         if selected_anestesista_id:
-            queryset = queryset.filter(procedimento__cooperado=selected_anestesista_id)
+            print(f"[DEBUG] Filtering by anesthesiologist ID: {selected_anestesista_id}")
+            # Filter by both cooperado and anestesistas_responsaveis fields
+            queryset_before = queryset.count()
+            queryset = queryset.filter(
+                Q(procedimento__cooperado=selected_anestesista_id) |
+                Q(procedimento__anestesistas_responsaveis=selected_anestesista_id)
+            ).distinct()
+            queryset_after = queryset.count()
+            print(f"[DEBUG] Queryset count before filter: {queryset_before}, after filter: {queryset_after}")
         # Keep anestesistas_for_template as anestesistas_all
 
     # Filter by procedimento if given (applies after anesthesiologist filter)
@@ -374,17 +385,25 @@ def financas_dashboard_view(request):
 
     # Distinct procedures
     anestesias_count = queryset.values('procedimento').distinct().count()
-    distinct_cooperados_count = queryset.filter(procedimento__cooperado__isnull=False)\
-        .values('procedimento__cooperado').distinct().count()
-
-    # Determine value to display for anestesias based on view toggle
-    if anestesias_view == 'por_anestesista':
-        if selected_anestesista_id:
-            anestesias_value = anestesias_count  # already filtered by selected anesthesiologist (cooperado)
-        else:
-            anestesias_value = (anestesias_count / distinct_cooperados_count) if distinct_cooperados_count > 0 else 0
-    else:
-        anestesias_value = anestesias_count
+    
+    print(f"[DEBUG] Total finance records: {total_count}")
+    print(f"[DEBUG] Distinct procedures (anestesias): {anestesias_count}")
+    
+    if selected_anestesista_id:
+        # Debug: Show procedures with this anesthesiologist
+        try:
+            anest = Anesthesiologist.objects.get(id=selected_anestesista_id)
+            print(f"[DEBUG] Selected anesthesiologist: {anest.name} (ID: {anest.id})")
+            
+            # Count procedures where this anesthesiologist is cooperado
+            cooperado_count = queryset.filter(procedimento__cooperado=selected_anestesista_id).values('procedimento').distinct().count()
+            print(f"[DEBUG] Procedures where anesthesiologist is cooperado: {cooperado_count}")
+            
+            # Count procedures where this anesthesiologist is in anestesistas_responsaveis
+            responsavel_count = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id).values('procedimento').distinct().count()
+            print(f"[DEBUG] Procedures where anesthesiologist is in anestesistas_responsaveis: {responsavel_count}")
+        except Anesthesiologist.DoesNotExist:
+            print(f"[DEBUG] Anesthesiologist with ID {selected_anestesista_id} not found")
 
     # Apply charge type filters ONLY for the Valores Totais card
     totals_queryset = queryset
@@ -678,8 +697,6 @@ def financas_dashboard_view(request):
     # -----------------------------------------------------------------------
     context = {
         'anestesias_count': anestesias_count,
-        'anestesias_value': anestesias_value,
-        'anestesias_view': anestesias_view,
         'valor_pago': valor_pago,
         'valor_pendente': valor_pendente,
         'valor_glosa': valor_glosa,
@@ -790,14 +807,22 @@ def export_financas_excel(request):
         try:
             current_user_anesthesiologist = Anesthesiologist.objects.get(user=user, group=user_group)
             if selected_anestesista_id and str(current_user_anesthesiologist.id) == selected_anestesista_id:
-                 queryset = queryset.filter(procedimento__cooperado=current_user_anesthesiologist.id)
+                 # Filter by both cooperado and anestesistas_responsaveis fields
+                 queryset = queryset.filter(
+                     Q(procedimento__cooperado=current_user_anesthesiologist.id) |
+                     Q(procedimento__anestesistas_responsaveis=current_user_anesthesiologist.id)
+                 ).distinct()
             # else: No filtering by anesthesiologist if "Todos" or invalid ID selected by anesthesiologist
         except Anesthesiologist.DoesNotExist:
             pass # Don't filter if profile is missing
 
     elif user.get_active_role() in [GESTOR_USER, ADMIN_USER]:
         if selected_anestesista_id:
-            queryset = queryset.filter(procedimento__cooperado=selected_anestesista_id)
+            # Filter by both cooperado and anestesistas_responsaveis fields
+            queryset = queryset.filter(
+                Q(procedimento__cooperado=selected_anestesista_id) |
+                Q(procedimento__anestesistas_responsaveis=selected_anestesista_id)
+            ).distinct()
 
     # Apply Procedure Filter
     if procedimento_filter_name:
