@@ -296,15 +296,11 @@ def financas_dashboard_view(request):
     elif user.get_active_role() in [GESTOR_USER, ADMIN_USER]:
         # Gestor/Admin can filter by any anesthesiologist
         if selected_anestesista_id:
-            print(f"[DEBUG] Filtering by anesthesiologist ID: {selected_anestesista_id}")
             # Filter by both cooperado and anestesistas_responsaveis fields
-            queryset_before = queryset.count()
             queryset = queryset.filter(
                 Q(procedimento__cooperado=selected_anestesista_id) |
                 Q(procedimento__anestesistas_responsaveis=selected_anestesista_id)
             ).distinct()
-            queryset_after = queryset.count()
-            print(f"[DEBUG] Queryset count before filter: {queryset_before}, after filter: {queryset_after}")
         # Keep anestesistas_for_template as anestesistas_all
 
     # Filter by procedimento if given (applies after anesthesiologist filter)
@@ -385,25 +381,6 @@ def financas_dashboard_view(request):
 
     # Distinct procedures
     anestesias_count = queryset.values('procedimento').distinct().count()
-    
-    print(f"[DEBUG] Total finance records: {total_count}")
-    print(f"[DEBUG] Distinct procedures (anestesias): {anestesias_count}")
-    
-    if selected_anestesista_id:
-        # Debug: Show procedures with this anesthesiologist
-        try:
-            anest = Anesthesiologist.objects.get(id=selected_anestesista_id)
-            print(f"[DEBUG] Selected anesthesiologist: {anest.name} (ID: {anest.id})")
-            
-            # Count procedures where this anesthesiologist is cooperado
-            cooperado_count = queryset.filter(procedimento__cooperado=selected_anestesista_id).values('procedimento').distinct().count()
-            print(f"[DEBUG] Procedures where anesthesiologist is cooperado: {cooperado_count}")
-            
-            # Count procedures where this anesthesiologist is in anestesistas_responsaveis
-            responsavel_count = queryset.filter(procedimento__anestesistas_responsaveis=selected_anestesista_id).values('procedimento').distinct().count()
-            print(f"[DEBUG] Procedures where anesthesiologist is in anestesistas_responsaveis: {responsavel_count}")
-        except Anesthesiologist.DoesNotExist:
-            print(f"[DEBUG] Anesthesiologist with ID {selected_anestesista_id} not found")
 
     # Apply charge type filters ONLY for the Valores Totais card
     totals_queryset = queryset
