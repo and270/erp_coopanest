@@ -10,7 +10,7 @@ from agenda.models import ProcedimentoDetalhes, Procedimento
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils import timezone
-from registration.models import Anesthesiologist
+from registration.models import Anesthesiologist, Surgeon
 from dateutil.relativedelta import relativedelta
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 import xlsxwriter
@@ -238,6 +238,7 @@ def financas_dashboard_view(request):
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
     selected_anestesista_id = request.GET.get('anestesista') # Keep as string for comparison
+    selected_cirurgiao_id = request.GET.get('cirurgiao') # Keep as string for comparison
     procedimento = request.GET.get('procedimento')
     selected_graph_type = request.GET.get('graph_type', 'ticket')
     clinic = request.GET.get('clinic')
@@ -269,6 +270,9 @@ def financas_dashboard_view(request):
     anestesistas_all = Anesthesiologist.objects.filter(group=user_group).order_by('name')
     anestesistas_for_template = anestesistas_all # Default for GESTOR/ADMIN
     current_user_anesthesiologist = None
+    
+    # --- Cirurgião Filtering Logic ---
+    cirurgioes_all = Surgeon.objects.filter(group=user_group).order_by('name')
 
     # Apesar de anestesista não terem acesso ao dashboard, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
     if user.get_active_role() == ANESTESISTA_USER:
@@ -300,10 +304,14 @@ def financas_dashboard_view(request):
             queryset = queryset.filter(
                 Q(procedimento__cooperado=selected_anestesista_id) |
                 Q(procedimento__anestesistas_responsaveis=selected_anestesista_id)
-            ).distinct()
+             ).distinct()
         # Keep anestesistas_for_template as anestesistas_all
 
-    # Filter by procedimento if given (applies after anesthesiologist filter)
+    # --- Apply Cirurgião Filter ---
+    if selected_cirurgiao_id:
+        queryset = queryset.filter(procedimento__cirurgiao=selected_cirurgiao_id)
+
+    # Filter by procedimento if given (applies after anesthesiologist and surgeon filters)
     if procedimento:
         queryset = queryset.filter(procedimento__procedimento_principal__name=procedimento)
 
@@ -712,6 +720,8 @@ def financas_dashboard_view(request):
 
         'anestesistas': anestesistas_for_template, # Pass the potentially limited list for the dropdown
         'selected_anestesista': selected_anestesista_id, # Pass the ID that was actually used for filtering
+        'cirurgioes': cirurgioes_all,
+        'selected_cirurgiao': selected_cirurgiao_id,
         'period_total': period_total,
         'anestesista_total': anestesista_total,
         'selected_graph_type': selected_graph_type,
@@ -799,7 +809,11 @@ def export_financas_excel(request):
             queryset = queryset.filter(
                 Q(procedimento__cooperado=selected_anestesista_id) |
                 Q(procedimento__anestesistas_responsaveis=selected_anestesista_id)
-            ).distinct()
+             ).distinct()
+
+    # Apply Cirurgião Filter
+    if selected_cirurgiao_id:
+        queryset = queryset.filter(procedimento__cirurgiao=selected_cirurgiao_id)
 
     # Apply Procedure Filter
     if procedimento_filter_name:

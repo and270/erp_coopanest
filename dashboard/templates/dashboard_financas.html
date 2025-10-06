@@ -21,21 +21,33 @@
             <label for="qualidade-view"><b>Qualidade</b></label>
         </div>
         <div class="dashboard-actions">
-            <div class="period-filter" style="margin-left: 12px;">
-                <select id="clinicFilter" class="filter-select">
+            <div class="period-filter" style="margin-left: 8px;">
+                <select id="clinicFilter" class="filter-select filter-select-compact">
                     <option value="">Todas as Clínicas</option>
                     {% for value,label in clinic_choices %}
                         <option value="{{ value }}" {% if selected_clinic == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="period-filter" style="margin-left: 12px;">
-                <select id="anestesistaFilter" class="filter-select anestesista-filter">
+            <div class="period-filter" style="margin-left: 8px;">
+                <select id="anestesistaFilter" class="filter-select filter-select-compact anestesista-filter">
                     {% if active_role == GESTOR_USER %}
                         <option value="">Todos os Anestesistas</option>
                         {% for anestesista in anestesistas %}
                             <option value="{{ anestesista.id }}" {% if selected_anestesista == anestesista.id|stringformat:"s" %}selected{% endif %}>
                                 {{ anestesista.name }}
+                            </option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="period-filter" style="margin-left: 8px;">
+                <select id="cirurgiaoFilter" class="filter-select filter-select-compact">
+                    {% if active_role == GESTOR_USER %}
+                        <option value="">Todos os Cirurgiões</option>
+                        {% for cirurgiao in cirurgioes %}
+                            <option value="{{ cirurgiao.id }}" {% if selected_cirurgiao == cirurgiao.id|stringformat:"s" %}selected{% endif %}>
+                                {{ cirurgiao.name }}
                             </option>
                         {% endfor %}
                     {% endif %}
@@ -544,6 +556,18 @@ document.getElementById('anestesistaFilter').addEventListener('change', function
         currentUrl.searchParams.set('anestesista', selectedValue);
     } else {
         currentUrl.searchParams.delete('anestesista');
+    }
+    window.location.href = currentUrl.toString();
+});
+
+// Cirurgião filter
+document.getElementById('cirurgiaoFilter').addEventListener('change', function() {
+    const selectedValue = this.value;
+    const currentUrl = new URL(window.location.href);
+    if (selectedValue) {
+        currentUrl.searchParams.set('cirurgiao', selectedValue);
+    } else {
+        currentUrl.searchParams.delete('cirurgiao');
     }
     window.location.href = currentUrl.toString();
 });

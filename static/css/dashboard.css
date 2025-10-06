@@ -474,6 +474,12 @@
     min-width: 150px;
 }
 
+.filter-select-compact {
+    min-width: 140px;
+    max-width: 180px;
+    font-size: 12px;
+}
+
 #ticketMedioChart {
     width: 100% !important;
     height: 300px !important;
