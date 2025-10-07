@@ -1,6 +1,7 @@
 from django import forms
+from datetime import timedelta # Import timedelta
 
-from constants import STATUS_FINISHED
+from constants import STATUS_FINISHED, CLINIC_TYPE_CHOICES
 from .models import BPS_DESCRIPTIONS, EVA_DESCRIPTIONS, FLACC_DESCRIPTIONS, PAINAD_B_DESCRIPTIONS, AvaliacaoRPA, ProcedimentoQualidade
 from financas.models import ProcedimentoFinancas
 import pytz
@@ -91,29 +92,49 @@ class AvaliacaoRPAForm(forms.ModelForm):
 
 class ProcedimentoFinalizacaoForm(forms.ModelForm):
     # Add financial fields
+    procedimento_tipo_clinica = forms.ChoiceField(
+        choices=[('', '--- Selecione a Clínica ---')] + CLINIC_TYPE_CHOICES,
+        required=False,
+        label='Clínica (Perfil Cirúrgico)',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     tipo_cobranca = forms.ChoiceField(
         choices=ProcedimentoFinancas.COBRANCA_CHOICES,
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
         required=True
     )
-    valor_cobranca = forms.DecimalField(
+    valor_faturado = forms.DecimalField(
         max_digits=15,
         decimal_places=2,
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'data-dependent-on': 'tipo_cobranca',
-            'id': 'id_valor_cobranca'
+            'id': 'id_valor_faturado'
         })
     )
     tipo_pagamento_direto = forms.ChoiceField(
         choices=ProcedimentoFinancas.DIRECT_PAYMENT_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Forma de Pagamento (Direto)'
+    )
+
+    data_pagamento = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'dd/mm/aaaa'}),
+        required=False,
+        label='Data do Pagamento (Hospital/Direto)'
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Prefill clinic type from linked Procedimento if available
+        try:
+            procedimento = self.instance.procedimento
+            if procedimento and procedimento.tipo_clinica:
+                self.initial['procedimento_tipo_clinica'] = procedimento.tipo_clinica
+        except Exception:
+            pass
         self.EVA_DESCRIPTIONS = EVA_DESCRIPTIONS
         self.FLACC_DESCRIPTIONS = FLACC_DESCRIPTIONS
         self.BPS_DESCRIPTIONS = BPS_DESCRIPTIONS
@@ -154,8 +175,14 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'eventos_adversos_graves', 'eventos_adversos_graves_desc',
             'reacao_alergica_grave', 'reacao_alergica_grave_desc',
             'encaminhamento_uti', 'evento_adverso_evitavel',
+            'evento_adverso_evitavel_desc',
             'adesao_checklist', 'uso_tecnicas_assepticas',
-            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia'
+            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia_antibiotica',
+            'adesao_prevencao_tvp_tep',
+            # New fields
+            'abreviacao_jejum', 'escala_aldrete',
+            # Financial fields that are part of this form
+            'tipo_cobranca', 'valor_faturado', 'tipo_pagamento_direto', 'data_pagamento'
         ]
         widgets = {
             'data_horario_inicio_efetivo': forms.DateTimeInput(
@@ -212,6 +239,11 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
             ),
+            'evento_adverso_evitavel_desc': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
+            ),
             'adesao_checklist': forms.RadioSelect(
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
@@ -228,7 +260,11 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
             ),
-            'adesao_profilaxia': forms.RadioSelect(
+            'adesao_profilaxia_antibiotica': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'adesao_prevencao_tvp_tep': forms.RadioSelect(
                 choices=[(True, 'Sim'), (False, 'Não')],
                 attrs={'class': 'form-check-inline'}
             ),
@@ -238,12 +274,20 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'tipo_pagamento_direto': forms.Select(
                 attrs={'class': 'form-control'}
             ),
-            'valor_cobranca': forms.NumberInput(
+            'valor_faturado': forms.NumberInput(
                 attrs={
                     'class': 'form-control',
                     'data-dependent-on': 'tipo_cobranca',
-                    'id': 'id_valor_cobranca'
+                    'id': 'id_valor_faturado'
                 }
+            ),
+            'abreviacao_jejum': forms.RadioSelect(
+                choices=[(True, 'Sim'), (False, 'Não')],
+                attrs={'class': 'form-check-inline'}
+            ),
+            'escala_aldrete': forms.RadioSelect(
+                choices=[(i, str(i)) for i in range(0, 11)],
+                attrs={'class': 'form-options-text'}
             ),
         }
 
@@ -253,18 +297,46 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         if commit:
             qualidade_instance.save()
             
-            # Create or update ProcedimentoFinancas
-            financas, _ = ProcedimentoFinancas.objects.get_or_create(
-                procedimento=qualidade_instance.procedimento
-            )
+            # Handle multiple ProcedimentoFinancas records that might exist from conciliation
+            try:
+                financas = ProcedimentoFinancas.objects.get(procedimento=qualidade_instance.procedimento)
+            except ProcedimentoFinancas.DoesNotExist:
+                # Create a new financial record if none exists
+                financas = ProcedimentoFinancas.objects.create(
+                    procedimento=qualidade_instance.procedimento,
+                    group=qualidade_instance.procedimento.group
+                )
+            except ProcedimentoFinancas.MultipleObjectsReturned:
+                # If multiple financial records exist, get the first one
+                # This can happen when conciliation creates multiple CPSAs for the same procedure
+                financas = ProcedimentoFinancas.objects.filter(procedimento=qualidade_instance.procedimento).first()
             financas.tipo_cobranca = self.cleaned_data['tipo_cobranca']
-            financas.valor_cobranca = self.cleaned_data['valor_cobranca']
-            financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto']
+            if self.cleaned_data['tipo_cobranca'] == 'cortesia':
+                financas.valor_faturado = 0
+                financas.valor_recebido = 0
+                financas.valor_recuperado = 0
+            else:
+                financas.valor_faturado = self.cleaned_data['valor_faturado']
+            financas.tipo_pagamento_direto = self.cleaned_data['tipo_pagamento_direto'] if self.cleaned_data['tipo_cobranca'] == 'particular' else None
+            data_pagamento = self.cleaned_data.get('data_pagamento')
+            financas.data_pagamento = data_pagamento
+
+            if data_pagamento:
+                financas.status_pagamento = 'processo_finalizado'
+                financas.valor_recebido = financas.valor_faturado
+            elif not financas.status_pagamento or financas.status_pagamento == 'em_processamento':
+                financas.status_pagamento = 'em_processamento'
+
+            financas.group = qualidade_instance.procedimento.group
             financas.save()
             
             # Update Procedimento status
             procedimento = qualidade_instance.procedimento
             procedimento.status = STATUS_FINISHED
+            # Update optional clinic type if provided
+            clinic_value = self.cleaned_data.get('procedimento_tipo_clinica')
+            if clinic_value:
+                procedimento.tipo_clinica = clinic_value
             procedimento.save()
 
         return qualidade_instance
@@ -280,6 +352,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         eventos_adversos_graves_desc = cleaned_data.get('eventos_adversos_graves_desc')
         tipo_cobranca = cleaned_data.get('tipo_cobranca')
         tipo_pagamento_direto = cleaned_data.get('tipo_pagamento_direto')
+        data_pagamento = cleaned_data.get('data_pagamento')
+        evento_adverso_evitavel = cleaned_data.get('evento_adverso_evitavel')
+        evento_adverso_evitavel_desc = cleaned_data.get('evento_adverso_evitavel_desc')
 
         if inicio:
             # Convert to UTC, then back to Sao Paulo to preserve the exact time
@@ -301,8 +376,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             'eventos_adversos_graves', 'reacao_alergica_grave',
             'encaminhamento_uti', 'evento_adverso_evitavel',
             'adesao_checklist', 'uso_tecnicas_assepticas',
-            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia',
-            'tipo_cobranca'
+            'conformidade_diretrizes', 'ponv', 'adesao_profilaxia_antibiotica',
+            'adesao_prevencao_tvp_tep', 'tipo_cobranca',
+            'abreviacao_jejum', 'escala_aldrete'  # Added new fields
         ]
         
         for field in required_fields:
@@ -312,33 +388,62 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
         if cleaned_data.get('reacao_alergica_grave') and not cleaned_data.get('reacao_alergica_grave_desc'):
             self.add_error('reacao_alergica_grave_desc', 'Este campo é obrigatório quando há reação alérgica grave.')
 
-        if not escala:
-            self.add_error('escala', 'É necessário selecionar uma escala')
+        if evento_adverso_evitavel and not evento_adverso_evitavel_desc:
+            self.add_error('evento_adverso_evitavel_desc', 'Este campo é obrigatório quando há evento adverso evitável.')
 
-        if escala:
-            if escala == 'EVA':
-                if cleaned_data.get('eva_score') is None:
-                    self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
-            elif escala == 'FLACC':
-                for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
-                    if cleaned_data.get(field) is None:
-                        self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
-            elif escala == 'BPS':
-                for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
-                    if cleaned_data.get(field) is None:
-                        self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
-            elif escala == 'PAINAD-B':
-                for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
-                    if cleaned_data.get(field) is None:
-                        self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+        if dor_pos_operatoria is True:  # Only validate pain scale if dor_pos_operatoria is True
+            if not escala:
+                self.add_error('escala', 'É necessário selecionar uma escala')
+            else:
+                if escala == 'EVA':
+                    if cleaned_data.get('eva_score') is None:
+                        self.add_error('eva_score', 'Este campo é obrigatório para a escala EVA.')
+                elif escala == 'FLACC':
+                    for field in ['face', 'pernas', 'atividade', 'choro', 'consolabilidade']:
+                        if cleaned_data.get(field) is None:
+                            self.add_error(field, f'Este campo é obrigatório para a escala FLACC.')
+                elif escala == 'BPS':
+                    for field in ['expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador']:
+                        if cleaned_data.get(field) is None:
+                            self.add_error(field, f'Este campo é obrigatório para a escala BPS.')
+                elif escala == 'PAINAD-B':
+                    for field in ['respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal', 'consolabilidade_painad']:
+                        if cleaned_data.get(field) is None:
+                            self.add_error(field, f'Este campo é obrigatório para a escala PAINAD-B.')
+        elif dor_pos_operatoria is False:
+            # Clear any errors for pain scale fields if dor_pos_operatoria is False
+            pain_scale_fields = [
+                'escala', 'eva_score', 'face', 'pernas', 'atividade', 'choro', 'consolabilidade',
+                'expressao_facial', 'movimentos_membros_superiores', 'adaptacao_ventilador',
+                'respiracao', 'vocalizacao_negativa', 'expressao_facial_painad', 'linguagem_corporal',
+                'consolabilidade_painad'
+            ]
+            for field in pain_scale_fields:
+                if field in self.errors:
+                    del self.errors[field]
 
-        if tipo_cobranca != 'cooperativa' and not cleaned_data.get('valor_cobranca'):
-            self.add_error('valor_cobranca', 'Este campo é obrigatório para este tipo de cobrança.')
+        # Handle special charging types
+        if tipo_cobranca == 'cortesia':
+            cleaned_data['valor_faturado'] = 0
+            cleaned_data['tipo_pagamento_direto'] = None
+        # Require value for Hospital, Direta (particular) and Via Cirurgião
+        if tipo_cobranca in ['hospital', 'particular', 'via_cirurgiao'] and not cleaned_data.get('valor_faturado'):
+            self.add_error('valor_faturado', 'Este campo é obrigatório para este tipo de cobrança.')
 
         if eventos_adversos_graves and not eventos_adversos_graves_desc:
             self.add_error('eventos_adversos_graves_desc', 'Este campo é obrigatório quando há eventos adversos graves.')
 
         if tipo_cobranca == 'particular' and not tipo_pagamento_direto:
             self.add_error('tipo_pagamento_direto', 'Este campo é obrigatório para pagamento direto.')
+
+        # Validations for effective start and end times
+        if inicio and fim: # Ensure both fields are present and valid so far
+            # Ensure end time is strictly after start time
+            if fim <= inicio:
+                self.add_error('data_horario_fim_efetivo', "O horário de término deve ser posterior ao horário de início.")
+            
+            # Ensure duration does not exceed 24 hours
+            if (fim - inicio) > timedelta(hours=24):
+                self.add_error('data_horario_fim_efetivo', "A duração entre o início e o fim é maior que 24 horas. Tem certeza que estes horários estão corretos?")
 
         return cleaned_data

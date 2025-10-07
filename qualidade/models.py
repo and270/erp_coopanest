@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from agenda.models import Procedimento
 from django.utils.safestring import mark_safe
 
@@ -142,26 +143,44 @@ class ProcedimentoQualidade(models.Model):
     ]
 
     EVENTOS_ADVERSOS_CHOICES = [
-        ('broncoaspiracao', 'Broncoaspiração'),
-        ('pcr', 'Parada Cardiorrespiratória (PCR)'),
-        ('hemorragia', 'Hemorragia Maciça'),
-        ('embolia', 'Embolia Pulmonar'),
-        ('choque_anafilatico', 'Choque Anafilático'),
-        ('lesao_orgao', 'Lesão de Órgão Não-Alvo'),
-        ('iam', 'Infarto Agudo do Miocárdio'),
         ('avc', 'Acidente Vascular Cerebral (AVC)'),
-        ('sirs', 'Síndrome da Resposta Inflamatória Sistêmica (SIRS)'),
-        ('tvp', 'Trombose Venosa Profunda (TVP)'),
-        ('ira', 'Insuficiência Renal Aguda'),
+        ('broncoaspiracao', 'Broncoaspiração'),
+        ('choque_anafilatico', 'Choque Anafilático'),
+        ('embolia_pulmonar', 'Embolia Pulmonar'),
+        ('hemorragia_macica', 'Hemorragia Maciça'),
+        ('hipertensao_grave', 'Hipertensão grave necessitando medicação'),
+        ('hipertermia_maligna', 'Hipertermia Maligna'),
+        ('hipotensao_amina', 'Hipotensão necessitando amina'),
+        ('hipoxia_hipoventilacao', 'Hipóxia/Hipoventilação'),
+        ('iam', 'Infarto Agudo do Miocárdio'),
+        ('lesao_nervo_periferico', 'Lesão de Nervo Periférico'),
+        ('lesao_orgao_nao_alvo', 'Lesão de Órgão Não-Alvo'),
+        ('pcr', 'Parada Cardiorrespiratória (PCR)'),
         ('pneumotorax', 'Pneumotórax'),
-        ('sind_compartimental', 'Síndrome Compartimental'),
-        ('hipertermia', 'Hipertermia Maligna'),
-        ('deiscencia', 'Deiscência de Sutura'),
-        ('lesao_nervo', 'Lesão de Nervo Periférico'),
-        ('cegueira', 'Cegueira Pós-Operatória'),
-        ('sdra', 'Síndrome do Desconforto Respiratório Agudo (SDRA)'),
-        ('reacao_transfusional', 'Reação Transfusional Hemolítica Aguda'),
-        ('sepse', 'Sepse Pós-Operatória'),
+        ('reacao_transfusional', 'Reação Transfusional'),
+        ('tvp', 'Trombose Venosa Profunda (TVP)'),
+        ('tromboembolismo_pulmonar', 'Tromboembolismo pulmonar'),
+        ('via_aerea_dificil', 'Via aérea difícil'),
+    ]
+
+    EVENTO_ADVERSO_EVITAVEL_CHOICES = [
+        ('dano_dentario', 'Dano dentário'),
+        ('erro_medicacao', 'Erro de medicação'),
+        ('erro_posologia', 'Erro de posologia'),
+        ('erro_via_administracao', 'Erro de via de administração'),
+        ('falha_equipamento', 'Falha de equipamento'),
+        ('hipertermia_maligna_crise', 'Hipertermia maligna (crise)'),
+        ('hipotermia_nao_intencional', 'Hipotermia não intencional'),
+        ('hipoxia_hipoventilacao_evitavel', 'Hipóxia/Hipoventilação'),
+        ('injecao_intratecal_inadvertida', 'Injeção intratecal inadvertida de medicações não aprovadas'),
+        ('lesao_nervosa_perioperatoria', 'Lesão nervosa perioperatória'),
+        ('lesoes_oculares', 'Lesões oculares'),
+        ('nvpo_nao_prevenido', 'Náuseas e vômitos pós-operatórios (NVPO) não prevenidos'),
+        ('perda_sangue_nao_controlada', 'Perda de sangue não controlada'),
+        ('perfuracao_inadvertida_orgaos', 'Perfuração inadvertida de órgãos'),
+        ('queimaduras', 'Queimaduras'),
+        ('reacao_anafilatica_alergica', 'Reação anafilática/alérgica'),
+        ('via_aerea_dificil_nao_manejada', 'Via aérea difícil não antecipada/não manejada'),
     ]
 
     ESCALA_CHOICES = [
@@ -188,13 +207,21 @@ class ProcedimentoQualidade(models.Model):
     reacao_alergica_grave_desc = models.TextField(verbose_name='Descrição da reação alérgica grave', null=True, blank=True)
     encaminhamento_uti = models.BooleanField(verbose_name='Encaminhamentos não programado à UTI', null=True, blank=True)
     evento_adverso_evitavel = models.BooleanField(verbose_name='Evento adverso evitável', null=True, blank=True)
+    evento_adverso_evitavel_desc = models.CharField(
+        max_length=50,
+        choices=EVENTO_ADVERSO_EVITAVEL_CHOICES,
+        verbose_name='Qual?',
+        null=True,
+        blank=True
+    )
 
     # Protocol adherence fields
     adesao_checklist = models.BooleanField(verbose_name='Adesão ao check list de segurança', null=True, blank=True)
     uso_tecnicas_assepticas = models.BooleanField(verbose_name='Uso adequado de técnicas assépticas', null=True, blank=True)
     conformidade_diretrizes = models.BooleanField(verbose_name='Conformidade com diretrizes e protocolos', null=True, blank=True)
     ponv = models.BooleanField(verbose_name='PONV', null=True, blank=True)
-    adesao_profilaxia = models.BooleanField(verbose_name='Adesão aos protocolos de profilaxia antibiótica e de prevenção de TVP/TEP', null=True, blank=True)
+    adesao_profilaxia_antibiotica = models.BooleanField(verbose_name='Adesão aos protocolos de profilaxia antibiótica', null=True, blank=True)
+    adesao_prevencao_tvp_tep = models.BooleanField(verbose_name='Adesão aos protocolos de prevenção de TVP/TEP', null=True, blank=True)
 
     # Survey form fields
     satisfacao_geral = models.IntegerField(
@@ -259,6 +286,20 @@ class ProcedimentoQualidade(models.Model):
     expressao_facial_painad = models.IntegerField(verbose_name="Expressão facial", null=True, blank=True)
     linguagem_corporal = models.IntegerField(verbose_name="Linguagem corporal", null=True, blank=True)
     consolabilidade_painad = models.IntegerField(verbose_name="Consolabilidade", null=True, blank=True)
+
+    # New fields for fasting and Aldrete score
+    abreviacao_jejum = models.BooleanField(
+        verbose_name='Houve abreviação de jejum?',
+        null=True,  # Allows for procedures where this question might not be applicable or answered
+        blank=True  # Allows the field to be blank in forms
+    )
+    escala_aldrete = models.IntegerField(
+        verbose_name='Escala de Aldrete',
+        null=True,
+        blank=True,
+        help_text='Valor de 0 a 10',
+        validators=[MinValueValidator(0), MaxValueValidator(10)]
+    )
 
     class Meta:
         verbose_name = "Qualidade do Procedimento"

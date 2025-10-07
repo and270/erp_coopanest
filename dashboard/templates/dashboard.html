@@ -105,12 +105,12 @@
             </div>
 
             <div class="metric-card">
-                <h3>Tempo de atraso médio para início da cirurgia</h3>
+                <h3>Tempo de atraso médio para início da cirurgia (hh:mm)</h3>
                 <div class="metric-value">{% if metrics.atraso_medio %}{{ metrics.atraso_medio }}{% else %}--:--{% endif %}</div>
             </div>
 
             <div class="metric-card">
-                <h3>Tempo médio de duração das cirurgias</h3>
+                <h3>Tempo médio de duração das cirurgias (hh:mm)</h3>
                 <div class="metric-value">{% if metrics.duracao_media %}{{ metrics.duracao_media }}{% else %}--:--{% endif %}</div>
             </div>
         </div>
@@ -125,6 +125,18 @@
             <div class="metric-card">
                 <h3>Encaminhamentos não programados ao CTI</h3>
                 <div class="metric-value">{% if metrics.encaminhamentos_uti %}{{ metrics.encaminhamentos_uti|floatformat:0 }}%{% else %}0%{% endif %}</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Abreviação de Jejum</h3>
+                <div class="metric-value">{% if metrics.abreviacao_jejum_percent %}{{ metrics.abreviacao_jejum_percent|floatformat:0 }}%{% else %}--{% endif %}</div>
+                <div class="metric-label">Sim</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>Aldrete > 8</h3>
+                <div class="metric-value">{% if metrics.aldrete_maior_que_8_percent %}{{ metrics.aldrete_maior_que_8_percent|floatformat:0 }}%{% else %}--{% endif %}</div>
+                <div class="metric-label">% com Aldrete acima de 8</div>
             </div>
         </div>
 
@@ -193,6 +205,22 @@
                     </div>
                     <div class="progress-label">{% if metrics.tecnicas_assepticas %}{{ metrics.tecnicas_assepticas|floatformat:0 }}%{% else %}--{% endif %}</div>
                     <div class="progress-title">Uso de técnicas assépticas</div>
+                </div>
+
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {% if metrics.adesao_profilaxia_antibiotica %}{{ metrics.adesao_profilaxia_antibiotica|floatformat:0 }}%{% else %}100%{% endif %}"></div>
+                    </div>
+                    <div class="progress-label">{% if metrics.adesao_profilaxia_antibiotica %}{{ metrics.adesao_profilaxia_antibiotica|floatformat:0 }}%{% else %}--{% endif %}</div>
+                    <div class="progress-title">Adesão à profilaxia antibiótica</div>
+                </div>
+
+                <div class="progress-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="height: {% if metrics.adesao_prevencao_tvp_tep %}{{ metrics.adesao_prevencao_tvp_tep|floatformat:0 }}%{% else %}100%{% endif %}"></div>
+                    </div>
+                    <div class="progress-label">{% if metrics.adesao_prevencao_tvp_tep %}{{ metrics.adesao_prevencao_tvp_tep|floatformat:0 }}%{% else %}--{% endif %}</div>
+                    <div class="progress-title">Adesão à prevenção de TVP/TEP</div>
                 </div>
             </div>
         </div>

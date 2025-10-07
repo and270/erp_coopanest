@@ -44,7 +44,7 @@
 
 .header-actions {
     display: flex;
-    gap: 5px;
+    gap: 8px; /* Adjusted gap for more space */
     align-items: center;
     margin-bottom: 24px;
     width: 100%;
@@ -52,7 +52,8 @@
 
 .search-box {
     position: relative;
-    width: 55%;
+    /* width: 55%; */ /* Let it flex */
+    flex-grow: 3; /* Give search more space */
 }
 
 .search-box input {
@@ -75,7 +76,9 @@
 }
 
 .status-filter {
-    width: 15%;
+    /* width: 15%; */ /* Let it flex */
+    flex-grow: 1; /* Give it some space */
+    min-width: 150px; /* Minimum width */
 }
 
 .status-filter select {
@@ -95,7 +98,8 @@
 }
 
 .filter-btn,
-.export-btn {
+.export-btn,
+.header-actions .add-btn { /* Include the add button in header */
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -103,13 +107,17 @@
     border: none;
     border-radius: 6px;
     font-family: Inter;
-    font-size: 16px;
+    font-size: 14px; /* Consistent font size */
     cursor: pointer;
     height: 35px;
+    white-space: nowrap; /* Prevent wrapping */
+    flex-shrink: 0; /* Don't shrink buttons */
 }
 .period-filter {
-    width: 15%;
+    /* width: 15%; */ /* Let it flex */
+    flex-grow: 1; /* Give it some space */
     position: relative;
+    min-width: 160px; /* Minimum width */
 }
 
 .period-dropdown {
@@ -200,26 +208,32 @@
 .filter-btn {
     background: #F3F3F3;
     color: #3D3D3D;
-    width: 100%;
+    width: 100%; /* Fill container */
     justify-content: center;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 14px;
-    min-width: 150px;
+    /* min-width: 150px; */ /* Removed fixed min-width */
 }
 
 .export-btn {
     background: #1A73E8;
     color: white;
-    width: 15%;
+    /* width: 15%; */ /* Let it flex */
     justify-content: center;
 }
+
+.header-actions .add-btn { /* Specific style for add button in header */
+    background: #1A73E8;
+    color: white;
+    justify-content: center;
+}
+
 
 .financas-table {
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow-x: auto;
     margin-bottom: 24px;
     width: 100%;
 }
@@ -274,6 +288,7 @@
     -webkit-text-fill-color: white;
 }
 
+/* Existing .add-btn outside header (for Despesas) */
 .add-btn {
     display: inline-flex;
     align-items: center;
@@ -286,7 +301,7 @@
     font-family: Inter;
     font-size: 14px;
     cursor: pointer;
-    margin-top: 24px;
+    margin-top: 24px; /* Only applies to the one outside header */
 }
 
 /* Modal styles */
@@ -306,8 +321,9 @@
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    max-width: 500px;
+    max-width: 600px;
     position: relative;
+    color: #000000; /* Ensure text in all modals is black */
 }
 
 .modal-content h2 {
@@ -427,7 +443,8 @@
     .search-box,
     .status-filter,
     .period-filter,
-    .export-btn {
+    .export-btn,
+    .header-actions .add-btn { /* Make sure add button is full width on mobile */
         width: 100%;
     }
     
@@ -440,4 +457,172 @@
         width: 100%;
         right: 0;
     }
+}
+
+
+.conciliation-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    color: #000000; /* Ensure text in conciliation cards is black */
+}
+
+.comparison {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.system-data, .api-data {
+    flex: 1;
+    padding: 10px;
+    color: #000000; /* Ensure text in data sections is black */
+}
+
+.system-data h3, .api-data h3 {
+    color: #000000; /* Ensure headings are black */
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.conciliate-btn {
+    /* background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer; */
+    display: none; /* Hide the old button if still in HTML */
+}
+
+/* Generic FAB Styles */
+.fab {
+    position: fixed;
+    bottom: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.fab i {
+    font-size: 20px;
+}
+
+/* Conciliation FAB */
+#conciliate-fab {
+    right: 30px; /* Position on the far right */
+    background-color: #4CAF50; /* Green */
+}
+
+#conciliate-fab:hover {
+    background-color: #45a049;
+}
+
+/* Removed #add-financa-fab styles as it no longer exists */
+
+
+/* Styles for unmatched-guias-modal */
+#unmatched-guias-list {
+    color: #000000; /* Ensure text in unmatched guias list is black */
+    overflow-x: auto; /* Add horizontal scrolling if needed */
+    max-width: 100%; /* Ensure it doesn't exceed parent width */
+}
+
+#unmatched-guias-list table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Help with sizing columns */
+}
+
+#unmatched-guias-list th,
+#unmatched-guias-list td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    color: #000000; /* Ensure table text is black */
+    word-wrap: break-word; /* Allow long words to break */
+    white-space: normal; /* Allow normal wrapping */
+}
+
+/* Keep specific column widths for structure, but content can now wrap */
+#unmatched-guias-list th:first-child, #unmatched-guias-list td:first-child {
+    width: 12%; /* CPSA ID column */
+}
+
+#unmatched-guias-list th:nth-child(3), #unmatched-guias-list td:nth-child(3) {
+    width: 12%; /* Data column */
+}
+
+#unmatched-guias-list th:nth-child(4), #unmatched-guias-list td:nth-child(4) {
+    width: 12%; /* Valor column */
+}
+
+/* For unmatched-guias-modal specifically, make it wider */
+#unmatched-guias-modal .modal-content {
+    max-width: 800px; /* Wider than the default */
+}
+
+#no-unmatched-guias p,
+#no-matches p {
+    color: #000000; /* Ensure message text is black */
+}
+
+/* Despesas Recorrentes Styles */
+.add-buttons-container {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.add-buttons-container .add-btn {
+    margin-top: 0; /* Remove individual margin since container has it */
+}
+
+.btn-recorrente {
+    background: #28a745 !important; /* Green color for recurring expenses */
+}
+
+.btn-recorrente:hover {
+    background: #218838 !important;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+}
+
+.badge-despesa {
+    background-color: #6c757d; /* Gray for regular expenses */
+}
+
+.badge-recorrente {
+    background-color: #28a745; /* Green for recurring expenses */
+}
+
+/* Hide despesas-recorrentes-fields by default */
+#despesas-recorrentes-fields {
+    display: none;
 }

@@ -5,7 +5,7 @@ from agenda.views import MONTH_NAMES_PT, get_calendar_dates, get_week_dates
 from financas.models import ProcedimentoFinancas
 from registration.models import CustomUser
 from agenda.models import Procedimento
-from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, SECRETARIA_USER, STATUS_FINISHED
+from constants import ADMIN_USER, ANESTESISTA_USER, GESTOR_USER, STATUS_FINISHED
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils.translation import gettext as _
@@ -19,6 +19,7 @@ from .models import AvaliacaoRPA, ProcedimentoQualidade
 from django.views.decorators.http import require_POST
 from .forms import ProcedimentoFinalizacaoForm
 from django.contrib import messages
+import pytz
 
 @login_required
 def search_qualidade(request):
@@ -96,7 +97,6 @@ def search_qualidade(request):
         'current_month': month,
         'current_week_start': week_start,
         'month_name': MONTH_NAMES_PT[month],
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -216,7 +216,6 @@ def qualidade_view(request):
         'current_month': month,
         'current_week_start': week_start,
         'month_name': MONTH_NAMES_PT[month],
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -285,7 +284,6 @@ def avaliacao_rpa(request, procedimento_id):
     context = {
         'form': form,
         'procedimento': procedimento,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
@@ -301,7 +299,20 @@ def finalizar_procedimento_view(request, procedimento_id):
     
     # Get or create related models
     qualidade, _ = ProcedimentoQualidade.objects.get_or_create(procedimento=procedimento)
-    financas, _ = ProcedimentoFinancas.objects.get_or_create(procedimento=procedimento)
+    
+    # Handle multiple ProcedimentoFinancas records that might exist from conciliation
+    try:
+        financas = ProcedimentoFinancas.objects.get(procedimento=procedimento)
+    except ProcedimentoFinancas.DoesNotExist:
+        # Create a new financial record if none exists
+        financas = ProcedimentoFinancas.objects.create(
+            procedimento=procedimento,
+            group=procedimento.group
+        )
+    except ProcedimentoFinancas.MultipleObjectsReturned:
+        # If multiple financial records exist, get the first one
+        # This can happen when conciliation creates multiple CPSAs for the same procedure
+        financas = ProcedimentoFinancas.objects.filter(procedimento=procedimento).first()
     
     if request.method == 'POST':
         form = ProcedimentoFinalizacaoForm(request.POST, instance=qualidade)
@@ -311,17 +322,63 @@ def finalizar_procedimento_view(request, procedimento_id):
             return redirect('qualidade')
     else:
         initial_data = {
-            'tipo_cobranca': financas.tipo_cobranca,
-            'valor_cobranca': financas.valor_cobranca,
+            # Finance defaults
+            'tipo_cobranca': financas.tipo_cobranca or 'cooperativa',
+            'valor_faturado': financas.valor_faturado,
             'tipo_pagamento_direto': financas.tipo_pagamento_direto,
+            'data_pagamento': financas.data_pagamento,
+
+            # Quality form defaults (pre-fill like the provided screenshot)
+            # Pain and scales
+            'dor_pos_operatoria': False,
+            'abreviacao_jejum': False,
+
+            # Safety/protocol adherence
+            'adesao_checklist': True,
+            'uso_tecnicas_assepticas': True,
+            'conformidade_diretrizes': True,
+            'adesao_profilaxia_antibiotica': True,
+            'adesao_prevencao_tvp_tep': True,
+
+            # Adverse events & outcomes
+            'eventos_adversos_graves': False,
+            'reacao_alergica_grave': False,
+            'encaminhamento_uti': False,
+            'evento_adverso_evitavel': False,
+            'ponv': False,
         }
+        
+        # Pre-fill effective start and end times from the Procedimento object
+        # if they are not already set in the ProcedimentoQualidade instance.
+        # The form's __init__ method handles formatting for existing instance values.
+        # Here, we are providing initial values from the parent 'procedimento' object.
+
+        local_tz = pytz.timezone('America/Sao_Paulo')
+
+        # Only pre-fill if the 'qualidade' instance doesn't already have these times.
+        # If 'qualidade.data_horario_inicio_efetivo' is None, try to use 'procedimento.data_horario'.
+        if not qualidade.data_horario_inicio_efetivo and procedimento.data_horario:
+            # Ensure 'procedimento.data_horario' is timezone-aware (assuming UTC if naive)
+            dt_inicio = procedimento.data_horario
+            if timezone.is_naive(dt_inicio):
+                dt_inicio = timezone.make_aware(dt_inicio, pytz.utc)
+            local_inicio = dt_inicio.astimezone(local_tz)
+            initial_data['data_horario_inicio_efetivo'] = local_inicio.strftime('%Y-%m-%dT%H:%M')
+
+        # Similarly for the end time.
+        if not qualidade.data_horario_fim_efetivo and procedimento.data_horario_fim:
+            dt_fim = procedimento.data_horario_fim
+            if timezone.is_naive(dt_fim):
+                dt_fim = timezone.make_aware(dt_fim, pytz.utc)
+            local_fim = dt_fim.astimezone(local_tz)
+            initial_data['data_horario_fim_efetivo'] = local_fim.strftime('%Y-%m-%dT%H:%M')
+            
         form = ProcedimentoFinalizacaoForm(instance=qualidade, initial=initial_data)
     
     context = {
         'form': form,
         'procedimento': procedimento,
         'financas': financas,
-        'SECRETARIA_USER': SECRETARIA_USER,
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,

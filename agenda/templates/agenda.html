@@ -1,5 +1,6 @@
 {% extends 'layout.html' %}
 {% load static %}
+{% load tz %}
 
 {% block title %}Agenda{% endblock %}
 
@@ -44,6 +45,7 @@
                 <input type="radio" id="agenda-view" name="view-toggle" checked>
                 <label for="agenda-view"><b>Agenda</b></label>
             </div>
+            <button id="open-import-modal" class="btn btn-secondary" style="margin-left: 10px;">Importar</button>
         </div>
     </div>
 
@@ -65,9 +67,8 @@
             <div class="event-types-container">
                 <div class="event-types-legend">Legenda</div>
                 <ul class="event-types">
-                    <li><button class="btn-cirurgias">Cirurgia</button></li>
-                    <li><button class="btn-procedimentos">Procedimento fora do centro cirúrgico</button></li>
-                    <li><button class="btn-exames">Exame</button></li>
+                    <li><button class="btn-consultas">Consulta</button></li>
+                    <li><button class="btn-procedimentos">Cirurgia / Procedimento ambulatorial</button></li>
                 </ul>
             </div>
         </div>
@@ -106,27 +107,28 @@
                     <span>SÁB</span>
                 </div>
                 {% for date in calendar_dates %}
-                    <div class="day {% if not date.is_current_month %}other-month{% endif %}" data-date="{{ date.day|date:'Y-m-d' }}">
+                    <div class="day" data-date="{{ date.day|date:'Y-m-d' }}">
                         <span>{{ date.day.day }}</span>
                         {% for procedimento in procedimentos %}
-                            {% if procedimento.data_horario.date == date.day.date %}
-                                <div class="procedure-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
-                                    <span class="procedure-time-patient">{{ procedimento.data_horario|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
+                            {% with local_time=procedimento.data_horario|localtime %}
+                            {% if local_time|date:'Y-m-d' == date.day|date:'Y-m-d' %}
+                                <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
+                                    <span class="procedure-time-patient">{{ local_time|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
-                                    <span class="procedure-anesthesiologist">{{ procedimento.anestesista_responsavel.name }}
-                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
-                                        {% endfor %}
+                                    <span class="procedure-anesthesiologist">
+                                        {% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% endif %}
+                                        {% if procedimento.anestesistas_livres %}{% if procedimento.cooperado %}, {% endif %}{{ procedimento.anestesistas_livres }}{% endif %}
                                     </span>
                                 </div>
                                 <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                     <div class="procedure-modal-content">
                                         <span class="close-modal">&times;</span>
                                         <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                        <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
-                                        <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
+                                        <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
+                                        <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                         <br>
                                         <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
+                                        <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
                                         <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                         <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
                                         <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
@@ -137,13 +139,8 @@
                                                 {{ procedimento.cirurgiao_nome|default:"Não informado" }}
                                             {% endif %}
                                         </span></strong></p>
-                                        <p>Anestesistas: <strong>
-                                            <span class="modal-anesthesiologists">
-                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            </span>
-                                        </strong></p>
+                                        <p>Cooperado: <strong><span class="modal-cooperado">{% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% else %}--{% endif %}</span></strong></p>
+                                        <p>Anestesistas: <strong><span class="modal-anesthesiologists">{{ procedimento.anestesistas_livres|default:"--" }}</span></strong></p>
                                         <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                         <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                         <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -161,6 +158,7 @@
                                     </div>
                                 </div>
                             {% endif %}
+                            {% endwith %}
                         {% endfor %}
                     </div>
                 {% endfor %}
@@ -185,27 +183,28 @@
                         {% for hour in hours %}
                             <div class="hour-slot" data-hour="{{ hour }}">
                                 {% for procedimento in procedimentos %}
-                                    {% if procedimento.data_horario|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
-                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'cirurgia_procedimento' %}cirurgia{% elif procedimento.procedimento_type == 'fora_centro_procedimento' %}fora-centro{% elif procedimento.procedimento_type == 'exame_procedimento' %}exame{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ procedimento.data_horario|date:'Y-m-d' }}">
+                                    {% with local_time=procedimento.data_horario|localtime %}
+                                    {% if local_time|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
+                                        <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
                                             <div class="procedure-first-row">
-                                                <span class="procedure-time">{{ procedimento.data_horario|date:"H:i" }}</span>
+                                                <span class="procedure-time">{{ local_time|date:"H:i" }}</span>
                                                 <span class="procedure-patient">{{ procedimento.nome_paciente }}</span>
                                             </div>
-                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
+                                            <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:15 }}</span>
                                             <span class="procedure-anesthesiologist">
-                                                {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                                    {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
+                                                {% if procedimento.cooperado %}{{ procedimento.cooperado.name|truncatechars:15 }}{% endif %}
+                                                {% if procedimento.anestesistas_livres %}{% if procedimento.cooperado %}, {% endif %}{{ procedimento.anestesistas_livres|truncatechars:30 }}{% endif %}
                                             </span>
                                         </div>
                                         <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
                                             <div class="procedure-modal-content">
                                                 <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                                <p><span class="modal-date">{{ procedimento.data_horario|date:"d/m/Y" }}</span></p>
-                                                <p><span class="modal-start-time">{{ procedimento.data_horario|date:"H:i" }} - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|date:"H:i" }}</span></p>
+                                                <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
+                                                <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                                 <br>
                                                 <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
+                                                <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
                                                 <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
                                                 <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
                                                 <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
@@ -216,13 +215,8 @@
                                                         {{ procedimento.cirurgiao_nome|default:"Não informado" }}
                                                     {% endif %}
                                                 </span></strong></p>
-                                                <p>Anestesistas: <strong>
-                                                    <span class="modal-anesthesiologists">
-                                                        {% for anestesista in procedimento.anestesistas_responsaveis.all %}
-                                                            {{ anestesista.name }}{% if not forloop.last %}, {% endif %}
-                                                        {% endfor %}
-                                                    </span>
-                                                </strong></p>
+                                                <p>Cooperado: <strong><span class="modal-cooperado">{% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% else %}--{% endif %}</span></strong></p>
+                                                <p>Anestesistas: <strong><span class="modal-anesthesiologists">{{ procedimento.anestesistas_livres|default:"--" }}</span></strong></p>
                                                 <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
                                                 <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
                                                 <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
@@ -240,6 +234,7 @@
                                             </div>
                                         </div>
                                     {% endif %}
+                                    {% endwith %}
                                 {% endfor %}
                             </div>
                         {% endfor %}
@@ -262,11 +257,6 @@
             {{ form.non_field_errors }}
             
             <div class="form-group">
-                <label for="{{ form.procedimento_type.id_for_label }}">{{ form.procedimento_type.label }}<span class="required-asterisk">*</span></label>
-                {{ form.procedimento_type }}
-            </div>
-            
-            <div class="form-group">
                 <label for="{{ form.data.id_for_label }}">{{ form.data.label }}<span class="required-asterisk">*</span></label>
                 {{ form.data }}
             </div>
@@ -278,7 +268,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}<span class="required-asterisk">*</span></label>
+                    <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}</label>
                     {{ form.end_time }}
                 </div>
             </div>
@@ -299,6 +289,11 @@
             </div>
             
             <div class="form-group">
+                <label for="{{ form.convenio_nome_novo.id_for_label }}">{{ form.convenio_nome_novo.label }}</label>
+                {{ form.convenio_nome_novo }}
+            </div>
+            
+            <div class="form-group">
                 <label for="{{ form.cpf_paciente.id_for_label }}">{{ form.cpf_paciente.label }}</label>
                 {{ form.cpf_paciente }}
             </div>
@@ -307,6 +302,16 @@
             <div class="form-group">
                 <label for="{{ form.procedimento_principal.id_for_label }}">{{ form.procedimento_principal.label }}<span class="required-asterisk">*</span></label>
                 {{ form.procedimento_principal }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.tipo_procedimento.id_for_label }}">{{ form.tipo_procedimento.label }}</label>
+                {{ form.tipo_procedimento }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.tipo_clinica.id_for_label }}">{{ form.tipo_clinica.label }}</label>
+                {{ form.tipo_clinica }}
             </div>
             
             <div class="form-group">
@@ -327,11 +332,24 @@
                     {{ form.cirurgiao_nome }}
                 </div>
             </div>
-            
+
             <div class="form-group">
-                <label for="{{ form.anestesistas_responsaveis.id_for_label }}">{{ form.anestesistas_responsaveis.label }}</label>
-                {{ form.anestesistas_responsaveis }}
-                <button type="button" id="add-anesthesiologist" class="btn btn-secondary btn-sm mt-2">+ Adicionar Anestesista</button>
+                <label for="{{ form.cooperado.id_for_label }}">{{ form.cooperado.label }}</label>
+                {{ form.cooperado }}
+            </div>
+
+            <div class="form-group">
+                <label>Anestesista(s)</label>
+                <div class="input-group">
+                    <input type="text" id="anest-free-input" class="form-control" placeholder="Nome do anestesista">
+                    <button type="button" id="add-free-anest" class="btn btn-secondary btn-sm mt-2">+ Adicionar</button>
+                </div>
+                {{ form.anestesistas_livres }}
+                
+            </div>
+
+            <div id="selected-anesthesiologists-container" class="mt-2">
+                <!-- Free-text anesthesiologists will be added here -->
             </div>
             
             <div class="form-group-inline">
@@ -359,6 +377,24 @@
     </div>
 </div>
 <div id="customAlert" class="custom-alert"></div>
+
+<!-- Import Modal (same structure/styles as other modals) -->
+<div id="import-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" id="close-import-modal">&times;</span>
+        <h2>Importar Agendamentos (.xlsx)</h2>
+        <p class="required-field-text" style="margin-bottom: 10px;">Use planilha com as colunas suportadas: <strong>Obrigatórias:</strong> Data, Paciente. <strong>Opcionais:</strong> Hora início, Hora fim, N° CPSA, Plano de saúde, Hospital/Clínica, Eletivo/Urgência, CPF, Cirurgia/Códigos, Anestesista/Cooperado, Cirurgião, Forma Pagamento, Valor, Data Recebimento, Valor Recebido, Observação.</p>
+        <form>
+            <div class="form-group">
+                <label for="import-file">Arquivo .xlsx</label>
+                <input type="file" id="import-file" accept=".xlsx">
+            </div>
+            <button type="button" class="cadastrar-btn" id="run-import-btn">Importar</button>
+        </form>
+        <div id="import-results" style="margin-top: 15px; max-height: 300px; overflow: auto;"></div>
+    </div>
+    
+</div>
 
 {% endblock %}
 
@@ -479,8 +515,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentDateRange = document.getElementById('current-date-range');
 
     let currentView = '{{ view_type }}';
-    let currentYear = {{ current_year }};
-    let currentMonth = {{ current_month }};
+    let currentYear = parseInt("{{ current_year }}");
+    let currentMonth = parseInt("{{ current_month }}");
     let currentWeekStart = new Date('{{ current_week_start|date:"Y-m-d" }}T00:00:00');
 
     const MONTH_NAMES_PT = {
@@ -504,7 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadView(year, month, weekStart) {
-        const base_url = '{% url 'agenda' %}';
+        const base_url = "{% url 'agenda' %}";
         const url = new URL(window.location.origin + base_url);
         url.searchParams.set('year', year);
         url.searchParams.set('month', month);
@@ -636,6 +672,113 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 <script>
+    // Import modal open/close
+    (function(){
+        const openBtn = document.getElementById('open-import-modal');
+        const modal = document.getElementById('import-modal');
+        const closeBtn = document.getElementById('close-import-modal');
+        const runBtn = document.getElementById('run-import-btn');
+        const fileInput = document.getElementById('import-file');
+        const resultsDiv = document.getElementById('import-results');
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function renderResults(data){
+            const container = document.createElement('div');
+            const summary = document.createElement('p');
+            summary.innerHTML = `<strong>Criados:</strong> ${data.created} | <strong>CPSA vinculados:</strong> ${data.financas_linked}`;
+            container.appendChild(summary);
+
+            if (data.results && data.results.length){
+                const list = document.createElement('div');
+                data.results.forEach(r => {
+                    const row = document.createElement('div');
+                    row.style.padding = '6px 0';
+                    const msgs = (r.errors || r.warnings || []).join('; ');
+                    row.textContent = `Linha ${r.row} — ${r.status}${msgs ? ' — ' + msgs : ''}`;
+                    list.appendChild(row);
+                });
+                container.appendChild(list);
+            }
+
+            const btn = document.createElement('button');
+            btn.className = 'cadastrar-btn';
+            btn.id = 'reload-after-import';
+            btn.textContent = 'Recarregar página';
+            btn.addEventListener('click', () => window.location.reload());
+            container.appendChild(btn);
+
+            resultsDiv.innerHTML = '';
+            resultsDiv.appendChild(container);
+        }
+
+        if (openBtn){
+            openBtn.addEventListener('click', function(){
+                resultsDiv.innerHTML = '';
+                fileInput.value = '';
+                modal.style.display = 'block';
+            });
+        }
+        if (closeBtn){
+            closeBtn.addEventListener('click', function(){
+                modal.style.display = 'none';
+            });
+        }
+        window.addEventListener('click', function(e){
+            if (e.target === modal){ modal.style.display = 'none'; }
+        });
+
+        if (runBtn){
+            runBtn.addEventListener('click', function(){
+                const file = fileInput.files && fileInput.files[0];
+                if (!file){
+                    showCustomAlert('Selecione um arquivo .xlsx para importar.', 'error');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', file);
+                runBtn.disabled = true;
+                runBtn.textContent = 'Importando...';
+                fetch('/agenda/import/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success){
+                        showCustomAlert(data.message || 'Falha na importação.', 'error');
+                    } else {
+                        showCustomAlert('Importação concluída.', 'success');
+                        renderResults(data);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showCustomAlert('Erro ao importar. Tente novamente.', 'error');
+                })
+                .finally(() => {
+                    runBtn.disabled = false;
+                    runBtn.textContent = 'Importar';
+                });
+            });
+        }
+    })();
+</script>
+<script>
     $(document).ready(function(){
         // Apply masks
         $("input[name='data']").inputmask("99/99/9999");  // dd/mm/yyyy
@@ -678,29 +821,56 @@ document.addEventListener('DOMContentLoaded', function() {
     const procedureFormModal = document.getElementById('procedimento-form-modal');
     const formSubmitBtn = document.getElementById('form-submit-btn');
     const procedimentoForm = document.getElementById('procedimento-form');
-    const addAnesthesiologistBtn = document.getElementById('add-anesthesiologist');
-    const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
+    const selectedAnesthesiologistsContainer = document.getElementById('selected-anesthesiologists-container');
+    const anestFreeInput = document.getElementById('anest-free-input');
+    const addFreeAnestBtn = document.getElementById('add-free-anest');
+    const hiddenAnestLivres = document.getElementById('id_anestesistas_livres');
 
-    addAnesthesiologistBtn.addEventListener('click', function() {
-        const selectedOptions = Array.from(anesthesiologistSelect.selectedOptions);
-        
-        if (selectedOptions.length > 0) {
-            selectedOptions.forEach(option => {
-                const newDiv = document.createElement('div');
-                newDiv.className = 'selected-anesthesiologist';
-                newDiv.innerHTML = `
-                    ${option.text}
-                    <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
-                `;
-                anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
-                option.selected = false;
-            });
+    function syncHiddenFromChips() {
+        const names = Array.from(selectedAnesthesiologistsContainer.querySelectorAll('.selected-anesthesiologist'))
+            .map(div => div.dataset.name)
+            .filter(Boolean);
+        hiddenAnestLivres.value = names.join(', ');
+    }
+
+    function addFreeAnesthesiologist(name) {
+        const trimmed = (name || '').trim();
+        if (!trimmed) {
+            showCustomAlert('Digite o nome do anestesista para adicionar.', 'error');
+            return;
         }
-    });
+        const exists = selectedAnesthesiologistsContainer.querySelector(`[data-name="${trimmed}"]`);
+        if (exists) {
+            showCustomAlert(`${trimmed} já foi adicionado.`, 'error');
+            return;
+        }
+        const div = document.createElement('div');
+        div.className = 'selected-anesthesiologist';
+        div.dataset.name = trimmed;
+        div.innerHTML = `${trimmed} <button type="button" class="btn btn-danger btn-sm remove-free-anest" data-name="${trimmed}">Remover</button>`;
+        selectedAnesthesiologistsContainer.appendChild(div);
+        anestFreeInput.value = '';
+        syncHiddenFromChips();
+    }
 
-    document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('remove-anesthesiologist')) {
-            e.target.parentElement.remove();
+    function removeFreeAnesthesiologist(name) {
+        const div = selectedAnesthesiologistsContainer.querySelector(`[data-name="${name}"]`);
+        if (div) {
+            div.remove();
+            syncHiddenFromChips();
+        }
+    }
+
+    if (addFreeAnestBtn) {
+        addFreeAnestBtn.addEventListener('click', function() {
+            addFreeAnesthesiologist(anestFreeInput.value);
+        });
+    }
+
+    selectedAnesthesiologistsContainer.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('remove-free-anest')) {
+            const name = e.target.dataset.name;
+            removeFreeAnesthesiologist(name);
         }
     });
     
@@ -712,24 +882,15 @@ document.addEventListener('DOMContentLoaded', function() {
         formSubmitBtn.innerHTML = '<span class="spinner"></span> Processando...';
         formSubmitBtn.disabled = true;
 
-        // Mark all selected anesthesiologists as selected in the form's select field
-        const anesthesiologistSelect = document.getElementById('id_anestesistas_responsaveis');
-        const selectedAnesthesiologists = document.querySelectorAll('.selected-anesthesiologist');
-        selectedAnesthesiologists.forEach(div => {
-            const anesthesiologistName = div.textContent.trim().replace('Remover', '').trim();
-            const option = Array.from(anesthesiologistSelect.options).find(opt => opt.text === anesthesiologistName);
-            if (option) {
-                option.selected = true;
-            }
-        });
-
         const formData = new FormData(this);
         const procedureId = document.getElementById('procedure_id').value;
 
+        // Debug: Log all form data being submitted
+        console.log("FORM SUBMISSION - FormData contents:");
         for (const pair of formData.entries()) {
-            console.log(pair[0]+ ', ' + pair[1]); 
+            console.log(pair[0] + ': ' + pair[1]);
         }
-        
+
         // Reset previous error messages
         document.querySelectorAll('.error-message').forEach(el => el.remove());
         document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -751,24 +912,45 @@ document.addEventListener('DOMContentLoaded', function() {
                     message += ' O link de pesquisa foi enviado para o email do paciente.';
                 }
                 showCustomAlert(message, 'success');
-                showAgendarButton(); 
+                showAgendarButton();
                 setTimeout(() => {
                     location.reload();
                 }, 2000);
             } else {
+                // Error handling (display errors, reset button)
                 const errors = JSON.parse(data.errors);
                 Object.keys(errors).forEach(fieldName => {
-                    const field = document.getElementById(`id_${fieldName}`);
+                    // Handle field errors for 'anestesistas_responsaveis' specifically if needed
+                    let field = document.getElementById(`id_${fieldName}`);
+                    if (!field && fieldName === 'anestesistas_responsaveis') {
+                        // If error is for the hidden field, show it near the selector
+                        field = document.getElementById('id_anestesista_selector');
+                    }
+
                     if (field) {
                         field.classList.add('is-invalid');
-                        const errorMessage = document.createElement('div');
-                        errorMessage.className = 'invalid-feedback error-message';
-                        errorMessage.textContent = errors[fieldName][0].message;
-                        field.parentNode.appendChild(errorMessage);
+                        // Avoid adding multiple error messages
+                        let errorMsgElement = field.parentNode.querySelector(`.invalid-feedback.error-message[data-field="${fieldName}"]`);
+                        if (!errorMsgElement) {
+                            errorMsgElement = document.createElement('div');
+                            errorMsgElement.className = 'invalid-feedback error-message';
+                            errorMsgElement.dataset.field = fieldName; // Mark which field it's for
+                            field.parentNode.appendChild(errorMsgElement);
+                        }
+                        // Update or set the error message text
+                        errorMsgElement.textContent = errors[fieldName][0].message;
+                    } else if (fieldName === '__all__') {
+                         // Handle non-field errors if necessary
+                         showCustomAlert(errors[fieldName][0].message, 'error');
                     }
                 });
-                showCustomAlert('Erro ao salvar o procedimento. Verifique os campos e tente novamente.', 'error');
-                
+                 if (!data.errors || Object.keys(JSON.parse(data.errors)).length === 0) {
+                    // Show generic error if no specific field errors were returned
+                    showCustomAlert(data.message || 'Erro ao salvar o procedimento. Verifique os campos e tente novamente.', 'error');
+                } else {
+                     showCustomAlert('Erro ao salvar o procedimento. Verifique os campos destacados.', 'error');
+                }
+
                 // Reset button state
                 formSubmitBtn.innerHTML = originalText;
                 formSubmitBtn.disabled = false;
@@ -829,7 +1011,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 document.getElementById('procedure_id').value = procedureId;
-                document.getElementById('id_procedimento_type').value = data.procedimento_type;
                 document.getElementById('id_data').value = data.data;
                 
                 // Directly use the time strings from the server
@@ -838,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
                 document.getElementById('id_email_paciente').value = data.email_paciente;
-                document.getElementById('id_convenio').value = data.convenio;
+                document.getElementById('id_convenio_nome_novo').value = data.convenio_nome_novo;
                 document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
@@ -847,37 +1028,111 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
+                document.getElementById('id_tipo_procedimento').value = data.tipo_procedimento;
+                // Ensure tipo_clinica is set and option exists
+                (function populateTipoClinica(){
+                    const select = document.getElementById('id_tipo_clinica');
+                    if (!select) return;
+                    const key = data.tipo_clinica || '';
+                    const label = data.tipo_clinica_label || '';
+                    if (key){
+                        let hasOption = false;
+                        for (let i=0;i<select.options.length;i++){
+                            if (select.options[i].value === key){ hasOption = true; break; }
+                        }
+                        if (!hasOption){
+                            const opt = document.createElement('option');
+                            opt.value = key;
+                            opt.text = label || key;
+                            select.appendChild(opt);
+                        }
+                        select.value = key;
+                    } else {
+                        select.value = '';
+                    }
+                })();
                 
-                document.querySelectorAll('.selected-anesthesiologist').forEach(el => el.remove());
-
+                // Fix for procedimento_principal (Select2)
                 if (data.procedimento_principal) {
-                    const procedimentoSelect = $('#id_procedimento_principal');
+                    // Create a new option and append it to the select
                     const newOption = new Option(
-                        data.procedimento_principal.text, 
-                        data.procedimento_principal.id, 
-                        true, 
+                        data.procedimento_principal.text,
+                        data.procedimento_principal.id,
+                        true,
                         true
                     );
-                    procedimentoSelect.append(newOption).trigger('change');
+                    $('#id_procedimento_principal').empty().append(newOption).trigger('change');
                 }
-            
-                
-                data.anestesistas_responsaveis.forEach(anestesista => {
-                    const option = Array.from(anesthesiologistSelect.options).find(opt => opt.value == anestesista.id);
-                    if (option) {
-                        const newDiv = document.createElement('div');
-                        newDiv.className = 'selected-anesthesiologist';
-                        newDiv.innerHTML = `
-                            ${anestesista.name}
-                            <button type="button" class="btn btn-danger btn-sm remove-anesthesiologist">Remover</button>
-                        `;
-                        anesthesiologistSelect.parentNode.insertBefore(newDiv, addAnesthesiologistBtn);
+
+                // Fix for convenio (Select2)
+                if (data.convenio) {
+                    // Create a new option and append it to the select
+                    const newOption = new Option(
+                        data.convenio.text,
+                        data.convenio.id,
+                        true,
+                        true
+                    );
+                    $('#id_convenio').empty().append(newOption).trigger('change');
+                }
+
+                // Populate Cooperado (ensure option exists and is selected)
+                (function populateCooperado() {
+                    const coopSelect = document.getElementById('id_cooperado');
+                    console.log('Cooperado select element:', coopSelect);
+                    console.log('Data cooperado:', data.cooperado);
+                    if (!coopSelect) {
+                        console.error('Cooperado select not found!');
+                        return;
                     }
-                });
+
+                    console.log('Current options count:', coopSelect.options.length);
+                    for (let i = 0; i < coopSelect.options.length; i++) {
+                        console.log(`Option ${i}: value="${coopSelect.options[i].value}", text="${coopSelect.options[i].text}"`);
+                    }
+
+                    if (data.cooperado && data.cooperado.id) {
+                        const targetValue = String(data.cooperado.id);
+                        console.log('Target cooperado value:', targetValue);
+                        let hasOption = false;
+                        for (let i = 0; i < coopSelect.options.length; i++) {
+                            if (coopSelect.options[i].value === targetValue) { 
+                                hasOption = true; 
+                                console.log('Found existing option at index', i);
+                                break; 
+                            }
+                        }
+                        if (!hasOption) {
+                            console.log('Option not found, adding new option');
+                            const opt = document.createElement('option');
+                            opt.value = targetValue;
+                            opt.text = data.cooperado.name || `ID ${targetValue}`;
+                            coopSelect.appendChild(opt);
+                        }
+                        coopSelect.value = targetValue;
+                        console.log('Set cooperado select value to:', coopSelect.value);
+                    } else {
+                        console.log('No cooperado data, clearing selection');
+                        coopSelect.value = '';
+                    }
+                })();
+
+                // Populate Anestesistas Livres
+                selectedAnesthesiologistsContainer.innerHTML = '';
+                hiddenAnestLivres.value = '';
+                if (data.anestesistas_livres) {
+                    data.anestesistas_livres.split(',').forEach(n => {
+                        const name = n.trim();
+                        if (name) addFreeAnesthesiologist(name);
+                    });
+                }
 
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Salvar Alterações';
                 hideAgendarButton();
+
+                // Ensure conditional fields for visita pre-anestesica are shown/hidden correctly
+                toggleConditionalFields();
             });
     }
     
@@ -903,14 +1158,17 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (data.success) {
-                location.reload();
+                showCustomAlert('Procedimento excluído com sucesso.', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
             } else {
-                showCustomAlert('Falha ao deletar o procedimento. Por favor, tente novamente.', 'error');
+                showCustomAlert('Falha ao excluir o procedimento. Por favor, tente novamente.', 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showCustomAlert('Ocorreu um erro ao deletar o procedimento. Por favor, tente novamente.', 'error');
+            showCustomAlert('Ocorreu um erro ao excluir o procedimento. Por favor, tente novamente.', 'error');
         });
     }
     
@@ -933,10 +1191,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset form when opening for a new procedure
     document.getElementById('agendar-btn').addEventListener('click', function() {
         document.querySelector('#procedimento-form-modal form').reset();
+        // Clear Select2 fields
+        $('#id_procedimento_principal').val(null).trigger('change');
+        $('#id_convenio').val(null).trigger('change');
+        // Clear anesthesiologists free-text list and cooperado
+        const selectedAnesthesiologistsContainer = document.getElementById('selected-anesthesiologists-container');
+        if (selectedAnesthesiologistsContainer) selectedAnesthesiologistsContainer.innerHTML = '';
+        const hiddenAnestLivres = document.getElementById('id_anestesistas_livres');
+        if (hiddenAnestLivres) hiddenAnestLivres.value = '';
+        const coopSelect = document.getElementById('id_cooperado');
+        if (coopSelect) coopSelect.value = '';
+
         document.getElementById('procedure_id').value = '';
         formSubmitBtn.textContent = 'Criar Agendamento';
         procedureFormModal.style.display = 'block';
         hideAgendarButton();
+        toggleConditionalFields(); // Set initial state for conditional fields
     });
 });
 </script>
@@ -1251,6 +1521,21 @@ document.addEventListener('DOMContentLoaded', function() {
     cirurgiaoNomeInput.addEventListener('input', function() {
         if (this.value) {
             cirurgiaoSelect.value = '';
+        }
+    });
+
+    const convenioSelect = $('#id_convenio');
+    const convenioNomeNovoInput = document.getElementById('id_convenio_nome_novo');
+
+    convenioSelect.on('change', function() {
+        if ($(this).val()) {
+            convenioNomeNovoInput.value = '';
+        }
+    });
+
+    convenioNomeNovoInput.addEventListener('input', function() {
+        if (this.value) {
+            convenioSelect.val(null).trigger('change');
         }
     });
 });

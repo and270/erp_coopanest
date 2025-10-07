@@ -15,4 +15,5 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
     path('termos-de-servico/', views.terms_of_service, name='terms_of_service'),
     path('politica-de-privacidade/', views.privacy_policy, name='privacy_policy'),
+    path('terms-agreement/', views.terms_agreement_view, name='terms_agreement'),
 ]

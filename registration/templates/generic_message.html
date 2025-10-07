@@ -1,0 +1,19 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ message_title|default:"Mensagem" }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 40px; padding-bottom: 40px;">
+    <div class="message-box" style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9;">
+        <h1 class="main-title" style="text-align: center;">{{ message_title|default:"Aviso" }}</h1>
+        <p style="text-align: center;">{{ message_body|default:"Ocorreu um problema." }}</p>
+        {# Optional: Add a link back home or to profile #}
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{% url 'home' %}" class="btn btn-secondary">Voltar para Home</a>
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'profile' %}" class="btn btn-primary">Ir para Meu Perfil</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

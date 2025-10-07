@@ -82,6 +82,20 @@
             </div>
 
             <div class="radio-group">
+                <label for="{{ form.procedimento_tipo_clinica.id_for_label }}">{{ form.procedimento_tipo_clinica.label }}</label>
+                <div class="input-width-280">
+                    {{ form.procedimento_tipo_clinica }}
+                    {% if form.procedimento_tipo_clinica.errors %}
+                    <div class="error-message">
+                        {% for error in form.procedimento_tipo_clinica.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="radio-group">
                 <label>{{ form.dor_pos_operatoria.label }}</label>
                 <div class="radio-options-container">
                     {% for radio in form.dor_pos_operatoria %}
@@ -253,6 +267,45 @@
             </div>
 
             <div class="radio-group">
+                <label>{{ form.abreviacao_jejum.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.abreviacao_jejum %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.abreviacao_jejum.errors %}
+                <div class="error-message">
+                    {% for error in form.abreviacao_jejum.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group scale-container">
+                <label>{{ form.escala_aldrete.label }}</label>
+                <div class="rainbow-scale"></div>
+                <div class="horizontal-radio-group">
+                    {% for radio in form.escala_aldrete %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.escala_aldrete.errors %}
+                <div class="error-message">
+                    {% for error in form.escala_aldrete.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group">
                 <label>{{ form.eventos_adversos_graves.label }}</label>
                 <div class="radio-options-container">
                     {% for radio in form.eventos_adversos_graves %}
@@ -316,9 +369,42 @@
                 {% endif %}
             </div>
 
+            <div class="radio-group">
+                <label>{{ form.evento_adverso_evitavel.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.evento_adverso_evitavel %}
+                        <div class="radio-option">
+                            <label>{{ radio.tag }}</label>
+                            {{ radio.choice_label }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if form.evento_adverso_evitavel.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso_evitavel.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group" id="evento_adverso_evitavel_desc_group" style="display: none;">
+                <label for="{{ form.evento_adverso_evitavel_desc.id_for_label }}">{{ form.evento_adverso_evitavel_desc.label }}</label>
+                <div class="input-width-280">
+                    {{ form.evento_adverso_evitavel_desc }}
+                </div>
+                {% if form.evento_adverso_evitavel_desc.errors %}
+                <div class="error-message">
+                    {% for error in form.evento_adverso_evitavel_desc.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
             <!-- Exclude already handled fields from the general radio fields loop -->
             {% for field in form %}
-                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca'|split:',' %}
+                {% with excluded_fields='eventos_adversos_graves,reacao_alergica_grave,dor_pos_operatoria,escala,eva_score,face,pernas,atividade,choro,consolabilidade,expressao_facial,movimentos_membros_superiores,adaptacao_ventilador,respiracao,vocalizacao_negativa,expressao_facial_painad,linguagem_corporal,consolabilidade_painad,tipo_cobranca,adesao_profilaxia_antibiotica,adesao_prevencao_tvp_tep,evento_adverso_evitavel,abreviacao_jejum,escala_aldrete'|split:',' %}
                     {% if field.field.widget.input_type == "radio" and field.name not in excluded_fields %}
                         <div class="radio-group">
                             <label>{{ field.label }}</label>
@@ -345,6 +431,48 @@
             {% endfor %}
 
             <div class="radio-group">
+                <label>{{ form.adesao_profilaxia_antibiotica.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.adesao_profilaxia_antibiotica %}
+                        {% if radio.choice_label != '---------' %}
+                            <div class="radio-option">
+                                <label>{{ radio.tag }}</label>
+                                {{ radio.choice_label }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% if form.adesao_profilaxia_antibiotica.errors %}
+                <div class="error-message">
+                    {% for error in form.adesao_profilaxia_antibiotica.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group">
+                <label>{{ form.adesao_prevencao_tvp_tep.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.adesao_prevencao_tvp_tep %}
+                        {% if radio.choice_label != '---------' %}
+                            <div class="radio-option">
+                                <label>{{ radio.tag }}</label>
+                                {{ radio.choice_label }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% if form.adesao_prevencao_tvp_tep.errors %}
+                <div class="error-message">
+                    {% for error in form.adesao_prevencao_tvp_tep.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="radio-group">
                 <label>{{ form.tipo_cobranca.label }}</label>
                 <div class="radio-options-container">
                     {% for radio in form.tipo_cobranca %}
@@ -365,13 +493,13 @@
                 {% endif %}
             </div>
 
-            <div class="radio-group" id="valor_cobranca_container">
-                <label for="{{ form.valor_cobranca.id_for_label }}">{{ form.valor_cobranca.label }}</label>
+            <div class="radio-group" id="valor_faturado_container">
+                <label for="{{ form.valor_faturado.id_for_label }}">{{ form.valor_faturado.label }}</label>
                 <div class="input-width-280">
-                    {{ form.valor_cobranca }}
-                    {% if form.valor_cobranca.errors %}
+                    {{ form.valor_faturado }}
+                    {% if form.valor_faturado.errors %}
                     <div class="error-message">
-                        {% for error in form.valor_cobranca.errors %}
+                        {% for error in form.valor_faturado.errors %}
                             {{ error }}
                         {% endfor %}
                     </div>
@@ -393,6 +521,20 @@
                 </div>
             </div>
 
+            <div class="radio-group" id="data_pagamento_container" style="display: none;">
+                <label for="{{ form.data_pagamento.id_for_label }}">{{ form.data_pagamento.label }}</label>
+                <div class="input-width-280">
+                    {{ form.data_pagamento }}
+                    {% if form.data_pagamento.errors %}
+                    <div class="error-message">
+                        {% for error in form.data_pagamento.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="button-container">
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </div>
@@ -406,9 +548,52 @@
 <script src="https://unpkg.com/imask"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize money mask for valor_cobranca
-    const valorCobrancaInput = document.getElementById('id_valor_cobranca');
-    if (valorCobrancaInput) {
+    const form = document.getElementById('finalizarProcedimentoForm');
+    const valorFaturadoInput = document.getElementById('id_valor_faturado');
+    let moneyMask; // Instance of IMask
+
+    // Declare elements that might be used by various functions
+    let escalaInputs, evaFields, flaccFields, bpsFields, painadBFields, painScaleSectionElements;
+    const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]'); // First and only declaration
+    const dorPosOperatoriaInputs = document.querySelectorAll('input[name="dor_pos_operatoria"]');
+
+    if (form) {
+        escalaInputs = form.querySelectorAll('input[name="escala"]');
+    }
+    // These are looked up by ID, so they are fine here
+    evaFields = document.getElementById('eva-fields');
+    flaccFields = document.getElementById('flacc-fields');
+    bpsFields = document.getElementById('bps-fields');
+    painadBFields = document.getElementById('painad-b-fields');
+    
+    // Define pain scale section elements
+    // This includes the 'escala' radio group, all specific scale field divs, and the total-container.
+    // The 'escala' field is within a div with class 'radio-group scale-container'.
+    // Other scale fields are in divs with IDs like 'eva-fields'.
+    // The total score is in a div with class 'total-container'.
+    painScaleSectionElements = [
+        document.querySelector('input[name="escala"]').closest('.radio-group.scale-container'), // Escala radio buttons
+        evaFields,
+        flaccFields,
+        bpsFields,
+        painadBFields,
+        document.getElementById('total-score').closest('.total-container') // Total score display
+    ].filter(el => el != null); // Filter out any null elements if some IDs don't exist
+
+    if (valorFaturadoInput) {
+        // --- Debug: Initial value from Django ---
+        // console.log('DEBUG: Initial valorFaturadoInput.value (from Django):', valorFaturadoInput.value);
+
+        let initialValueForIMask = valorFaturadoInput.value;
+        if (initialValueForIMask && initialValueForIMask.includes('.') && !initialValueForIMask.includes(',')) {
+            const parts = initialValueForIMask.split('.');
+            if (parts.length === 2 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
+                initialValueForIMask = initialValueForIMask.replace('.', ',');
+                console.log('DEBUG: initialValueForIMask (after replacing . with ,):', initialValueForIMask);
+            }
+        }
+        valorFaturadoInput.value = initialValueForIMask;
+
         const maskOptions = {
             mask: 'R$ num',
             blocks: {
@@ -419,83 +604,152 @@ document.addEventListener('DOMContentLoaded', function() {
                     padFractionalZeros: true,
                     radix: ',',
                     mapToRadix: ['.'],
-                    max: 999999.99
+                    max: 999999.99,
+                    autofix: true
                 }
             }
         };
-        
-        const mask = IMask(valorCobrancaInput, maskOptions);
+        moneyMask = IMask(valorFaturadoInput, maskOptions);
 
-        // Add form submit handler to convert the masked value back to a number
-        const form = document.getElementById('finalizarProcedimentoForm');
-        form.addEventListener('submit', function(e) {
-            // Get the raw value without mask
-            const rawValue = mask.unmaskedValue;
-            // Update the input value with the raw number
-            valorCobrancaInput.value = rawValue;
-        });
+        console.log('DEBUG: IMask after init - moneyMask.value:', moneyMask.value);
+        console.log('DEBUG: IMask after init - moneyMask.unmaskedValue:', moneyMask.unmaskedValue);
+        console.log('DEBUG: IMask after init - moneyMask.typedValue:', moneyMask.typedValue);
+
+        if (form) { // Ensure form exists before adding submit listener
+            form.addEventListener('submit', function(e) {
+                if (valorFaturadoInput && moneyMask) {
+                    console.log('DEBUG: Submit handler - moneyMask.value:', moneyMask.value);
+                    console.log('DEBUG: Submit handler - moneyMask.unmaskedValue:', moneyMask.unmaskedValue);
+                    console.log('DEBUG: Submit handler - moneyMask.typedValue:', moneyMask.typedValue);
+
+                    let finalSubmitValue = '';
+                    if (typeof moneyMask.typedValue === 'number' && !isNaN(moneyMask.typedValue)) {
+                        finalSubmitValue = moneyMask.typedValue.toFixed(maskOptions.blocks.num.scale);
+                        console.log('DEBUG: Submit - Using typedValue, formatted to:', finalSubmitValue);
+                    } else {
+                        const unmasked = moneyMask.unmaskedValue;
+                        if (unmasked && unmasked.trim() !== '') {
+                            finalSubmitValue = unmasked.replace(',', '.');
+                            console.log('DEBUG: Submit - Using unmaskedValue, converted to:', finalSubmitValue);
+                        } else {
+                            console.log('DEBUG: Submit - Input is considered empty.');
+                        }
+                    }
+                    valorFaturadoInput.value = finalSubmitValue;
+                    console.log('DEBUG: Final valorFaturadoInput.value for submission:', valorFaturadoInput.value);
+                }
+            });
+        }
     }
-
-    const form = document.getElementById('finalizarProcedimentoForm');
-
-    const escalaInputs = form.querySelectorAll('input[name="escala"]');
-    const evaFields = document.getElementById('eva-fields');
-    const flaccFields = document.getElementById('flacc-fields');
-    const bpsFields = document.getElementById('bps-fields');
-    const painadBFields = document.getElementById('painad-b-fields');
-    const tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]');
-    const valorCobrancaContainer = document.getElementById('valor_cobranca_container');
-    const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
 
     function handleTipoCobrancaChange() {
         const selectedValue = document.querySelector('input[name="tipo_cobranca"]:checked')?.value;
-        console.log('Tipo cobrança changed:', selectedValue);
-        
+        // console.log('Tipo cobrança changed:', selectedValue); // Keep for debugging
+
+        const valorFaturadoContainer = document.getElementById('valor_faturado_container');
+        const tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
+        const tipoPagamentoDiretoInput = document.getElementById('id_tipo_pagamento_direto');
+        const dataPagamentoContainer = document.getElementById('data_pagamento_container');
+        const dataPagamentoInput = document.getElementById('id_data_pagamento');
+
         if (selectedValue === 'cooperativa') {
-            valorCobrancaContainer.style.display = 'none';
-            tipoPagamentoDiretoContainer.style.display = 'none';
-            document.getElementById('id_valor_cobranca').value = '';
-            document.getElementById('id_tipo_pagamento_direto').value = '';
-        } else {
-            valorCobrancaContainer.style.display = 'block';
-            tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
-            if (selectedValue !== 'particular') {
-                document.getElementById('id_tipo_pagamento_direto').value = '';
+            if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+            if (dataPagamentoInput) dataPagamentoInput.value = ''; // Clear data_pagamento if cooperativa
+            // valorFaturadoInput is hidden, its value is managed by IMask & submit handler
+        } else if (selectedValue === 'cortesia') {
+            // Hide value and date, ensure value is zero
+            if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+            if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+            if (dataPagamentoInput) dataPagamentoInput.value = '';
+            if (moneyMask && valorFaturadoInput) {
+                moneyMask.typedValue = 0;
+                valorFaturadoInput.value = '0.00';
+            }
+        } else { // hospital, particular, via_cirurgiao
+            if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'block';
+            if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'block'; // Show for hospital/particular/via_cirurgiao
+
+            if (tipoPagamentoDiretoContainer) {
+                tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
+            }
+            if (selectedValue !== 'particular') { // hospital or via_cirurgiao
+                if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = ''; // Clear tipo_pagamento_direto
             }
         }
     }
 
-    // Add change event listener to all tipo_cobranca radio buttons
-    tipoCobrancaInputs.forEach(input => {
-        input.addEventListener('change', handleTipoCobrancaChange);
-    });
-    
-    // Run on page load to handle initial state
-    handleTipoCobrancaChange();
+    if (tipoCobrancaInputs && tipoCobrancaInputs.length > 0) {
+        tipoCobrancaInputs.forEach(input => {
+            input.addEventListener('change', handleTipoCobrancaChange);
+        });
+        handleTipoCobrancaChange(); // Initial call to set visibility based on current state
+    }
 
-    function showRelevantFields() {
-        const selectedScale = form.querySelector('input[name="escala"]:checked');
-        const selectedValue = selectedScale ? selectedScale.value : null;
+    function togglePainScaleSectionVisibility() {
+        const dorPosOperatoriaSelectedValue = document.querySelector('input[name="dor_pos_operatoria"]:checked')?.value;
+        const showPainScale = dorPosOperatoriaSelectedValue === 'True';
 
-        // If no scale is selected, hide all specific fields
-        evaFields.style.display = selectedValue === 'EVA' ? 'block' : 'none';
-        flaccFields.style.display = selectedValue === 'FLACC' ? 'block' : 'none';
-        bpsFields.style.display = selectedValue === 'BPS' ? 'block' : 'none';
-        painadBFields.style.display = selectedValue === 'PAINAD-B' ? 'block' : 'none';
+        painScaleSectionElements.forEach(el => {
+            if (el) el.style.display = showPainScale ? 'block' : 'none';
+        });
 
-        // Reset total when changing scales
-        if (!selectedValue) {
-            document.getElementById('total-score').textContent = '0';
-            document.getElementById('pain-classification').textContent = '';
+        // If pain scale is hidden, also hide specific scale fields
+        if (!showPainScale) {
+            if (evaFields) evaFields.style.display = 'none';
+            if (flaccFields) flaccFields.style.display = 'none';
+            if (bpsFields) bpsFields.style.display = 'none';
+            if (painadBFields) painadBFields.style.display = 'none';
+        } else {
+            // If pain scale is shown, trigger the logic to show the relevant specific scale
+            showRelevantScaleFields();
         }
     }
 
-    escalaInputs.forEach(input => {
-        input.addEventListener('change', showRelevantFields);
-    });
+    function showRelevantScaleFields() {
+        if (!form || !escalaInputs || !evaFields || !flaccFields || !bpsFields || !painadBFields) return; // Guard
 
-    // Show relevant fields on page load
-    showRelevantFields();
+        const dorPosOperatoriaSelectedValue = document.querySelector('input[name="dor_pos_operatoria"]:checked')?.value;
+        // Only proceed if "Sim" is selected for post-operative pain
+        if (dorPosOperatoriaSelectedValue !== 'True') {
+            return;
+        }
+
+        const selectedScale = form.querySelector('input[name="escala"]:checked');
+        const selectedValue = selectedScale ? selectedScale.value : null;
+
+        if (evaFields) evaFields.style.display = selectedValue === 'EVA' ? 'block' : 'none';
+        if (flaccFields) flaccFields.style.display = selectedValue === 'FLACC' ? 'block' : 'none';
+        if (bpsFields) bpsFields.style.display = selectedValue === 'BPS' ? 'block' : 'none';
+        if (painadBFields) painadBFields.style.display = selectedValue === 'PAINAD-B' ? 'block' : 'none';
+
+        const totalScoreEl = document.getElementById('total-score');
+        const painClassificationEl = document.getElementById('pain-classification');
+        if (!selectedValue && totalScoreEl && painClassificationEl) {
+            totalScoreEl.textContent = '0';
+            painClassificationEl.textContent = '';
+        }
+    }
+    
+    if (dorPosOperatoriaInputs && dorPosOperatoriaInputs.length > 0) {
+        dorPosOperatoriaInputs.forEach(input => {
+            input.addEventListener('change', togglePainScaleSectionVisibility);
+        });
+        // Initial call to set visibility on page load
+        togglePainScaleSectionVisibility();
+    }
+
+    if (escalaInputs && escalaInputs.length > 0) {
+        escalaInputs.forEach(input => {
+            input.addEventListener('change', showRelevantScaleFields);
+        });
+        // Initial call, but it will be controlled by togglePainScaleSectionVisibility's call to showRelevantScaleFields
+        // showRelevantScaleFields(); 
+    }
 
     // Pain classification logic
     function getPainClassification(scale, total) {
@@ -593,6 +847,29 @@ document.addEventListener('DOMContentLoaded', function() {
         handleEventosAdversosGravesChange({ target: initialEventosAdversos });
     }
 
+    // Evento Adverso Evitável handler
+    const eventoAdversoEvitavelInputs = document.querySelectorAll('input[name="evento_adverso_evitavel"]');
+    const eventoAdversoEvitavelDescGroup = document.getElementById('evento_adverso_evitavel_desc_group');
+
+    function handleEventoAdversoEvitavelChange(event) {
+        const selectedValue = event.target.value === 'True';
+        eventoAdversoEvitavelDescGroup.style.display = selectedValue ? 'block' : 'none';
+        
+        if (!selectedValue) {
+            const select = document.querySelector('select[name="evento_adverso_evitavel_desc"]');
+            if (select) select.value = '';
+        }
+    }
+
+    eventoAdversoEvitavelInputs.forEach(input => {
+        input.addEventListener('change', handleEventoAdversoEvitavelChange);
+    });
+
+    const initialEventoAdversoEvitavel = document.querySelector('input[name="evento_adverso_evitavel"]:checked');
+    if (initialEventoAdversoEvitavel) {
+        handleEventoAdversoEvitavelChange({ target: initialEventoAdversoEvitavel });
+    }
+
     // Reação Alérgica Grave handler
     const reacaoAlergicaGraveInputs = document.querySelectorAll('input[name="reacao_alergica_grave"]');
     const reacaoAlergicaGraveDescGroup = document.getElementById('reacao_alergica_grave_desc_group');
@@ -616,6 +893,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initialReacaoAlergica) {
         handleReacaoAlergicaGraveChange({ target: initialReacaoAlergica });
     }
+
+    // Ensure initial state of pain scale section is correct based on dor_pos_operatoria
+    togglePainScaleSectionVisibility();
+    // Then, ensure the correct specific scale fields are shown if the section itself is visible.
+    showRelevantScaleFields(); 
 });
 </script>
 {% endblock %}

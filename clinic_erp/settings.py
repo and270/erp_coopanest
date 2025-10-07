@@ -60,7 +60,21 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'registration.middleware.CoopahubConnectionMiddleware',
 ]
+
+AUTHENTICATION_BACKENDS = [
+    'registration.backends.CoopahubAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+COOPAHUB_API = {
+    'BASE_URL': 'https://aplicacao.coopanestrio.org.br',
+    'LOGIN_ENDPOINT': '/portal/acesso/loginportal.php',
+    'VALIDATE_ENDPOINT': '/portal/acesso/ajaxValidaConexao.php',
+    'DEFAULT_ORIGIN': 'PF',
+    'TOKEN_REFRESH_MINUTES': 30,
+}
 
 ROOT_URLCONF = 'clinic_erp.urls'
 
@@ -136,6 +150,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
+    os.path.join(BASE_DIR, "templates/email_templates"),
 ]
 
 # Default primary key field type

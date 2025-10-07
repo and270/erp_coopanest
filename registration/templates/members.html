@@ -1,20 +1,49 @@
 {% extends 'layout.html' %}
 {% load static %}
 
-{% block title %}Membros{% endblock %}
+{% block title %}
+    {% if request.active_role == ANESTESISTA_USER %}Meu Cadastro{% else %}Membros{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="members-container">
-    {% if no_record_message %}
-        <p>Você ainda não foi cadastrado como Anestesista do grupo. Por favor, solicite o seu cadastro a quem possui o acesso do tipo Secretário(a) ou Gestor.</p>
-    {% else %}
-        <div class="tab-container">
-            <button class="tab-button active" data-tab="anesthesiologists">Médicos anestesiologistas</button>
-            <button class="tab-button" data-tab="surgeons">Médicos cirurgiões</button>
-            <button class="tab-button" data-tab="hospitals">Hospitais e clínicas</button>
-        </div>
+    <div style="overflow: hidden; padding-bottom: 15px;">
+        <h1 style="float: left;">
+            {% if request.active_role == ANESTESISTA_USER %}Meu Cadastro{% else %}Membros{% endif %}
+        </h1>
+        {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
+            <a href="{% url 'cadastro' %}" class="cadastrar-btn" style="text-decoration: none; margin-top: 30px; margin-right: 30px;">Adicionar Membro</a>
+        {% endif %}
+    </div>
 
-        <div id="anesthesiologists" class="tab-content active">
+    {% if request.active_role == ANESTESISTA_USER %}
+        {# Anestesista View: Show only their own details in a card #}
+        {% if my_anesthesiologist_record %}
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{ my_anesthesiologist_record.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> {{ my_anesthesiologist_record.email }}</p>
+                    <p><strong>CPF:</strong> {{ my_anesthesiologist_record.cpf }}</p>
+                    <p><strong>CRM:</strong> {{ my_anesthesiologist_record.crm }}</p>
+                    <p><strong>Cargo:</strong> {{ my_anesthesiologist_record.get_role_in_group_display }}</p>
+                </div>
+                 <div class="card-footer">
+                    <a href="{% url 'edit' model_name='anesthesiologist' object_id=my_anesthesiologist_record.id %}" class="btn btn-sm btn-outline-primary">Editar meu cadastro</a>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-warning" role="alert">
+                Seu cadastro de anestesista ainda não foi completado ou vinculado. Por favor, entre em contato com o gestor do seu grupo.
+            </div>
+        {% endif %}
+
+    {% elif request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
+        {# Gestor/Admin View: Show tables for each member type #}
+        
+        <div id="anesthesiologists" class="mb-5">
+            <h2>Anestesiologistas</h2>
             {% if anesthesiologists %}
                 <table class="member-table">
                     <thead>
@@ -29,16 +58,16 @@
                     <tbody>
                         {% for anesthesiologist in anesthesiologists %}
                             <tr>
-                                <td>{{ anesthesiologist.name }}</td>
-                                <td>{{ anesthesiologist.crm }}</td>
-                                <td>{{ anesthesiologist.email }}</td>
-                                <td>{{ anesthesiologist.phone }}</td>
+                                <td>{{ anesthesiologist.name|default:"(Não informado)" }}</td>
+                                <td>{{ anesthesiologist.crm|default:"--" }}</td>
+                                <td>{{ anesthesiologist.email|default:"--" }}</td>
+                                <td>{{ anesthesiologist.phone|default:"--" }}</td>
                                 <td>
                                     <div class="actions-dropdown">
                                         <button class="actions-button">Ações ▼</button>
                                         <div class="actions-content">
-                                            <a href="{% url 'edit' 'anesthesiologist' anesthesiologist.id %}">Editar</a>
-                                            <a href="{% url 'delete' 'anesthesiologist' anesthesiologist.id %}" onclick="return confirm('Tem certeza que deseja deletar este Anestesiologista?');">Deletar</a>
+                                            <a href="{% url 'edit' model_name='anesthesiologist' object_id=anesthesiologist.id %}">Editar</a>
+                                            {# Delete is forbidden #}
                                         </div>
                                     </div>
                                 </td>
@@ -47,11 +76,12 @@
                     </tbody>
                 </table>
             {% else %}
-                <p>Nenhum anestesiologista cadastrado.</p>
+                <p>Nenhum anestesiologista cadastrado neste grupo.</p>
             {% endif %}
         </div>
 
-        <div id="surgeons" class="tab-content">
+        <div id="surgeons" class="mb-5">
+            <h2>Cirurgiões</h2>
             {% if surgeons %}
                 <table class="member-table">
                     <thead>
@@ -65,15 +95,15 @@
                     <tbody>
                         {% for surgeon in surgeons %}
                             <tr>
-                                <td>{{ surgeon.name }}</td>
-                                <td>{{ surgeon.phone }}</td>
-                                <td>{{ surgeon.crm }}</td>
+                                <td>{{ surgeon.name|default:"(Não informado)" }}</td>
+                                <td>{{ surgeon.phone|default:"--" }}</td>
+                                <td>{{ surgeon.crm|default:"--" }}</td>
                                 <td>
                                     <div class="actions-dropdown">
                                         <button class="actions-button">Ações ▼</button>
                                         <div class="actions-content">
-                                            <a href="{% url 'edit' 'surgeon' surgeon.id %}">Editar</a>
-                                            <a href="{% url 'delete' 'surgeon' surgeon.id %}" onclick="return confirm('Tem certeza que deseja deletar este Cirurgião?');">Deletar</a>
+                                            <a href="{% url 'edit' model_name='surgeon' object_id=surgeon.id %}">Editar</a>
+                                            <a href="{% url 'delete' model_name='surgeon' object_id=surgeon.id %}" onclick="return confirm('Tem certeza que deseja deletar este Cirurgião?');" class="delete-action">Deletar</a>
                                         </div>
                                     </div>
                                 </td>
@@ -82,33 +112,37 @@
                     </tbody>
                 </table>
             {% else %}
-                <p>Nenhum cirurgião cadastrado.</p>
+                <p>Nenhum cirurgião cadastrado neste grupo.</p>
             {% endif %}
         </div>
 
-        <div id="hospitals" class="tab-content">
+        <div id="hospitals" class="mb-5">
+            <h2>Hospitais e Clínicas</h2>
             {% if hospitals %}
                 <table class="member-table">
                     <thead>
                         <tr class="header-row">
                             <th>Nome</th>
                             <th>Endereço</th>
-                            <th>Telefone do Centro Cirúrgico</th>
+                            <th>Telefone Centro Cirúrgico</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for hospital in hospitals %}
                             <tr>
-                                <td>{{ hospital.name }}</td>
+                                <td>{{ hospital.name|default:"(Não informado)" }}</td>
                                 <td>{{ hospital.address|default:"--" }}</td>
                                 <td>{{ hospital.surgery_center_phone|default:"--" }}</td>
                                 <td>
                                     <div class="actions-dropdown">
                                         <button class="actions-button">Ações ▼</button>
                                         <div class="actions-content">
-                                            <a href="{% url 'edit' 'hospital_clinic' hospital.id %}">Editar</a>
-                                            <a href="{% url 'delete' 'hospital_clinic' hospital.id %}" onclick="return confirm('Tem certeza que deseja deletar este Hospital/Clínica?');">Deletar</a>
+                                            <a href="{% url 'edit' model_name='hospital_clinic' object_id=hospital.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                            <form action="{% url 'delete' model_name='hospital_clinic' object_id=hospital.id %}" method="post" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja deletar {{ hospital.name }}?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Deletar</button>
+                                            </form>
                                         </div>
                                     </div>
                                 </td>
@@ -117,41 +151,15 @@
                     </tbody>
                 </table>
             {% else %}
-                <p>Nenhum hospital/clínica cadastrado.</p>
+                <p>Nenhum hospital/clínica cadastrado neste grupo.</p>
             {% endif %}
         </div>
-    {% endif %}
-    <button class="new-registration-button" data-tab="anesthesiologists">Novo Cadastro</button>
+
+    {% endif %} {# End User Type Check #}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const newRegistrationButton = document.querySelector('.new-registration-button');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tabName = button.getAttribute('data-tab');
-                
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-
-                button.classList.add('active');
-                document.getElementById(tabName).classList.add('active');
-
-                // Update the new registration button's data-tab attribute
-                newRegistrationButton.setAttribute('data-tab', tabName);
-            });
-        });
-
-        // Add click event listener for the new registration button
-        newRegistrationButton.addEventListener('click', function() {
-            const currentTab = this.getAttribute('data-tab');
-            window.location.href = "{% url 'cadastro_redirect' 'placeholder' %}".replace('placeholder', currentTab);
-        });
-    });
-</script>
+{# The JavaScript tab switching logic is removed to simplify the page #}
 {% endblock %}
