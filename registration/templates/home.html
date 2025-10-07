@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% load static %}
 
 {% block title %}Home{% endblock %}
 
@@ -9,47 +10,74 @@
     <div class="cards">
             {% if user.is_authenticated %}
                 {% if request.active_role == GESTOR_USER or request.active_role == ADMIN_USER %}
-                    <a href="{% url 'cadastro' %}" class="card cadastro">
+                    <a href="{% url 'cadastro' %}" class="card cadastro" data-bg="{% static 'cadastro.jpg' %}">
                         <span>Cadastro</span>
                     </a>
                 {% elif request.active_role == ANESTESISTA_USER %}
-                    <a href="{% url 'members' %}" class="card cadastro">
+                    <a href="{% url 'members' %}" class="card cadastro" data-bg="{% static 'cadastro.jpg' %}">
                         <span>Meu cadastro</span>
                     </a>
                 {% endif %}
-                <a href="{% url 'agenda' %}" class="card agenda">
+                <a href="{% url 'agenda' %}" class="card agenda" data-bg="{% static 'agenda.jpg' %}">
                     <span>Agenda</span>
                 </a>
                 {% if request.active_role == GESTOR_USER %}
-                    <a href="{% url 'financas' %}" class="card financas">
+                    <a href="{% url 'financas' %}" class="card financas" data-bg="{% static 'financas.jpg' %}">
                         <span>Finanças</span>
                     </a>
                 {% endif %}
-                <a href="{% url 'qualidade' %}" class="card qualidade">
+                <a href="{% url 'qualidade' %}" class="card qualidade" data-bg="{% static 'qualidade.png' %}">
                     <span>Qualidade</span>
                 </a>
                 {% if request.active_role == GESTOR_USER %}
-                    <a href="{% url 'dashboard' %}" class="card dashboard">
+                    <a href="{% url 'dashboard' %}" class="card dashboard" data-bg="{% static 'dashboard.jpg' %}">
                         <span>Dashboard</span>
                     </a>
                 {% endif %}
             {% else %}
-                <a href="{% url 'login_register' %}" class="card cadastro">
+                <a href="{% url 'login_register' %}" class="card cadastro" data-bg="{% static 'cadastro.jpg' %}">
                     <span>Cadastro</span>
                 </a>
-                <a href="{% url 'login_register' %}" class="card agenda">
+                <a href="{% url 'login_register' %}" class="card agenda" data-bg="{% static 'agenda.jpg' %}">
                     <span>Agenda</span>
                 </a>
-                <a href="{% url 'login_register' %}" class="card financas">
+                <a href="{% url 'login_register' %}" class="card financas" data-bg="{% static 'financas.jpg' %}">
                     <span>Finanças</span>
                 </a>
-                <a href="{% url 'login_register' %}" class="card qualidade">
+                <a href="{% url 'login_register' %}" class="card qualidade" data-bg="{% static 'qualidade.png' %}">
                     <span>Qualidade</span>
                 </a>
-                <a href="{% url 'login_register' %}" class="card dashboard">
+                <a href="{% url 'login_register' %}" class="card dashboard" data-bg="{% static 'dashboard.jpg' %}">
                     <span>Dashboard</span>
                 </a>
             {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Lazy-load card backgrounds when they enter the viewport
+    document.addEventListener('DOMContentLoaded', function(){
+        const cards = document.querySelectorAll('.card[data-bg]');
+        if (!('IntersectionObserver' in window)) {
+            cards.forEach(c => c.style.backgroundImage = `url('${c.getAttribute('data-bg')}')`);
+            return;
+        }
+        const io = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const bg = el.getAttribute('data-bg');
+                    if (bg) {
+                        el.style.backgroundImage = `url('${bg}')`;
+                        el.removeAttribute('data-bg');
+                    }
+                    observer.unobserve(el);
+                }
+            });
+        }, { rootMargin: '200px' });
+        cards.forEach(c => io.observe(c));
+    });
+    </script>
 {% endblock %}
