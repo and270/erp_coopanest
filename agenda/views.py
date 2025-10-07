@@ -525,11 +525,33 @@ def agenda_view(request):
     if view_type == 'week':
         week_dates = get_week_dates(week_start)
         calendar_dates = []
+        start_date = week_start
+        end_date = week_start + timedelta(days=6)
     else:
         calendar_dates = get_calendar_dates(year, month)
         week_dates = []
+        # Align with get_calendar_dates: 6 weeks grid starting on the Sunday before the 1st
+        first_day_weekday = weekday(year, month, 1)
+        first_day_weekday = (first_day_weekday + 1) % 7
+        start_date = datetime(year, month, 1).date() - timedelta(days=first_day_weekday)
+        end_date = start_date + timedelta(days=41)
 
-    procedimentos = Procedimento.objects.filter(group=request.user.group).prefetch_related('anestesistas_responsaveis').order_by('data_horario')
+    # Limit procedimentos to visible range and reduce DB roundtrips
+    tz = timezone.get_current_timezone()
+    start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), tz)
+    end_dt_exclusive = timezone.make_aware(datetime.combine(end_date + timedelta(days=1), datetime.min.time()), tz)
+
+    procedimentos = (
+        Procedimento.objects
+        .filter(
+            group=request.user.group,
+            data_horario__gte=start_dt,
+            data_horario__lt=end_dt_exclusive,
+        )
+        .select_related('procedimento_principal', 'convenio', 'hospital', 'cirurgiao', 'cooperado')
+        .prefetch_related('anestesistas_responsaveis')
+        .order_by('data_horario')
+    )
     
 
     for procedimento in procedimentos:

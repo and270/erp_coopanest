@@ -149,6 +149,9 @@ main {
     text-align: center;
     text-decoration: none;
     color: #ffffff;
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
 }
 
 .card::before {
@@ -193,30 +196,8 @@ main {
     background-color: rgba(0, 0, 0, 0.9);
 }
 
-.card.cadastro {
-    background: url("../cadastro.jpg") no-repeat center center;
-    background-size: cover;
-}
-
-.card.agenda {
-    background: url("../agenda.jpg") no-repeat center center;
-    background-size: cover;
-}
-
-.card.financas {
-    background: url("../financas.jpg") no-repeat center center;
-    background-size: cover;
-}
-
-.card.qualidade {
-    background: url("../qualidade.png") no-repeat center center;
-    background-size: cover;
-}
-
-.card.dashboard {
-    background: url("../dashboard.jpg") no-repeat center center;
-    background-size: cover;
-}
+/* Card-specific background images will be applied lazily via JS to avoid
+   eager loading of heavy assets on first paint. */
 
 
 
