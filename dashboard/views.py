@@ -9,6 +9,8 @@ from qualidade.models import ProcedimentoQualidade
 from agenda.models import ProcedimentoDetalhes, Procedimento
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
+from decimal import Decimal
+from collections import defaultdict
 import calendar
 from django.utils import timezone
 from registration.models import Anesthesiologist, Surgeon
@@ -48,6 +50,7 @@ def dashboard_view(request):
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
+    selected_month = request.GET.get('month', '')
     procedimento = request.GET.get('procedimento')
 
     # Get view preferences
@@ -746,24 +749,64 @@ def financas_dashboard_view(request):
         for item in top_clinics_qs
     ]
 
-    anestesista_comparativo_qs = (
+    anestesista_totals = defaultdict(lambda: {
+        'name': '',
+        'total_valor': Decimal('0'),
+        'total_anestesias': 0,
+    })
+
+    responsaveis_qs = (
         queryset.filter(procedimento__anestesistas_responsaveis__isnull=False)
         .values('procedimento__anestesistas_responsaveis__id', 'procedimento__anestesistas_responsaveis__name')
         .annotate(
             total_valor=Sum('valor_faturado'),
             total_anestesias=Count('procedimento__id', distinct=True),
         )
-        .order_by('-total_valor')[:10]
     )
-    anestesista_comparativo = [
-        {
-            'id': item['procedimento__anestesistas_responsaveis__id'],
-            'name': item['procedimento__anestesistas_responsaveis__name'] or 'Não informado',
-            'total_valor': item['total_valor'] or 0,
-            'total_anestesias': item['total_anestesias'] or 0,
-        }
-        for item in anestesista_comparativo_qs
-    ]
+
+    for item in responsaveis_qs:
+        anest_id = item['procedimento__anestesistas_responsaveis__id']
+        if not anest_id:
+            continue
+        entry = anestesista_totals[anest_id]
+        entry['name'] = item['procedimento__anestesistas_responsaveis__name'] or entry['name'] or 'Não informado'
+        entry['total_valor'] += item['total_valor'] or Decimal('0')
+        entry['total_anestesias'] += item['total_anestesias'] or 0
+
+    cooperado_fallback_qs = (
+        queryset.filter(
+            procedimento__anestesistas_responsaveis__isnull=True,
+            procedimento__cooperado__isnull=False,
+        )
+        .values('procedimento__cooperado__id', 'procedimento__cooperado__name')
+        .annotate(
+            total_valor=Sum('valor_faturado'),
+            total_anestesias=Count('procedimento__id', distinct=True),
+        )
+    )
+
+    for item in cooperado_fallback_qs:
+        anest_id = item['procedimento__cooperado__id']
+        if not anest_id:
+            continue
+        entry = anestesista_totals[anest_id]
+        entry['name'] = item['procedimento__cooperado__name'] or entry['name'] or 'Não informado'
+        entry['total_valor'] += item['total_valor'] or Decimal('0')
+        entry['total_anestesias'] += item['total_anestesias'] or 0
+
+    anestesista_comparativo = sorted(
+        [
+            {
+                'id': anest_id,
+                'name': data['name'] or 'Não informado',
+                'total_valor': data['total_valor'],
+                'total_anestesias': data['total_anestesias'],
+            }
+            for anest_id, data in anestesista_totals.items()
+        ],
+        key=lambda item: item['total_valor'],
+        reverse=True,
+    )[:10]
 
     # -----------------------------------------------------------------------
     # 9) Build context
