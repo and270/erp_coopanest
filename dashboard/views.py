@@ -255,6 +255,7 @@ def financas_dashboard_view(request):
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
+    selected_month = request.GET.get('month', '')
     selected_anestesista_id = request.GET.get('anestesista') # Keep as string for comparison
     selected_cirurgiao_id = request.GET.get('cirurgiao') # Keep as string for comparison
     procedimento = request.GET.get('procedimento')
