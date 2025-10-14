@@ -118,7 +118,19 @@ class ProcedimentoForm(forms.ModelForm):
         self.fields['tipo_procedimento'].empty_label = "--- Selecione o Tipo ---"
         # Style for optional clinic type selector
         if 'tipo_clinica' in self.fields:
-            self.fields['tipo_clinica'].widget.attrs.update({'class': 'form-control'})
+            field = self.fields['tipo_clinica']
+            field.widget.attrs.update({'class': 'form-control'})
+            # Sort clinic type options alphabetically while preserving blank choices on top
+            choices = list(field.choices)
+            empty_choices = []
+            clinic_choices = []
+            for value, label in choices:
+                if value in (None, ''):
+                    empty_choices.append((value, label))
+                else:
+                    clinic_choices.append((value, label))
+            clinic_choices.sort(key=lambda choice: choice[1])
+            field.choices = empty_choices + clinic_choices
 
 
     def save(self, commit=True):
