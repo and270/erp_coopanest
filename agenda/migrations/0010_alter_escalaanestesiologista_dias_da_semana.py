@@ -4,6 +4,53 @@ import django.contrib.postgres.fields
 from django.db import migrations, models
 
 
+DIAS_DA_SEMANA_CHOICES = [
+    ('0', 'Domingo'),
+    ('1', 'Segunda-feira'),
+    ('2', 'Terça-feira'),
+    ('3', 'Quarta-feira'),
+    ('4', 'Quinta-feira'),
+    ('5', 'Sexta-feira'),
+    ('6', 'Sábado'),
+]
+
+
+def to_array_field(apps, schema_editor):
+    if schema_editor.connection.vendor == 'sqlite':
+        # SQLite does not support ArrayField; keep the existing CharField storage.
+        return
+
+    Escala = apps.get_model('agenda', 'EscalaAnestesiologista')
+    old_field = Escala._meta.get_field('dias_da_semana')
+
+    new_field = django.contrib.postgres.fields.ArrayField(
+        base_field=models.CharField(choices=DIAS_DA_SEMANA_CHOICES, max_length=1),
+        blank=True,
+        default=list,
+        size=None,
+        verbose_name='Dias da Semana',
+    )
+    new_field.set_attributes_from_name('dias_da_semana')
+    schema_editor.alter_field(Escala, old_field, new_field)
+
+
+def to_char_field(apps, schema_editor):
+    if schema_editor.connection.vendor == 'sqlite':
+        return
+
+    Escala = apps.get_model('agenda', 'EscalaAnestesiologista')
+    old_field = Escala._meta.get_field('dias_da_semana')
+
+    char_field = models.CharField(
+        choices=DIAS_DA_SEMANA_CHOICES,
+        default='1',
+        max_length=20,
+        verbose_name='Dias da Semana',
+    )
+    char_field.set_attributes_from_name('dias_da_semana')
+    schema_editor.alter_field(Escala, old_field, char_field)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,9 +58,22 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
-            model_name='escalaanestesiologista',
-            name='dias_da_semana',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(choices=[('0', 'Domingo'), ('1', 'Segunda-feira'), ('2', 'Terça-feira'), ('3', 'Quarta-feira'), ('4', 'Quinta-feira'), ('5', 'Sexta-feira'), ('6', 'Sábado')], max_length=1), blank=True, default=list, size=None, verbose_name='Dias da Semana'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunPython(to_array_field, to_char_field),
+            ],
+            state_operations=[
+                migrations.AlterField(
+                    model_name='escalaanestesiologista',
+                    name='dias_da_semana',
+                    field=django.contrib.postgres.fields.ArrayField(
+                        base_field=models.CharField(choices=DIAS_DA_SEMANA_CHOICES, max_length=1),
+                        blank=True,
+                        default=list,
+                        size=None,
+                        verbose_name='Dias da Semana',
+                    ),
+                ),
+            ],
         ),
     ]
