@@ -59,6 +59,8 @@
                     {% if selected_period %}
                         {% if selected_period == 'custom' %}
                             Personalizado
+                        {% elif selected_period == 'month' %}
+                            {{ selected_month_label|default:'Mês selecionado' }}
                         {% elif selected_period == 7 %}Últimos 7 dias
                         {% elif selected_period == 14 %}Últimos 14 dias
                         {% elif selected_period == 30 %}Últimos 30 dias
@@ -82,11 +84,18 @@
                     <div class="period-option" data-value="540" {% if selected_period == '540' %}data-selected{% endif %}>Último 1 ano e meio</div>
                     <div class="period-option" data-value="730" {% if selected_period == '730' %}data-selected{% endif %}>Últimos 2 anos</div>
 
+                    <div class="period-option" data-value="month" {% if selected_period == 'month' %}data-selected{% endif %}>Selecionar Mês</div>
+                    <div id="monthPickerContainer" class="month-picker" style="{% if selected_period == 'month' %}display: flex;{% else %}display: none;{% endif %}">
+                        <label for="monthPicker">Mês de referência:</label>
+                        <input type="month" id="monthPicker" value="{{ selected_month }}" />
+                        <button type="button" id="applyMonthBtn">Aplicar mês</button>
+                    </div>
+
                     <!-- New custom range option -->
                     <div class="period-option" data-value="custom" {% if selected_period == 'custom' %}data-selected{% endif %}>Período Personalizado</div>
 
                     <!-- Hidden container for custom range -->
-                    <div id="customRangeContainer" class="custom-range" style="display: none; margin-top: 10px;">
+                    <div id="customRangeContainer" class="custom-range" style="{% if selected_period == 'custom' %}display: flex;{% else %}display: none;{% endif %} margin-top: 10px;">
                         <label for="customStart">Início:</label>
                         <input type="date" id="customStart" value="{{ custom_start_date|default_if_none:'' }}" />
                         <label for="customEnd">Fim:</label>
@@ -125,6 +134,8 @@
                     {% if selected_period %}
                         {% if selected_period == 'custom' %}
                             (Período Personalizado)
+                        {% elif selected_period == 'month' %}
+                            ({{ selected_month_label|default:'Mês selecionado' }})
                         {% elif selected_period == 7 %}realizadas nos últimos 7 dias
                         {% elif selected_period == 14 %}realizadas nos últimos 14 dias
                         {% elif selected_period == 30 %}realizadas nos últimos 30 dias
@@ -215,6 +226,8 @@
                             <div class="period-text">
                                 {% if selected_period == 'custom' %}
                                     Personalizado
+                                {% elif selected_period == 'month' %}
+                                    {{ selected_month_label|default:'Mês selecionado' }}
                                 {% else %}
                                     Últimos {{ selected_period|default:"180" }} dias
                                 {% endif %}
@@ -328,6 +341,70 @@
                     </div>
                 </div>
             </div>
+            <div class="metric-card ranking-card">
+                <div class="header-row">
+                    <h3>Ranking de Faturamento (Top 10)</h3>
+                </div>
+                <p class="card-subtitle">Valores somados no período filtrado</p>
+                <div class="ranking-content">
+                    <div class="ranking-section">
+                        <h4>Cirurgiões</h4>
+                        <ol class="ranking-list">
+                            {% for surgeon in top_surgeons %}
+                                <li class="ranking-item">
+                                    <span class="ranking-name">{{ forloop.counter }}. {{ surgeon.name }}</span>
+                                    <span class="ranking-value">R$ {{ surgeon.total_valor|format_currency }}</span>
+                                </li>
+                            {% empty %}
+                                <li class="ranking-item ranking-empty">Sem dados no período</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    <div class="ranking-section">
+                        <h4>Clínicas</h4>
+                        <ol class="ranking-list">
+                            {% for clinic in top_clinics %}
+                                <li class="ranking-item">
+                                    <span class="ranking-name">{{ forloop.counter }}. {{ clinic.name }}</span>
+                                    <span class="ranking-value">R$ {{ clinic.total_valor|format_currency }}</span>
+                                </li>
+                            {% empty %}
+                                <li class="ranking-item ranking-empty">Sem dados no período</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card anestesista-comparativo-card">
+                <div class="header-row">
+                    <h3>Comparativo de Anestesistas</h3>
+                </div>
+                <p class="card-subtitle">Top 10 por valor faturado no período filtrado</p>
+                <div class="table-wrapper">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Anestesista</th>
+                                <th>Valor Faturado</th>
+                                <th>Anestesias</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in anestesista_comparativo %}
+                                <tr>
+                                    <td>{{ item.name }}</td>
+                                    <td>R$ {{ item.total_valor|format_currency }}</td>
+                                    <td>{{ item.total_anestesias }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr class="empty-row">
+                                    <td colspan="3">Sem dados no período selecionado</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -364,6 +441,8 @@ document.getElementById('clinicFilter').addEventListener('change', function() {
 // Period Filter
 const periodFilterBtn = document.getElementById('periodFilterBtn');
 const periodFilter = document.getElementById('periodFilter');
+const customRangeContainer = document.getElementById('customRangeContainer');
+const monthPickerContainer = document.getElementById('monthPickerContainer');
 
 periodFilterBtn.addEventListener('click', function(e) {
     e.stopPropagation();
@@ -380,16 +459,20 @@ document.addEventListener('click', function(e) {
 document.querySelectorAll('.period-option').forEach(option => {
     option.addEventListener('click', function() {
         const value = this.dataset.value;
-        // If "custom" was selected, show the date pickers:
         if (value === 'custom') {
-            document.getElementById('customRangeContainer').style.display = 'block';
+            if (customRangeContainer) customRangeContainer.style.display = 'block';
+            if (monthPickerContainer) monthPickerContainer.style.display = 'none';
+        } else if (value === 'month') {
+            if (customRangeContainer) customRangeContainer.style.display = 'none';
+            if (monthPickerContainer) monthPickerContainer.style.display = 'flex';
         } else {
-            // Hide custom container if previously displayed
-            document.getElementById('customRangeContainer').style.display = 'none';
+            if (customRangeContainer) customRangeContainer.style.display = 'none';
+            if (monthPickerContainer) monthPickerContainer.style.display = 'none';
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('period', value);
             currentUrl.searchParams.delete('start_date');
             currentUrl.searchParams.delete('end_date');
+            currentUrl.searchParams.delete('month');
             window.location.href = currentUrl.toString();
         }
     });
@@ -404,11 +487,30 @@ document.getElementById('applyCustomRangeBtn').addEventListener('click', functio
         currentUrl.searchParams.set('period', 'custom');
         currentUrl.searchParams.set('start_date', startInput.value);
         currentUrl.searchParams.set('end_date', endInput.value);
+        currentUrl.searchParams.delete('month');
         window.location.href = currentUrl.toString();
     } else {
         alert('Por favor, selecione ambas as datas.');
     }
 });
+
+// "Aplicar" button for month selection
+const applyMonthBtn = document.getElementById('applyMonthBtn');
+if (applyMonthBtn) {
+    applyMonthBtn.addEventListener('click', function() {
+        const monthInput = document.getElementById('monthPicker');
+        if (monthInput && monthInput.value) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('period', 'month');
+            currentUrl.searchParams.set('month', monthInput.value);
+            currentUrl.searchParams.delete('start_date');
+            currentUrl.searchParams.delete('end_date');
+            window.location.href = currentUrl.toString();
+        } else {
+            alert('Por favor, selecione um mês.');
+        }
+    });
+}
 
 // Chart configuration
 const selected_graph_type = '{{ selected_graph_type }}';

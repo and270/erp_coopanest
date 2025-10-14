@@ -9,6 +9,7 @@ from qualidade.models import ProcedimentoQualidade
 from agenda.models import ProcedimentoDetalhes, Procedimento
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
+import calendar
 from django.utils import timezone
 from registration.models import Anesthesiologist, Surgeon
 from dateutil.relativedelta import relativedelta
@@ -17,6 +18,21 @@ import xlsxwriter
 from io import BytesIO
 from qualidade.models import AvaliacaoRPA
 from django.db import models as db_models
+
+MONTH_NAMES_PT = {
+    1: 'Janeiro',
+    2: 'Fevereiro',
+    3: 'Março',
+    4: 'Abril',
+    5: 'Maio',
+    6: 'Junho',
+    7: 'Julho',
+    8: 'Agosto',
+    9: 'Setembro',
+    10: 'Outubro',
+    11: 'Novembro',
+    12: 'Dezembro',
+}
 
 @login_required
 def dashboard_view(request):
@@ -32,7 +48,6 @@ def dashboard_view(request):
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
-
     procedimento = request.GET.get('procedimento')
 
     # Get view preferences
@@ -322,9 +337,34 @@ def financas_dashboard_view(request):
     chart_start_date = None
     chart_end_date = None
     selected_period = None
+    selected_month_label = ''
+
+    if period == 'month' and selected_month:
+        try:
+            year, month = map(int, selected_month.split('-'))
+            last_day = calendar.monthrange(year, month)[1]
+            month_start = datetime(year, month, 1)
+            month_end = datetime(year, month, last_day, 23, 59, 59)
+
+            chart_start_date = timezone.make_aware(month_start)
+            chart_end_date = timezone.make_aware(month_end)
+
+            queryset = queryset.filter(
+                effective_date_for_filter__gte=month_start.date(),
+                effective_date_for_filter__lte=month_end.date()
+            )
+
+            selected_period = 'month'
+            selected_month_label = f"{MONTH_NAMES_PT.get(month, str(month))} {year}"
+        except (ValueError, TypeError):
+            selected_month = ''
+            selected_period = 180
+            chart_end_date = now
+            chart_start_date = now - timedelta(days=180)
+            queryset = queryset.filter(effective_date_for_filter__gte=chart_start_date.date())
 
     # if user selected 'custom' and provided valid start/end dates
-    if period == 'custom' and start_date_str and end_date_str:
+    elif period == 'custom' and start_date_str and end_date_str:
         try:
             custom_start = datetime.strptime(start_date_str, '%Y-%m-%d')
             custom_end = datetime.strptime(end_date_str, '%Y-%m-%d')
@@ -568,13 +608,7 @@ def financas_dashboard_view(request):
 
         # Sort by actual date
         sorted_months = sorted(date_range)
-        meses_pt = {
-            'January': 'Janeiro', 'February': 'Fevereiro', 'March': 'Março',
-            'April': 'Abril', 'May': 'Maio', 'June': 'Junho', 'July': 'Julho',
-            'August': 'Agosto', 'September': 'Setembro', 'October': 'Outubro',
-            'November': 'Novembro', 'December': 'Dezembro'
-        }
-        month_labels = [meses_pt[m.strftime("%B")] for m in sorted_months]
+        month_labels = [MONTH_NAMES_PT.get(m.month, m.strftime("%B")) for m in sorted_months]
 
         coopanest_values = [month_map[m.strftime("%Y-%m")]['cooperativa'] for m in sorted_months]
         hospital_values = [month_map[m.strftime("%Y-%m")]['hospital'] for m in sorted_months]
@@ -678,7 +712,61 @@ def financas_dashboard_view(request):
               anestesista_total = 0 # Avoid division by zero
 
     # -----------------------------------------------------------------------
-    # 8) Build context
+    # 8) Rankings and comparative data
+    # -----------------------------------------------------------------------
+    clinic_type_map = dict(CLINIC_TYPE_CHOICES)
+
+    top_surgeons_qs = (
+        queryset.filter(procedimento__cirurgiao__isnull=False)
+        .values('procedimento__cirurgiao__id', 'procedimento__cirurgiao__name')
+        .annotate(total_valor=Sum('valor_faturado'))
+        .order_by('-total_valor')[:10]
+    )
+    top_surgeons = [
+        {
+            'id': item['procedimento__cirurgiao__id'],
+            'name': item['procedimento__cirurgiao__name'] or 'Não informado',
+            'total_valor': item['total_valor'] or 0,
+        }
+        for item in top_surgeons_qs
+    ]
+
+    top_clinics_qs = (
+        queryset.filter(procedimento__tipo_clinica__isnull=False)
+        .values('procedimento__tipo_clinica')
+        .annotate(total_valor=Sum('valor_faturado'))
+        .order_by('-total_valor')[:10]
+    )
+    top_clinics = [
+        {
+            'slug': item['procedimento__tipo_clinica'],
+            'name': clinic_type_map.get(item['procedimento__tipo_clinica'], 'Não informado'),
+            'total_valor': item['total_valor'] or 0,
+        }
+        for item in top_clinics_qs
+    ]
+
+    anestesista_comparativo_qs = (
+        queryset.filter(procedimento__anestesistas_responsaveis__isnull=False)
+        .values('procedimento__anestesistas_responsaveis__id', 'procedimento__anestesistas_responsaveis__name')
+        .annotate(
+            total_valor=Sum('valor_faturado'),
+            total_anestesias=Count('procedimento__id', distinct=True),
+        )
+        .order_by('-total_valor')[:10]
+    )
+    anestesista_comparativo = [
+        {
+            'id': item['procedimento__anestesistas_responsaveis__id'],
+            'name': item['procedimento__anestesistas_responsaveis__name'] or 'Não informado',
+            'total_valor': item['total_valor'] or 0,
+            'total_anestesias': item['total_anestesias'] or 0,
+        }
+        for item in anestesista_comparativo_qs
+    ]
+
+    # -----------------------------------------------------------------------
+    # 9) Build context
     # -----------------------------------------------------------------------
     context = {
         'anestesias_count': anestesias_count,
@@ -698,9 +786,11 @@ def financas_dashboard_view(request):
         'via_cirurgiao_values': via_cirurgiao_values,
         'cortesia_values': cortesia_values,
 
-        'selected_period': selected_period,  # could be int or 'custom'
+        'selected_period': selected_period,  # could be int, 'custom' or 'month'
         'custom_start_date': start_date_str,
         'custom_end_date': end_date_str,
+        'selected_month': selected_month if selected_period == 'month' else '',
+        'selected_month_label': selected_month_label,
 
         'GESTOR_USER': GESTOR_USER,
         'ADMIN_USER': ADMIN_USER,
@@ -732,6 +822,9 @@ def financas_dashboard_view(request):
         'include_particular': include_particular != '0',
         'include_hospital': include_hospital != '0',
         'include_via_cirurgiao': include_via_cirurgiao != '0',
+        'top_surgeons': top_surgeons,
+        'top_clinics': top_clinics,
+        'anestesista_comparativo': anestesista_comparativo,
     }
 
     return render(request, 'dashboard_financas.html', context)
@@ -767,7 +860,9 @@ def export_financas_excel(request):
     period = request.GET.get('period', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
+    selected_month = request.GET.get('month', '')
     selected_anestesista_id = request.GET.get('anestesista')
+    selected_cirurgiao_id = request.GET.get('cirurgiao')
     procedimento_filter_name = request.GET.get('procedimento') # Renamed to avoid clash
     clinic = request.GET.get('clinic')
 
@@ -824,12 +919,25 @@ def export_financas_excel(request):
     export_start_date = None
     export_end_date = None
 
-    if period == 'custom' and start_date_str and end_date_str:
+    if period == 'month' and selected_month:
+        try:
+            year, month = map(int, selected_month.split('-'))
+            last_day = calendar.monthrange(year, month)[1]
+            export_start_date = timezone.make_aware(datetime(year, month, 1))
+            export_end_date = timezone.make_aware(datetime(year, month, last_day, 23, 59, 59))
+            queryset = queryset.filter(
+                effective_date_for_filter__gte=export_start_date.date(),
+                effective_date_for_filter__lte=export_end_date.date(),
+            )
+        except (ValueError, TypeError):
+            period = 180  # fallback if month is invalid
+
+    elif period == 'custom' and start_date_str and end_date_str:
         try:
             custom_start = datetime.strptime(start_date_str, '%Y-%m-%d')
             custom_end = datetime.strptime(end_date_str, '%Y-%m-%d')
             if custom_start > custom_end: custom_start, custom_end = custom_end, custom_start
-            
+
             export_start_date = timezone.make_aware(custom_start)
             export_end_date = timezone.make_aware(custom_end)
             queryset = queryset.filter(
