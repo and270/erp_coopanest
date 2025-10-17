@@ -349,6 +349,10 @@
         <div class="metric-card anestesista-comparativo-card">
             <div class="header-row">
                 <h3>Comparativo de Anestesistas</h3>
+                <select id="anestesistaComparativoSelector" class="graph-type-selector">
+                    <option value="valor_faturado" {% if selected_anestesista_view == 'valor_faturado' or not selected_anestesista_view %}selected{% endif %}>Valor Faturado</option>
+                    <option value="num_anestesias" {% if selected_anestesista_view == 'num_anestesias' %}selected{% endif %}>Número de Anestesias</option>
+                </select>
             </div>
             <p class="card-subtitle">Top 10 por valor faturado no período filtrado</p>
             
@@ -369,10 +373,17 @@
                         {% for item in anestesista_comparativo_mensal %}
                             <tr>
                                 <td class="anestesista-name">{{ item.name }}</td>
-                                {% for month_value in item.monthly_values %}
-                                    <td class="monthly-value">R$ {{ month_value|format_currency }}</td>
-                                {% endfor %}
-                                <td class="total-value">R$ {{ item.total_valor|format_currency }}</td>
+                                {% if selected_anestesista_view == 'valor_faturado' or not selected_anestesista_view %}
+                                    {% for month_value in item.monthly_values %}
+                                        <td class="monthly-value">R$ {{ month_value|format_currency }}</td>
+                                    {% endfor %}
+                                    <td class="total-value">R$ {{ item.total_valor|format_currency }}</td>
+                                {% else %}
+                                    {% for month_count in item.monthly_anestesias %}
+                                        <td class="monthly-value">{{ month_count }}</td>
+                                    {% endfor %}
+                                    <td class="total-value">{{ item.total_anestesias }}</td>
+                                {% endif %}
                             </tr>
                         {% empty %}
                             <tr class="empty-row">
@@ -389,20 +400,22 @@
                     <thead>
                         <tr>
                             <th>Anestesista</th>
-                            <th>Valor Faturado</th>
-                            <th>Anestesias</th>
+                            <th class="comparativo-valor-faturado" style="{% if selected_anestesista_view == 'num_anestesias' %}display: none;{% endif %}">Valor Faturado</th>
+                            <th style="{% if selected_anestesista_view == 'valor_faturado' or not selected_anestesista_view %}display: none;{% endif %}">Número de Anestesias</th>
+                            <th class="comparativo-valor-faturado" style="{% if selected_anestesista_view == 'num_anestesias' %}display: none;{% endif %}">Anestesias</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in anestesista_comparativo %}
                             <tr>
                                 <td>{{ item.name }}</td>
-                                <td>R$ {{ item.total_valor|format_currency }}</td>
-                                <td>{{ item.total_anestesias }}</td>
+                                <td class="comparativo-valor-faturado" style="{% if selected_anestesista_view == 'num_anestesias' %}display: none;{% endif %}">R$ {{ item.total_valor|format_currency }}</td>
+                                <td style="{% if selected_anestesista_view == 'valor_faturado' or not selected_anestesista_view %}display: none;{% endif %}">{{ item.total_anestesias }}</td>
+                                <td class="comparativo-valor-faturado" style="{% if selected_anestesista_view == 'num_anestesias' %}display: none;{% endif %}">{{ item.total_anestesias }}</td>
                             </tr>
                         {% empty %}
                             <tr class="empty-row">
-                                <td colspan="3">Sem dados no período selecionado</td>
+                                <td colspan="4">Sem dados no período selecionado</td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -815,6 +828,13 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = "{% url 'financas_dashboard_view' %}";
         }
     });
+});
+
+// Anestesista Comparativo selector
+document.getElementById('anestesistaComparativoSelector').addEventListener('change', function() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('anestesista_view', this.value);
+    window.location.href = currentUrl.toString();
 });
 </script>
 {% endblock %}
