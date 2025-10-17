@@ -731,6 +731,7 @@ circle {
     margin-top: 24px;
     max-width: 100%;
     padding: 0 24px;
+    align-items: start;
 }
 
 .financas-dashboard .metrics-grid-second-row .metric-card {
