@@ -375,36 +375,74 @@
                     </div>
                 </div>
             </div>
-            <div class="metric-card anestesista-comparativo-card">
-                <div class="header-row">
-                    <h3>Comparativo de Anestesistas</h3>
-                </div>
-                <p class="card-subtitle">Top 10 por valor faturado no período filtrado</p>
-                <div class="table-wrapper">
-                    <table class="comparison-table">
-                        <thead>
-                            <tr>
-                                <th>Anestesista</th>
-                                <th>Valor Faturado</th>
-                                <th>Anestesias</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in anestesista_comparativo %}
-                                <tr>
-                                    <td>{{ item.name }}</td>
-                                    <td>R$ {{ item.total_valor|format_currency }}</td>
-                                    <td>{{ item.total_anestesias }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr class="empty-row">
-                                    <td colspan="3">Sem dados no período selecionado</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        </div>
+    </div>
+
+    <!-- Second row: Anestesista Comparativo Card -->
+    <div class="metrics-grid-second-row">
+        <div class="metric-card anestesista-comparativo-card">
+            <div class="header-row">
+                <h3>Comparativo de Anestesistas</h3>
             </div>
+            <p class="card-subtitle">Top 10 por valor faturado no período filtrado</p>
+            
+            <!-- Monthly breakdown table (shown when multiple months in period) -->
+            {% if anestesista_comparativo_mensal %}
+            <div class="table-wrapper">
+                <table class="comparison-table comparison-table-monthly">
+                    <thead>
+                        <tr>
+                            <th>Anestesista</th>
+                            {% for month in monthly_headers %}
+                                <th>{{ month }}</th>
+                            {% endfor %}
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in anestesista_comparativo_mensal %}
+                            <tr>
+                                <td class="anestesista-name">{{ item.name }}</td>
+                                {% for month_value in item.monthly_values %}
+                                    <td class="monthly-value">R$ {{ month_value|format_currency }}</td>
+                                {% endfor %}
+                                <td class="total-value">R$ {{ item.total_valor|format_currency }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr class="empty-row">
+                                <td colspan="100">Sem dados no período selecionado</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <!-- Default table (single month or no breakdown) -->
+            <div class="table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Anestesista</th>
+                            <th>Valor Faturado</th>
+                            <th>Anestesias</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in anestesista_comparativo %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>R$ {{ item.total_valor|format_currency }}</td>
+                                <td>{{ item.total_anestesias }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr class="empty-row">
+                                <td colspan="3">Sem dados no período selecionado</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

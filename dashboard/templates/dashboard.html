@@ -57,6 +57,13 @@
                         <input type="date" id="customEnd" />
                         <button type="button" id="applyCustomRangeBtn">Aplicar</button>
                     </div>
+
+                    <div class="period-option" data-value="month" {% if selected_period == 'month' %}data-selected{% endif %}>Selecionar Mês</div>
+                    <div id="monthPickerContainer" class="month-picker" style="{% if selected_period == 'month' %}display: flex;{% else %}display: none;{% endif %}">
+                        <label for="monthPicker">Mês de referência:</label>
+                        <input type="month" id="monthPicker" value="{{ selected_month }}" />
+                        <button type="button" id="applyMonthBtn">Aplicar mês</button>
+                    </div>
                 </div>
             </div>            
             <button class="export-btn" id="exportBtn">
@@ -331,19 +338,44 @@ document.querySelectorAll('.period-option').forEach(option => {
     // If "custom" was selected, just show the date inputs, no page reload yet
     if (value === 'custom') {
       document.getElementById('customRangeContainer').style.display = 'block';
-    } else {
-      // Hide custom range UI if previously shown
+      document.getElementById('monthPickerContainer').style.display = 'none';
+    } else if (value === 'month') {
+      // If "month" was selected, show the month picker, no page reload yet
+      document.getElementById('monthPickerContainer').style.display = 'flex';
       document.getElementById('customRangeContainer').style.display = 'none';
+    } else {
+      // Hide custom range and month picker UI if previously shown
+      document.getElementById('customRangeContainer').style.display = 'none';
+      document.getElementById('monthPickerContainer').style.display = 'none';
 
       // Immediately apply the chosen period filter
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.set('period', value);
       currentUrl.searchParams.delete('start_date');
       currentUrl.searchParams.delete('end_date');
+      currentUrl.searchParams.delete('month');
       window.location.href = currentUrl.toString();
     }
   });
 });
+
+// "Aplicar" button for month selection
+const applyMonthBtn = document.getElementById('applyMonthBtn');
+if (applyMonthBtn) {
+    applyMonthBtn.addEventListener('click', function() {
+        const monthInput = document.getElementById('monthPicker');
+        if (monthInput && monthInput.value) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('period', 'month');
+            currentUrl.searchParams.set('month', monthInput.value);
+            currentUrl.searchParams.delete('start_date');
+            currentUrl.searchParams.delete('end_date');
+            window.location.href = currentUrl.toString();
+        } else {
+            alert('Por favor, selecione um mês.');
+        }
+    });
+}
 
 
 </script>
