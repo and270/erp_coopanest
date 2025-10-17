@@ -260,6 +260,7 @@ def financas_dashboard_view(request):
     selected_cirurgiao_id = request.GET.get('cirurgiao') # Keep as string for comparison
     procedimento = request.GET.get('procedimento')
     selected_graph_type = request.GET.get('graph_type', 'ticket')
+    selected_anestesista_view = request.GET.get('anestesista_view', 'valor_faturado')  # New parameter
     clinic = request.GET.get('clinic')
     # Charge type filters for Valores Totais card (defaults to include all)
     include_cooperativa = request.GET.get('include_cooperativa', '1')
@@ -810,6 +811,89 @@ def financas_dashboard_view(request):
     )[:10]
 
     # -----------------------------------------------------------------------
+    # 8b) Generate monthly breakdown for anestesista comparativo (if multiple months)
+    # -----------------------------------------------------------------------
+    anestesista_comparativo_mensal = None
+    monthly_headers = []
+    
+    # Only generate monthly breakdown if we have more than one month in the filtered period
+    if view_type == 'monthly' and len(sorted_months) > 1:
+        # Build month headers
+        monthly_headers = [MONTH_NAMES_PT.get(m.month, str(m.month)) for m in sorted_months]
+        
+        # Build monthly data for each anestesista in the top 10
+        anestesista_comparativo_mensal = []
+        
+        for anest_item in anestesista_comparativo:
+            anest_id = anest_item['id']
+            monthly_values = []
+            monthly_anestesias = []
+            
+            # For each month in the range, get the value for this anestesista
+            for month_date in sorted_months:
+                month_start = datetime(month_date.year, month_date.month, 1)
+                month_end = datetime(month_date.year, month_date.month, calendar.monthrange(month_date.year, month_date.month)[1])
+                
+                # Query responsaveis - valor faturado
+                month_total = Decimal('0')
+                responsaveis_monthly = (
+                    queryset.filter(
+                        procedimento__anestesistas_responsaveis__id=anest_id,
+                        effective_date_for_filter__gte=month_start.date(),
+                        effective_date_for_filter__lte=month_end.date()
+                    ).aggregate(total=Sum('valor_faturado'))
+                )
+                if responsaveis_monthly['total']:
+                    month_total += responsaveis_monthly['total']
+                
+                # Query cooperado fallback - valor faturado
+                cooperado_monthly = (
+                    queryset.filter(
+                        procedimento__anestesistas_responsaveis__isnull=True,
+                        procedimento__cooperado__id=anest_id,
+                        effective_date_for_filter__gte=month_start.date(),
+                        effective_date_for_filter__lte=month_end.date()
+                    ).aggregate(total=Sum('valor_faturado'))
+                )
+                if cooperado_monthly['total']:
+                    month_total += cooperado_monthly['total']
+                
+                monthly_values.append(month_total)
+                
+                # Query responsaveis - anesthesia count
+                month_anestesias = Decimal('0')
+                responsaveis_monthly_count = (
+                    queryset.filter(
+                        procedimento__anestesistas_responsaveis__id=anest_id,
+                        effective_date_for_filter__gte=month_start.date(),
+                        effective_date_for_filter__lte=month_end.date()
+                    ).values('procedimento').distinct().count()
+                )
+                month_anestesias += responsaveis_monthly_count
+                
+                # Query cooperado fallback - anesthesia count
+                cooperado_monthly_count = (
+                    queryset.filter(
+                        procedimento__anestesistas_responsaveis__isnull=True,
+                        procedimento__cooperado__id=anest_id,
+                        effective_date_for_filter__gte=month_start.date(),
+                        effective_date_for_filter__lte=month_end.date()
+                    ).values('procedimento').distinct().count()
+                )
+                month_anestesias += cooperado_monthly_count
+                
+                monthly_anestesias.append(month_anestesias)
+            
+            anestesista_comparativo_mensal.append({
+                'id': anest_id,
+                'name': anest_item['name'],
+                'total_valor': anest_item['total_valor'],
+                'total_anestesias': anest_item['total_anestesias'],
+                'monthly_values': monthly_values,
+                'monthly_anestesias': monthly_anestesias,
+            })
+
+    # -----------------------------------------------------------------------
     # 9) Build context
     # -----------------------------------------------------------------------
     context = {
@@ -860,7 +944,7 @@ def financas_dashboard_view(request):
         'anestesista_total': anestesista_total,
         'selected_graph_type': selected_graph_type,
         'active_role': request.user.get_active_role(),
-        'clinic_choices': CLINIC_TYPE_CHOICES,
+        'clinic_choices': sorted(CLINIC_TYPE_CHOICES, key=lambda x: x[1]),
         'selected_clinic': clinic,
         'include_cooperativa': include_cooperativa != '0',
         'include_particular': include_particular != '0',
@@ -869,6 +953,9 @@ def financas_dashboard_view(request):
         'top_surgeons': top_surgeons,
         'top_clinics': top_clinics,
         'anestesista_comparativo': anestesista_comparativo,
+        'anestesista_comparativo_mensal': anestesista_comparativo_mensal,
+        'monthly_headers': monthly_headers, # Add monthly_headers to context
+        'selected_anestesista_view': selected_anestesista_view,
     }
 
     return render(request, 'dashboard_financas.html', context)
