@@ -727,9 +727,10 @@ circle {
 }
 
 .financas-dashboard .metrics-grid-second-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     margin-top: 24px;
-    max-width: 33.333%;
+    max-width: 100%;
+    padding: 0 24px;
 }
 
 .financas-dashboard .metrics-grid-second-row .metric-card {

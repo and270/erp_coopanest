@@ -341,44 +341,10 @@
                     </div>
                 </div>
             </div>
-            <div class="metric-card ranking-card">
-                <div class="header-row">
-                    <h3>Ranking de Faturamento (Top 10)</h3>
-                </div>
-                <p class="card-subtitle">Valores somados no período filtrado</p>
-                <div class="ranking-content">
-                    <div class="ranking-section">
-                        <h4>Cirurgiões</h4>
-                        <ol class="ranking-list">
-                            {% for surgeon in top_surgeons %}
-                                <li class="ranking-item">
-                                    <span class="ranking-name">{{ forloop.counter }}. {{ surgeon.name }}</span>
-                                    <span class="ranking-value">R$ {{ surgeon.total_valor|format_currency }}</span>
-                                </li>
-                            {% empty %}
-                                <li class="ranking-item ranking-empty">Sem dados no período</li>
-                            {% endfor %}
-                        </ol>
-                    </div>
-                    <div class="ranking-section">
-                        <h4>Clínicas</h4>
-                        <ol class="ranking-list">
-                            {% for clinic in top_clinics %}
-                                <li class="ranking-item">
-                                    <span class="ranking-name">{{ forloop.counter }}. {{ clinic.name }}</span>
-                                    <span class="ranking-value">R$ {{ clinic.total_valor|format_currency }}</span>
-                                </li>
-                            {% empty %}
-                                <li class="ranking-item ranking-empty">Sem dados no período</li>
-                            {% endfor %}
-                        </ol>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Second row: Anestesista Comparativo Card -->
+    <!-- Second row: Anestesista Comparativo and Ranking Cards -->
     <div class="metrics-grid-second-row">
         <div class="metric-card anestesista-comparativo-card">
             <div class="header-row">
@@ -443,6 +409,40 @@
                 </table>
             </div>
             {% endif %}
+        </div>
+        <div class="metric-card ranking-card">
+            <div class="header-row">
+                <h3>Ranking de Faturamento (Top 10)</h3>
+            </div>
+            <p class="card-subtitle">Valores somados no período filtrado</p>
+            <div class="ranking-content">
+                <div class="ranking-section">
+                    <h4>Cirurgiões</h4>
+                    <ol class="ranking-list">
+                        {% for surgeon in top_surgeons %}
+                            <li class="ranking-item">
+                                <span class="ranking-name">{{ forloop.counter }}. {{ surgeon.name }}</span>
+                                <span class="ranking-value">R$ {{ surgeon.total_valor|format_currency }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="ranking-item ranking-empty">Sem dados no período</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                <div class="ranking-section">
+                    <h4>Clínicas</h4>
+                    <ol class="ranking-list">
+                        {% for clinic in top_clinics %}
+                            <li class="ranking-item">
+                                <span class="ranking-name">{{ forloop.counter }}. {{ clinic.name }}</span>
+                                <span class="ranking-value">R$ {{ clinic.total_valor|format_currency }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="ranking-item ranking-empty">Sem dados no período</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
         </div>
     </div>
 </div>
