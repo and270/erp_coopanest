@@ -23,6 +23,17 @@ class ProcedimentoDetalhesAdmin(ImportExportModelAdmin):
 class ConveniosAdmin(ImportExportModelAdmin):
     pass
 
+# Unregister models if already registered, then register with new admin
+try:
+    admin.site.unregister(Procedimento)
+except admin.sites.NotRegistered:
+    pass
+
+try:
+    admin.site.unregister(EscalaAnestesiologista)
+except admin.sites.NotRegistered:
+    pass
+
 @admin.register(Procedimento)
 class ProcedimentoAdmin(admin.ModelAdmin):
     list_display = ('nome_paciente', 'procedimento_principal', 'group', 'data_horario', 'status')
