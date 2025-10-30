@@ -210,6 +210,8 @@ def financas_view(request):
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
         'active_role': active_role,
+        'user_group': user_group,
+        'user_group_name': user_group.name if user_group else '',
     }
 
     return render(request, 'financas.html', context)
@@ -1122,6 +1124,12 @@ def conciliar_financas(request):
         if guias_for_debug:
             print(f"=== SINGLE GUIA EXAMPLE ===")
             print(f"Example Guia JSON: {guias_for_debug[0]}")
+            print(f"\n=== ALL AVAILABLE FIELDS IN FIRST GUIA (for Américas group) ===")
+            import json
+            first_guia = guias_for_debug[0]
+            print(json.dumps(first_guia, indent=2, ensure_ascii=False, default=str))
+            print(f"\n=== ALL KEYS AVAILABLE: ===")
+            print(f"Keys: {list(first_guia.keys())}")
             print(f"=== END SINGLE GUIA EXAMPLE ===")
 
         if api_response_data.get('erro') != '000':
@@ -1231,6 +1239,9 @@ def conciliar_financas(request):
                     if financa.api_data_cirurgia != guia_api_date_parsed:
                         financa.api_data_cirurgia = guia_api_date_parsed; updated = True
                     
+                    if financa.plantao_eletiva != guia.get('classificacao'):
+                        financa.plantao_eletiva = guia.get('classificacao'); updated = True
+                    
                     if updated:
                         if financa not in financas_to_update: financas_to_update.append(financa)
 
@@ -1288,7 +1299,8 @@ def conciliar_financas(request):
                         api_hospital_nome=guia.get('hospital'),
                         api_cooperado_nome=guia.get('cooperado'),
                         matricula=guia.get('matricula'),
-                        senha=guia.get('senha')
+                        senha=guia.get('senha'),
+                        plantao_eletiva=guia.get('classificacao')
                     )
                     financas_to_create.append(new_financa)
                     newly_created_count += 1 # For ProcedimentoFinancas
@@ -1321,7 +1333,8 @@ def conciliar_financas(request):
                              api_hospital_nome=guia.get('hospital'),
                              api_cooperado_nome=guia.get('cooperado'),
                              matricula=guia.get('matricula'),
-                             senha=guia.get('senha')
+                             senha=guia.get('senha'),
+                             plantao_eletiva=guia.get('classificacao')
                         )
                         financas_to_create.append(new_financa)
                         newly_created_count += 1 # For ProcedimentoFinancas

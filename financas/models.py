@@ -140,6 +140,12 @@ class ProcedimentoFinancas(models.Model):
         null=True,
         blank=True
     )
+    plantao_eletiva = models.CharField(
+        max_length=255,
+        verbose_name='Plantão/Eletiva (API)',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = "Financeiro do Procedimento"
