@@ -1122,6 +1122,12 @@ def conciliar_financas(request):
         if guias_for_debug:
             print(f"=== SINGLE GUIA EXAMPLE ===")
             print(f"Example Guia JSON: {guias_for_debug[0]}")
+            print(f"\n=== ALL AVAILABLE FIELDS IN FIRST GUIA (for Américas group) ===")
+            import json
+            first_guia = guias_for_debug[0]
+            print(json.dumps(first_guia, indent=2, ensure_ascii=False, default=str))
+            print(f"\n=== ALL KEYS AVAILABLE: ===")
+            print(f"Keys: {list(first_guia.keys())}")
             print(f"=== END SINGLE GUIA EXAMPLE ===")
 
         if api_response_data.get('erro') != '000':
