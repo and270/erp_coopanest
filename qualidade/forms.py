@@ -163,6 +163,9 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
                 local_time = self.instance.data_horario_fim_efetivo.astimezone(local_tz)
                 self.initial['data_horario_fim_efetivo'] = local_time.strftime('%Y-%m-%dT%H:%M')
 
+        # Set default value for abreviacao_jejum to True (Sim)
+        self.initial['abreviacao_jejum'] = True
+
     class Meta:
         model = ProcedimentoQualidade
         fields = [

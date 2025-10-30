@@ -101,16 +101,30 @@ WSGI_APPLICATION = 'clinic_erp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DBNAME'),
-        'USER': os.getenv('DBUSER'),
-        'PASSWORD': os.getenv('DATABASE_KEY'),
-        'HOST': os.getenv('DBADRESS'),
-        'PORT': os.getenv('DBPORT'),
+db_name = os.getenv('DBNAME')
+db_user = os.getenv('DBUSER')
+db_password = os.getenv('DATABASE_KEY')
+db_host = os.getenv('DBADRESS')
+db_port = os.getenv('DBPORT')
+
+if all([db_name, db_user, db_password, db_host, db_port]):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation

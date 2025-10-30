@@ -329,13 +329,27 @@
 }
 
 .financas-dashboard .metric-card {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    margin-bottom: 24px;
+    padding: 24px;  /* Consistent padding */
     height: auto;
     min-height: 0;
-    padding: 24px;  /* Consistent padding */
+}
+
+.financas-dashboard .metrics-column-1,
+.financas-dashboard .metrics-column-2,
+.financas-dashboard .metrics-column-3 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: auto;
+    grid-row: auto;
+}
+
+.financas-dashboard .metrics-column-1 .metric-card,
+.financas-dashboard .metrics-column-2 .metric-card,
+.financas-dashboard .metrics-column-3 .metric-card {
+    flex: initial;
 }
 
 .financas-dashboard .status-bar {
@@ -419,6 +433,125 @@
     height: auto;
     padding: 16px 24px;
     margin-bottom: 8px;
+}
+
+.financas-dashboard .metrics-column-3 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.financas-dashboard .metrics-column-3 .metric-card {
+    flex: 0 0 auto;
+    height: auto;
+}
+
+.financas-dashboard .ranking-card h4 {
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 600;
+    color: #01124A;
+    margin: 0 0 8px;
+}
+
+.financas-dashboard .ranking-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.financas-dashboard .card-subtitle {
+    font-family: Inter;
+    font-size: 12px;
+    color: #757575;
+    margin: 4px 0 12px;
+}
+
+.financas-dashboard .ranking-section {
+    flex: 1 1 220px;
+    min-width: 200px;
+}
+
+.financas-dashboard .ranking-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.financas-dashboard .ranking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #F7F9FC;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: Inter;
+    font-size: 13px;
+    color: #3D3D3D;
+}
+
+.financas-dashboard .ranking-item .ranking-name {
+    flex: 1;
+    margin-right: 8px;
+}
+
+.financas-dashboard .ranking-value {
+    font-weight: 600;
+    color: #01124A;
+}
+
+.financas-dashboard .ranking-item.ranking-empty {
+    justify-content: center;
+    background: transparent;
+    border: 1px dashed #E3E3E3;
+    color: #7A7A7A;
+}
+
+.financas-dashboard .anestesista-comparativo-card .table-wrapper {
+    margin-top: 12px;
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.financas-dashboard .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Inter;
+    font-size: 13px;
+    color: #3D3D3D;
+}
+
+.financas-dashboard .comparison-table th {
+    text-align: left;
+    font-weight: 600;
+    padding: 8px 12px;
+    background: #F7F9FC;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.financas-dashboard .comparison-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #EFEFEF;
+}
+
+.financas-dashboard .comparison-table td:nth-child(2) {
+    font-weight: 600;
+    color: #01124A;
+}
+
+.financas-dashboard .comparison-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.financas-dashboard .comparison-table .empty-row td {
+    text-align: center;
+    color: #7A7A7A;
+    padding: 16px 12px;
 }
 
 .financas-dashboard .metrics-column-1 .metric-card:not(.anestesias) {
@@ -583,6 +716,76 @@ circle {
     transition: stroke-dasharray 0.3s ease;
 }
 
+/* Second row grid for anestesista comparativo card */
+.metrics-grid-second-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-top: 24px;
+    padding: 0 24px;
+    max-width: 33.333%;
+}
+
+.financas-dashboard .metrics-grid-second-row {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 24px;
+    max-width: 100%;
+    padding: 0 24px;
+    align-items: start;
+}
+
+.financas-dashboard .metrics-grid-second-row .metric-card {
+    flex: 0 0 auto;
+    height: auto;
+}
+
+/* Position the anestesista comparativo card in the grid */
+.financas-dashboard .anestesista-comparativo-card {
+    grid-column: 1;
+    grid-row: auto;
+}
+
+/* Monthly comparison table specific styles */
+.comparison-table-monthly {
+    width: 100%;
+    font-size: 12px;
+}
+
+.comparison-table-monthly th,
+.comparison-table-monthly td {
+    padding: 8px 10px;
+    text-align: center;
+}
+
+.comparison-table-monthly th:first-child,
+.comparison-table-monthly td.anestesista-name {
+    text-align: left;
+    padding-left: 12px;
+}
+
+.comparison-table-monthly th:first-child {
+    font-weight: 600;
+    background: #F7F9FC;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.comparison-table-monthly th:last-child {
+    font-weight: 700;
+    background: #F0F7FF;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.comparison-table-monthly td.monthly-value {
+    color: #3D3D3D;
+    font-weight: 500;
+}
+
+.comparison-table-monthly td.total-value {
+    font-weight: 700;
+    color: #01124A;
+    background: #F0F7FF;
+}
+
 .view-filter select {
     background: #F3F3F3;
     width: 130.75px;
@@ -611,7 +814,8 @@ circle {
 }
 
 /* Custom Range Container Styling */
-.custom-range {
+.custom-range,
+.month-picker {
     display: flex;
     flex-direction: column; /* stack label + input vertically */
     align-items: center;    /* center them horizontally */
@@ -619,21 +823,23 @@ circle {
     padding: 16px;
     border-top: 1px solid #E3E3E3;
     margin-top: 8px;
-    /* text-align: left; if you want the label text to be left-aligned 
+    /* text-align: left; if you want the label text to be left-aligned
        but they will still be centered as a block within the container */
   }
-  
-  .custom-range label {
+
+  .custom-range label,
+  .month-picker label {
     font-family: Inter, sans-serif;
     font-size: 12px;
     color: #3D3D3D;
     margin-bottom: 4px;
     /* Center the label text or keep it left — your call: */
-    text-align: left; 
+    text-align: left;
     width: 100%; /* or a fixed width if you prefer */
   }
-  
-  .custom-range input[type="date"] {
+
+  .custom-range input[type="date"],
+  .month-picker input[type="month"] {
     display: block;
     width: 200px;
     margin-bottom: 12px;
@@ -648,7 +854,8 @@ circle {
     text-align: left;
   }
   
-  .custom-range button {
+  .custom-range button,
+  .month-picker button {
     display: block;
     width: 200px;
     margin: 0 auto;
@@ -665,7 +872,8 @@ circle {
     transition: background-color 0.2s ease;
   }
   
-  .custom-range button:hover {
+  .custom-range button:hover,
+  .month-picker button:hover {
     background: #1557B0;
   }
 
