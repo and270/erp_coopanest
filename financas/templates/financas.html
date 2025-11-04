@@ -95,7 +95,7 @@
                         <th>CPF</th>
                         <th>Data Cirurgia</th>
                         <th>Eletiva / Urgência</th>
-                        {% if user_group_name == 'Américas' %}<th>Plantão/Eletiva</th>{% endif %}
+                        {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}<th>Plantão/Eletiva</th>{% endif %}
                         <th>Valor Faturado</th>
                         <th>Valor Recebido</th>
                         <th>Valor Recuperado</th>
@@ -150,7 +150,7 @@
                                     --
                                 {% endif %}
                             </td>
-                            {% if user_group_name == 'Américas' %}
+                            {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}
                                 <td>{{ item.plantao_eletiva|default:"--" }}</td>
                             {% endif %}
                             {# Revert to original formatting #}
@@ -237,7 +237,7 @@
                     </tr>
                 {% empty %}
                 <tr>
-                   <td colspan="{% if view_type == 'receitas' %}{% if user_group_name == 'Américas' %}19{% else %}18{% endif %}{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                   <td colspan="{% if view_type == 'receitas' %}{% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}19{% else %}18{% endif %}{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
