@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from agenda.models import Procedimento, Convenios, ProcedimentoDetalhes
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, STATUS_PENDING, CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
 from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic, Surgeon
@@ -1085,7 +1086,9 @@ def find_comprehensive_procedure_match(all_procs_list, guia, group):
 @login_required
 def conciliar_financas(request):
     if not request.user.validado:
-        return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
+        # End the current session and instruct frontend to redirect to login
+        logout(request)
+        return JsonResponse({'error': 'Sessão expirada. Faça login novamente.', 'redirect_url': settings.LOGIN_URL}, status=401)
     active_role = request.user.get_active_role()
     if active_role != GESTOR_USER:
         return JsonResponse({'error': 'Acesso negado'}, status=403)
