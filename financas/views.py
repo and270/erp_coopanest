@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from agenda.models import Procedimento, Convenios, ProcedimentoDetalhes
 from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED, STATUS_PENDING, CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
 from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic, Surgeon
@@ -210,6 +211,8 @@ def financas_view(request):
         'ADMIN_USER': ADMIN_USER,
         'ANESTESISTA_USER': ANESTESISTA_USER,
         'active_role': active_role,
+        'user_group': user_group,
+        'user_group_name': user_group.name if user_group else '',
     }
 
     return render(request, 'financas.html', context)
@@ -559,6 +562,7 @@ def export_finances(request):
 
     user = request.user
     user_group = user.group
+    user_group_name = user_group.name if user_group else ''
     view_type = request.GET.get('view', 'receitas')
     status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
@@ -630,7 +634,7 @@ def export_finances(request):
             
             anest_name = ", ".join(anest_name_list) if anest_name_list else (item.api_cooperado_nome or '')
 
-            data.append({
+            row = {
                 'Paciente': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome or '',
                 'CPF': item.procedimento.cpf_paciente if item.procedimento else '',
                 'Data Cirurgia': (item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento and item.procedimento.data_horario else 
@@ -643,6 +647,13 @@ def export_finances(request):
                 'CPSA': item.get_cpsa_display() or '',
                 'Matrícula': item.matricula or '',
                 'Senha': item.senha or '',
+            }
+            # Include Plantão/Eletiva column for Américas groups to match on-screen table
+            if user_group_name in ('Américas', 'AMCRJ - SERVICOS MEDICOS LTDA'):
+                row['Plantão/Eletiva'] = item.plantao_eletiva or ''
+
+            # Continue with remaining columns
+            row.update({
                 'Anestesista': anest_name,
                 'Situação': item.get_status_pagamento_display() or '',
                 'Data do Pagamento': item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '-',
@@ -650,6 +661,8 @@ def export_finances(request):
                 'Convênio': item.procedimento.convenio.name if item.procedimento and item.procedimento.convenio else '',
                 'Vinculado': 'Sim' if item.procedimento else 'Não', # Indicate if linked
             })
+
+            data.append(row)
 
     else: # view_type == 'despesas'
         # --- Replicate financas_view logic to fetch both Despesas and DespesasRecorrentes ---
@@ -1073,7 +1086,9 @@ def find_comprehensive_procedure_match(all_procs_list, guia, group):
 @login_required
 def conciliar_financas(request):
     if not request.user.validado:
-        return JsonResponse({'error': 'Usuário não autenticado'}, status=401)
+        # End the current session and instruct frontend to redirect to login
+        logout(request)
+        return JsonResponse({'error': 'Sessão expirada. Faça login novamente.', 'redirect_url': settings.LOGIN_URL}, status=401)
     active_role = request.user.get_active_role()
     if active_role != GESTOR_USER:
         return JsonResponse({'error': 'Acesso negado'}, status=403)
@@ -1122,6 +1137,12 @@ def conciliar_financas(request):
         if guias_for_debug:
             print(f"=== SINGLE GUIA EXAMPLE ===")
             print(f"Example Guia JSON: {guias_for_debug[0]}")
+            print(f"\n=== ALL AVAILABLE FIELDS IN FIRST GUIA (for Américas group) ===")
+            import json
+            first_guia = guias_for_debug[0]
+            print(json.dumps(first_guia, indent=2, ensure_ascii=False, default=str))
+            print(f"\n=== ALL KEYS AVAILABLE: ===")
+            print(f"Keys: {list(first_guia.keys())}")
             print(f"=== END SINGLE GUIA EXAMPLE ===")
 
         if api_response_data.get('erro') != '000':
@@ -1231,6 +1252,9 @@ def conciliar_financas(request):
                     if financa.api_data_cirurgia != guia_api_date_parsed:
                         financa.api_data_cirurgia = guia_api_date_parsed; updated = True
                     
+                    if financa.plantao_eletiva != guia.get('classificacao'):
+                        financa.plantao_eletiva = guia.get('classificacao'); updated = True
+                    
                     if updated:
                         if financa not in financas_to_update: financas_to_update.append(financa)
 
@@ -1288,7 +1312,8 @@ def conciliar_financas(request):
                         api_hospital_nome=guia.get('hospital'),
                         api_cooperado_nome=guia.get('cooperado'),
                         matricula=guia.get('matricula'),
-                        senha=guia.get('senha')
+                        senha=guia.get('senha'),
+                        plantao_eletiva=guia.get('classificacao')
                     )
                     financas_to_create.append(new_financa)
                     newly_created_count += 1 # For ProcedimentoFinancas
@@ -1321,7 +1346,8 @@ def conciliar_financas(request):
                              api_hospital_nome=guia.get('hospital'),
                              api_cooperado_nome=guia.get('cooperado'),
                              matricula=guia.get('matricula'),
-                             senha=guia.get('senha')
+                             senha=guia.get('senha'),
+                             plantao_eletiva=guia.get('classificacao')
                         )
                         financas_to_create.append(new_financa)
                         newly_created_count += 1 # For ProcedimentoFinancas

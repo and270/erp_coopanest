@@ -95,6 +95,7 @@
                         <th>CPF</th>
                         <th>Data Cirurgia</th>
                         <th>Eletiva / Urgência</th>
+                        {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}<th>Plantão/Eletiva</th>{% endif %}
                         <th>Valor Faturado</th>
                         <th>Valor Recebido</th>
                         <th>Valor Recuperado</th>
@@ -149,6 +150,9 @@
                                     --
                                 {% endif %}
                             </td>
+                            {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}
+                                <td>{{ item.plantao_eletiva|default:"--" }}</td>
+                            {% endif %}
                             {# Revert to original formatting #}
                             <td>{% if item.valor_faturado is not None %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.valor_recebido is not None %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
@@ -233,7 +237,7 @@
                     </tr>
                 {% empty %}
                 <tr>
-                   <td colspan="{% if view_type == 'receitas' %}17{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                   <td colspan="{% if view_type == 'receitas' %}{% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}19{% else %}18{% endif %}{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -1144,19 +1148,40 @@ document.addEventListener('DOMContentLoaded', function() {
          if (!conciliateButton) return;
          conciliateButton.disabled = true;
          conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Just spinner
-         fetch('/financas/conciliar/') 
-             .then(response => response.json().then(data => ({ ok: response.ok, data })))
-             .then(({ ok, data }) => {
-                 if (ok && data.success) {
-                     alert(data.message || 'Conciliação concluída.');
-                     window.location.reload(); 
-                 } else { throw new Error(data.error || 'Erro durante a conciliação.'); }
-             })
-             .catch(error => { console.error('Error conciliation:', error); alert('Erro: ' + error.message); })
-             .finally(() => {
-                 conciliateButton.disabled = false;
-                 conciliateButton.innerHTML = '<i class="fas fa-sync"></i>'; // Reset icon
-             });
+        fetch('/financas/conciliar/') 
+            .then(async (response) => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    // Stop further handling since we're navigating away
+                    return Promise.reject('redirected');
+                }
+                const contentType = response.headers.get('content-type') || '';
+                const isJson = contentType.includes('application/json');
+                const data = isJson ? await response.json() : {};
+                return { ok: response.ok, status: response.status, data };
+            })
+            .then(({ ok, status, data }) => {
+                if (ok && data.success) {
+                    alert(data.message || 'Conciliação concluída.');
+                    window.location.reload(); 
+                    return;
+                }
+                if (status === 401) {
+                    const target = (data && data.redirect_url) || '/login/';
+                    window.location.href = target;
+                    return;
+                }
+                throw new Error((data && data.error) || 'Erro durante a conciliação.');
+            })
+            .catch(error => { 
+                if (error === 'redirected') return;
+                console.error('Error conciliation:', error); 
+                alert('Erro: ' + (error?.message || error)); 
+            })
+            .finally(() => {
+                conciliateButton.disabled = false;
+                conciliateButton.innerHTML = '<i class="fas fa-sync"></i>'; // Reset icon
+            });
     }
 
     // --- Re-focus on search input after search ---
