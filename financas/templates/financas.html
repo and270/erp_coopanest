@@ -93,9 +93,12 @@
                     {% if view_type == 'receitas' %}
                         <th>Paciente</th>
                         <th>CPF</th>
+                        <th>Nasc.</th>
                         <th>Data Cirurgia</th>
+                        <th>Horário</th>
                         <th>Eletiva / Urgência</th>
                         {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}<th>Plantão/Eletiva</th>{% endif %}
+                        <th>Acomod.</th>
                         <th>Valor Faturado</th>
                         <th>Valor Recebido</th>
                         <th>Valor Recuperado</th>
@@ -107,6 +110,7 @@
                         <th>Senha</th>
                         <th>Cooperado</th>
                         <th>Anestesistas</th>
+                        <th>Cirurgião</th>
                         <th>Situação</th>
                         <th>Data Pagamento</th>
                         <th>Ações</th> {# Renamed Header #}
@@ -134,11 +138,19 @@
                                 {% endif %}
                             </td>
                             <td>{{ item.procedimento.cpf_paciente|default:"--" }}</td> {# CPF only if linked #}
+                            <td>{{ item.procedimento.data_nascimento|date:"d/m/Y"|default:"--" }}</td>
                             <td>
                                 {% if item.procedimento and item.procedimento.data_horario %}
                                     {{ item.procedimento.data_horario|date:"d/m/Y" }}
                                 {% elif item.api_data_cirurgia %}
                                     {{ item.api_data_cirurgia|date:"d/m/Y" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.procedimento and item.procedimento.data_horario %}
+                                    {{ item.procedimento.data_horario|date:"H:i" }}{% if item.procedimento.data_horario_fim %} - {{ item.procedimento.data_horario_fim|date:"H:i" }}{% endif %}
                                 {% else %}
                                     --
                                 {% endif %}
@@ -153,6 +165,7 @@
                             {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}
                                 <td>{{ item.plantao_eletiva|default:"--" }}</td>
                             {% endif %}
+                            <td>{{ item.procedimento.acomodacao|default:"--" }}</td>
                             {# Revert to original formatting #}
                             <td>{% if item.valor_faturado is not None %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.valor_recebido is not None %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
@@ -179,6 +192,15 @@
                             <td>
                                 {% if item.procedimento %}
                                     {{ item.procedimento.anestesistas_livres|default:"--" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.procedimento and item.procedimento.cirurgiao %}
+                                    {{ item.procedimento.cirurgiao.name }}{% if item.procedimento.cirurgiao.crm %} ({{ item.procedimento.cirurgiao.crm }}){% endif %}
+                                {% elif item.procedimento and item.procedimento.cirurgiao_nome %}
+                                    {{ item.procedimento.cirurgiao_nome }}
                                 {% else %}
                                     --
                                 {% endif %}
@@ -237,7 +259,7 @@
                     </tr>
                 {% empty %}
                 <tr>
-                   <td colspan="{% if view_type == 'receitas' %}{% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}19{% else %}18{% endif %}{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                   <td colspan="{% if view_type == 'receitas' %}{% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}23{% else %}22{% endif %}{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
                 </tr>
                 {% endfor %}
             </tbody>

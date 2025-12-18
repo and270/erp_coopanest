@@ -114,6 +114,8 @@ class Procedimento(models.Model):
         null=True,
         blank=True
     )
+    data_nascimento = models.DateField(null=True, blank=True, verbose_name='Data de Nascimento')
+    acomodacao = models.CharField(max_length=100, null=True, blank=True, verbose_name='Acomodação')
 
     class Meta:
         verbose_name = "Procedimento"

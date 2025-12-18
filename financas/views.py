@@ -652,8 +652,10 @@ def export_finances(request):
             row = {
                 'Paciente': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome or '',
                 'CPF': item.procedimento.cpf_paciente if item.procedimento else '',
+                'Nascimento': item.procedimento.data_nascimento.strftime('%d/%m/%Y') if item.procedimento and item.procedimento.data_nascimento else '',
                 'Data Cirurgia': (item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento and item.procedimento.data_horario else 
                                   item.api_data_cirurgia.strftime('%d/%m/%Y') if item.api_data_cirurgia else ''),
+                'Horário': (f"{item.procedimento.data_horario.strftime('%H:%M')}" + (f" - {item.procedimento.data_horario_fim.strftime('%H:%M')}" if item.procedimento.data_horario_fim else "") if item.procedimento and item.procedimento.data_horario else ''),
                 'Valor Faturado': float(item.valor_faturado) if item.valor_faturado is not None else 0.0,
                 'Valor Recebido': float(item.valor_recebido) if item.valor_recebido is not None else 0.0,
                 'Valor Recuperado': float(item.valor_recuperado) if item.valor_recuperado is not None else 0.0,
@@ -666,10 +668,13 @@ def export_finances(request):
             # Include Plantão/Eletiva column for Américas groups to match on-screen table
             if user_group_name in ('Américas', 'AMCRJ - SERVICOS MEDICOS LTDA'):
                 row['Plantão/Eletiva'] = item.plantao_eletiva or ''
+            
+            row['Acomodação'] = item.procedimento.acomodacao if item.procedimento else ''
 
             # Continue with remaining columns
             row.update({
                 'Anestesista': anest_name,
+                'Cirurgião': (f"{item.procedimento.cirurgiao.name}" + (f" ({item.procedimento.cirurgiao.crm})" if item.procedimento.cirurgiao.crm else "") if item.procedimento and item.procedimento.cirurgiao else ''),
                 'Situação': item.get_status_pagamento_display() or '',
                 'Data do Pagamento': item.data_pagamento.strftime('%d/%m/%Y') if item.data_pagamento else '-',
                 'Hospital': item.procedimento.hospital.name if item.procedimento and item.procedimento.hospital else item.api_hospital_nome or '',
@@ -953,6 +958,24 @@ def update_procedimento_with_api_data(procedimento, guia, group):
             if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
                 procedimento.data_horario_fim = new_data_horario_fim
                 updated = True
+
+    # Update CPF if present and missing in procedure
+    api_cpf = guia.get('cpf') or guia.get('nr_cpf')
+    if api_cpf and not procedimento.cpf_paciente:
+        procedimento.cpf_paciente = api_cpf
+        updated = True
+
+    # Update Data Nascimento if present and missing in procedure
+    api_nascimento = parse_api_date(guia.get('dt_nascimento'))
+    if api_nascimento and not procedimento.data_nascimento:
+        procedimento.data_nascimento = api_nascimento
+        updated = True
+
+    # Update Acomodação if present
+    api_acomodacao = guia.get('acomodacao')
+    if api_acomodacao and not procedimento.acomodacao:
+        procedimento.acomodacao = api_acomodacao
+        updated = True
     
     api_surgeon_name = guia.get('cirurgiao')
     api_surgeon_crm = guia.get('crm_cirurgiao')
@@ -1516,6 +1539,9 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
     newly_created_procedimento = Procedimento.objects.create(
         group=group,
         nome_paciente=paciente_nome_para_proc,
+        cpf_paciente=guia.get('cpf') or guia.get('nr_cpf'), # Capture CPF
+        data_nascimento=parse_api_date(guia.get('dt_nascimento')), # Capture birth date
+        acomodacao=guia.get('acomodacao'), # Capture accommodation
         data_horario=proc_data_horario,
         data_horario_fim=proc_data_horario_fim,
         hospital=hospital_obj,
