@@ -6,6 +6,7 @@ from constants import GESTOR_USER, ADMIN_USER, ANESTESISTA_USER, STATUS_FINISHED
 from registration.models import Groups, Membership, Anesthesiologist, HospitalClinic, Surgeon
 from .models import ProcedimentoFinancas, Despesas, DespesasRecorrentes, ConciliacaoTentativa
 from django.db.models import Q, Sum, F, Value
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, timedelta, time
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
@@ -128,8 +129,10 @@ def financas_view(request):
                 Q(procedimento__cpf_paciente__icontains=search_query) |
                 Q(cpsa__icontains=search_query) |
                 Q(procedimento__cooperado__name__icontains=search_query) |
-                Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) |
-                Q(procedimento__isnull=True, api_cooperado_nome__icontains=search_query)
+                Q(api_paciente_nome__icontains=search_query) |
+                Q(api_cooperado_nome__icontains=search_query) |
+                Q(matricula__icontains=search_query) |
+                Q(senha__icontains=search_query)
             )
 
         # Apply status filter
@@ -199,8 +202,18 @@ def financas_view(request):
             reverse=True
         )
 
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(queryset, 50)  # Show 50 items per page
+    try:
+        items_page = paginator.page(page)
+    except PageNotAnInteger:
+        items_page = paginator.page(1)
+    except EmptyPage:
+        items_page = paginator.page(paginator.num_pages)
+
     context = {
-        'items': queryset,
+        'items': items_page,
         'view_type': view_type,
         'selected_status': status,
         'search_query': search_query,
@@ -612,8 +625,10 @@ def export_finances(request):
                  Q(procedimento__cpf_paciente__icontains=search_query) |
                  Q(cpsa__icontains=search_query) |
                  Q(procedimento__anestesistas_responsaveis__name__icontains=search_query) |
-                 Q(procedimento__isnull=True, api_paciente_nome__icontains=search_query) |
-                 Q(procedimento__isnull=True, api_cooperado_nome__icontains=search_query)
+                 Q(api_paciente_nome__icontains=search_query) |
+                 Q(api_cooperado_nome__icontains=search_query) |
+                 Q(matricula__icontains=search_query) |
+                 Q(senha__icontains=search_query)
              ).distinct()
         if status:
              base_qs = base_qs.filter(status_pagamento=status)
