@@ -83,10 +83,20 @@
         <button class="export-btn" onclick="exportFinances()">
             <i class="fas fa-file-excel"></i> Exportar {# Added icon #}
         </button>
+
+        {% if active_role == 'gestor' or user.is_superuser %}
+        <button id="conciliate-header-btn" class="refresh-btn" onclick="runConciliation()" title="Conciliar Dados da API">
+            <i class="fas fa-sync"></i>
+        </button>
+        {% endif %}
         
     </div>
 
-    <div class="financas-table">
+    <div id="top-scrollbar-wrapper" class="top-scrollbar-wrapper">
+        <div id="top-scrollbar-content"></div>
+    </div>
+
+    <div class="financas-table" id="main-table-wrapper">
         <table>
             <thead>
                 <tr>
@@ -488,20 +498,51 @@
 </div>
 
 
-{# Add FABs here, outside the main container typically #}
-{% if active_role == 'gestor' or user.is_superuser %} {# Only show FABs to relevant users #}
-    {# Removed Add Receita FAB - moved to header actions #}
-    <button id="conciliate-fab" class="fab conciliate" onclick="runConciliation()" title="Conciliar Dados da API">
-        <i class="fas fa-sync"></i>
-    </button>
-{% endif %}
-
-
 {# --- SCRIPTS --- #}
 <script src="https://unpkg.com/imask"></script> {# Keep iMask #}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Double Scrollbar Synchronization ---
+    const topWrapper = document.getElementById('top-scrollbar-wrapper');
+    const topContent = document.getElementById('top-scrollbar-content');
+    const tableWrapper = document.getElementById('main-table-wrapper');
+    
+    if (topWrapper && tableWrapper) {
+        const table = tableWrapper.querySelector('table');
+        
+        const updateTopScroll = () => {
+            const tableWidth = table.scrollWidth;
+            const wrapperWidth = tableWrapper.clientWidth;
+            
+            if (tableWidth > wrapperWidth) {
+                topWrapper.style.display = 'block';
+                topContent.style.width = tableWidth + 'px';
+                // Sync initial positions
+                topWrapper.scrollLeft = tableWrapper.scrollLeft;
+            } else {
+                topWrapper.style.display = 'none';
+            }
+        };
+
+        // Initial update
+        setTimeout(updateTopScroll, 100); // Small delay to ensure table is rendered
+        
+        window.addEventListener('resize', updateTopScroll);
+        
+        // Use a mutation observer to update when table content changes (e.g. search)
+        const observer = new MutationObserver(updateTopScroll);
+        observer.observe(table, { childList: true, subtree: true });
+
+        // Sync scrolls
+        topWrapper.onscroll = function() {
+            tableWrapper.scrollLeft = topWrapper.scrollLeft;
+        };
+        tableWrapper.onscroll = function() {
+            topWrapper.scrollLeft = tableWrapper.scrollLeft;
+        };
+    }
+
     const form = document.getElementById('edit-finance-form');
     const editModal = document.getElementById('edit-finance-modal'); 
     
@@ -1184,7 +1225,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // --- Conciliation Trigger ---
     window.runConciliation = function() {
-         const conciliateButton = document.getElementById('conciliate-fab'); // Target FAB now
+         const conciliateButton = document.getElementById('conciliate-header-btn'); // Target Header button now
          if (!conciliateButton) return;
          conciliateButton.disabled = true;
          conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Just spinner
