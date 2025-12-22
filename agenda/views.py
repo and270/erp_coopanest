@@ -156,9 +156,7 @@ def create_procedure(request):
         for key, value in form.cleaned_data.items():
             print(f"{key}: {value}")
             
-        procedure = form.save(commit=False)
-        procedure.group = request.user.group
-        procedure.save()
+        procedure = form.save(commit=True)
         
         email_sent = False
         email_error = None
@@ -267,6 +265,24 @@ def get_procedure(request, procedure_id):
         'tipo_clinica': procedure.tipo_clinica,
         'tipo_clinica_label': clinic_label_map.get(procedure.tipo_clinica, procedure.tipo_clinica or ''),
     }
+
+    # Add financial data if available
+    try:
+        financas = ProcedimentoFinancas.objects.get(procedimento=procedure)
+        data.update({
+            'tipo_cobranca': financas.tipo_cobranca or '',
+            'valor_faturado': str(financas.valor_faturado) if financas.valor_faturado else '',
+            'tipo_pagamento_direto': financas.tipo_pagamento_direto or '',
+            'data_pagamento': financas.data_pagamento.strftime('%Y-%m-%d') if financas.data_pagamento else '',
+        })
+    except ProcedimentoFinancas.DoesNotExist:
+        data.update({
+            'tipo_cobranca': '',
+            'valor_faturado': '',
+            'tipo_pagamento_direto': '',
+            'data_pagamento': '',
+        })
+
     return JsonResponse(data)
 
 def get_calendar_dates(year, month):
@@ -500,9 +516,7 @@ def agenda_view(request):
     if request.method == 'POST':
         form = ProcedimentoForm(request.POST, request.FILES, user=user)
         if form.is_valid():
-            procedimento = form.save(commit=False)
-            procedimento.group = user.group 
-            procedimento.save()
+            form.save()
             return redirect('agenda')
     else:
         form = ProcedimentoForm(user=user)

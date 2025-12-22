@@ -3,6 +3,7 @@ from django import forms
 from qualidade.models import ProcedimentoQualidade
 from registration.models import Anesthesiologist, HospitalClinic, Surgeon
 from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes, Convenios
+from financas.models import ProcedimentoFinancas
 from datetime import datetime, timedelta
 from dal import autocomplete
 from dal_select2 import widgets as dal_widgets
@@ -77,6 +78,50 @@ class ProcedimentoForm(forms.ModelForm):
         label='Anestesistas (livre)'
     )
 
+    # Financial fields
+    tipo_cobranca = forms.ChoiceField(
+        choices=[('', '--- Selecione ---')] + ProcedimentoFinancas.COBRANCA_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
+        required=False,
+        label='Tipo de Cobrança'
+    )
+    valor_faturado = forms.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'id': 'id_valor_faturado'
+        }),
+        label='Valor Faturado'
+    )
+    tipo_pagamento_direto = forms.ChoiceField(
+        choices=ProcedimentoFinancas.DIRECT_PAYMENT_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Forma de Pagamento (Direto)'
+    )
+    data_pagamento = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'dd/mm/aaaa'}),
+        required=False,
+        label='Data do Pagamento (Hospital/Direto)'
+    )
+
+    def clean_valor_faturado(self):
+        valor = self.cleaned_data.get('valor_faturado')
+        # DecimalField might already have parsed it if JS worked
+        # If JS failed, it might be a string or None
+        if not valor:
+            # Check raw data if cleaned_data is empty
+            raw_valor = self.data.get('valor_faturado')
+            if raw_valor and isinstance(raw_valor, str):
+                cleaned_valor = raw_valor.replace('R$', '').replace('.', '').replace(',', '.').replace(' ', '').strip()
+                try:
+                    return cleaned_valor
+                except (ValueError, TypeError):
+                    return None
+        return valor
+
     class Meta:
         model = Procedimento
         fields = [
@@ -88,14 +133,17 @@ class ProcedimentoForm(forms.ModelForm):
             'visita_pre_anestesica',
             'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita',
             'tipo_procedimento', # Added new field
-            'tipo_clinica' # New clinic type field (optional)
+            'tipo_clinica', # New clinic type field (optional)
+            'tipo_cobranca', 'valor_faturado', 'tipo_pagamento_direto', 'data_pagamento'
         ]
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super(ProcedimentoForm, self).__init__(*args, **kwargs)
+        self.user_group = None
 
         if user:
+            self.user_group = user.group
             anesthesiologist_qs = Anesthesiologist.objects.filter(group=user.group).order_by('name')
             self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
@@ -132,6 +180,17 @@ class ProcedimentoForm(forms.ModelForm):
             clinic_choices.sort(key=lambda choice: choice[1])
             field.choices = empty_choices + clinic_choices
 
+        # Pre-fill financial fields if editing
+        if self.instance and self.instance.pk:
+            try:
+                financas = ProcedimentoFinancas.objects.get(procedimento=self.instance)
+                self.initial['tipo_cobranca'] = financas.tipo_cobranca
+                self.initial['valor_faturado'] = financas.valor_faturado
+                self.initial['tipo_pagamento_direto'] = financas.tipo_pagamento_direto
+                self.initial['data_pagamento'] = financas.data_pagamento
+            except ProcedimentoFinancas.DoesNotExist:
+                pass
+
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -160,8 +219,38 @@ class ProcedimentoForm(forms.ModelForm):
         # as 'convenio' field is not required.
 
         if commit:
+            if self.user_group:
+                instance.group = self.user_group
             instance.save()
             self.save_m2m()
+
+            # Handle financial record
+            tipo_cobranca = self.cleaned_data.get('tipo_cobranca')
+            if tipo_cobranca:
+                try:
+                    financas = ProcedimentoFinancas.objects.get(procedimento=instance)
+                except ProcedimentoFinancas.DoesNotExist:
+                    financas = ProcedimentoFinancas(procedimento=instance, group=instance.group)
+
+                financas.tipo_cobranca = tipo_cobranca
+                if financas.tipo_cobranca == 'cortesia':
+                    financas.valor_faturado = 0
+                    financas.valor_recebido = 0
+                    financas.valor_recuperado = 0
+                else:
+                    financas.valor_faturado = self.cleaned_data.get('valor_faturado')
+
+                financas.tipo_pagamento_direto = self.cleaned_data.get('tipo_pagamento_direto') if financas.tipo_cobranca == 'particular' else None
+                data_pagamento = self.cleaned_data.get('data_pagamento')
+                financas.data_pagamento = data_pagamento
+
+                if data_pagamento:
+                    financas.status_pagamento = 'processo_finalizado'
+                    financas.valor_recebido = financas.valor_faturado
+                elif not financas.status_pagamento or financas.status_pagamento == 'em_processamento':
+                    financas.status_pagamento = 'em_processamento'
+
+                financas.save()
 
         return instance
 
