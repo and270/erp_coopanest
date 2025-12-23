@@ -200,8 +200,6 @@ def dashboard_view(request):
         group=user_group
     )
     
-    print(f"DEBUG: Peak hours total for group {user_group}: {peak_hours_queryset.count()}")
-    
     if procedimento:
         peak_hours_queryset = peak_hours_queryset.filter(procedimento_principal__name=procedimento)
 
@@ -229,8 +227,6 @@ def dashboard_view(request):
         start_date_val = timezone.now() - timedelta(days=p_days)
         peak_hours_queryset = peak_hours_queryset.filter(data_horario__gte=start_date_val)
 
-    print(f"DEBUG: Peak hours after filtering: {peak_hours_queryset.count()}")
-
     peak_hours = defaultdict(int)
     for p_item in peak_hours_queryset:
         if p_item.data_horario:
@@ -239,7 +235,6 @@ def dashboard_view(request):
     
     # Format peak hours for chart (all 24 hours)
     peak_hours_data = [peak_hours[h] for h in range(24)]
-    print(f"DEBUG: Peak hours data: {peak_hours_data}")
 
     # Monta o dicionário de métricas
     metrics = {
