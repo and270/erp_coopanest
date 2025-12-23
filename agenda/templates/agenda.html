@@ -124,6 +124,8 @@
                                     <div class="procedure-modal-content">
                                         <span class="close-modal">&times;</span>
                                         <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                        <p>Data de Nascimento: <strong><span class="modal-birth-date">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</span></strong></p>
+                                        <p>Acomodação: <strong><span class="modal-accommodation">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</span></strong></p>
                                         <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
                                         <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                         <br>
@@ -200,6 +202,8 @@
                                             <div class="procedure-modal-content">
                                                 <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                                <p>Data de Nascimento: <strong><span class="modal-birth-date">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</span></strong></p>
+                                                <p>Acomodação: <strong><span class="modal-accommodation">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</span></strong></p>
                                                 <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
                                                 <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                                 <br>
@@ -281,6 +285,16 @@
             <div class="form-group">
                 <label for="{{ form.email_paciente.id_for_label }}">{{ form.email_paciente.label }}</label>
                 {{ form.email_paciente }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.data_nascimento.id_for_label }}">{{ form.data_nascimento.label }}</label>
+                {{ form.data_nascimento }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.acomodacao.id_for_label }}">{{ form.acomodacao.label }}</label>
+                {{ form.acomodacao }}
             </div>
 
             <div class="form-group">
@@ -507,6 +521,13 @@
     // Reset the form and clear procedure_id
     document.querySelector('#procedimento-form-modal form').reset();
     document.getElementById('procedure_id').value = '';
+    
+    // Manual clear for fields that might not be fully handled by reset()
+    const birthDateField = document.getElementById('id_data_nascimento');
+    const accommodationField = document.getElementById('id_acomodacao');
+    if (birthDateField) birthDateField.value = '';
+    if (accommodationField) accommodationField.value = '';
+
     formSubmitBtn.textContent = 'Criar Agendamento'; // Reset button text to default
 
     // Pre-fill the date and time fields
@@ -1144,6 +1165,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
                 document.getElementById('id_email_paciente').value = data.email_paciente;
+                document.getElementById('id_data_nascimento').value = data.data_nascimento;
+                document.getElementById('id_acomodacao').value = data.acomodacao;
                 document.getElementById('id_convenio_nome_novo').value = data.convenio_nome_novo;
                 document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
                 document.getElementById('id_hospital').value = data.hospital;
@@ -1260,6 +1283,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Trigger change event to update visibility
                         tipoCobrancaRadio.dispatchEvent(new Event('change'));
                     }
+                } else {
+                    // Ensure all radios are unchecked and containers hidden
+                    document.querySelectorAll('input[name="tipo_cobranca"]').forEach(r => r.checked = false);
+                    handleTipoCobrancaChange();
                 }
                 
                 if (data.valor_faturado && typeof moneyMask !== 'undefined') {
@@ -1340,6 +1367,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset form when opening for a new procedure
     document.getElementById('agendar-btn').addEventListener('click', function() {
         document.querySelector('#procedimento-form-modal form').reset();
+        
+        // Manual clear for fields that might not be fully handled by reset()
+        document.getElementById('id_data_nascimento').value = '';
+        document.getElementById('id_acomodacao').value = '';
+
         // Clear Select2 fields
         $('#id_procedimento_principal').val(null).trigger('change');
         $('#id_convenio').val(null).trigger('change');
@@ -1352,11 +1384,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (coopSelect) coopSelect.value = '';
 
         // Reset financial fields
-        const tipoCobrancaDefault = document.querySelector('input[name="tipo_cobranca"][value=""]');
-        if (tipoCobrancaDefault) {
-            tipoCobrancaDefault.checked = true;
-            tipoCobrancaDefault.dispatchEvent(new Event('change'));
-        }
+        const tipoCobrancaRadios = document.querySelectorAll('input[name="tipo_cobranca"]');
+        tipoCobrancaRadios.forEach(radio => radio.checked = false);
+        // Explicitly hide containers since no radio is checked
+        if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+        if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+        if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+
         if (typeof moneyMask !== 'undefined' && moneyMask) {
             moneyMask.typedValue = 0;
             moneyMask.value = '';

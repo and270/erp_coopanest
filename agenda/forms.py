@@ -7,7 +7,7 @@ from financas.models import ProcedimentoFinancas
 from datetime import datetime, timedelta
 from dal import autocomplete
 from dal_select2 import widgets as dal_widgets
-from constants import CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
+from constants import CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO, ACOMODACAO_CHOICES
 
 class ProcedimentoForm(forms.ModelForm):
 
@@ -80,7 +80,7 @@ class ProcedimentoForm(forms.ModelForm):
 
     # Financial fields
     tipo_cobranca = forms.ChoiceField(
-        choices=[('', '--- Selecione ---')] + ProcedimentoFinancas.COBRANCA_CHOICES,
+        choices=ProcedimentoFinancas.COBRANCA_CHOICES,
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
         required=False,
         label='Tipo de Cobrança'
@@ -125,7 +125,7 @@ class ProcedimentoForm(forms.ModelForm):
     class Meta:
         model = Procedimento
         fields = [
-            'nome_paciente', 'email_paciente', 'cpf_paciente',
+            'nome_paciente', 'email_paciente', 'cpf_paciente', 'data_nascimento', 'acomodacao',
             'convenio', 'convenio_nome_novo', 'procedimento_principal', 'hospital', 'outro_local',
             'cirurgiao', 'cirurgiao_nome',
             'cooperado',
@@ -164,6 +164,13 @@ class ProcedimentoForm(forms.ModelForm):
         # self.fields['anestesistas_responsaveis'].label = ''
         self.fields['tipo_procedimento'].widget.attrs.update({'class': 'form-control'})
         self.fields['tipo_procedimento'].empty_label = "--- Selecione o Tipo ---"
+        
+        self.fields['data_nascimento'].widget = forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        self.fields['acomodacao'].widget = forms.Select(
+            attrs={'class': 'form-control'},
+            choices=[('', '--- Selecione ---')] + ACOMODACAO_CHOICES
+        )
+        
         # Style for optional clinic type selector
         if 'tipo_clinica' in self.fields:
             field = self.fields['tipo_clinica']

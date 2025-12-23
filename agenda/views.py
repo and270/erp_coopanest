@@ -242,6 +242,8 @@ def get_procedure(request, procedure_id):
         'end_time': end_time.strftime('%H:%M') if end_time else '',
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
+        'data_nascimento': procedure.data_nascimento.strftime('%Y-%m-%d') if procedure.data_nascimento else '',
+        'acomodacao': procedure.acomodacao or '',
         'convenio': {
             'id': procedure.convenio.id,
             'text': procedure.convenio.name

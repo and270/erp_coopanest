@@ -28,6 +28,14 @@
                 <div class="info-label">Paciente</div>
                 <div class="info-value">{{ procedimento.nome_paciente|default:"Não informado" }}</div>
             </div>
+            <div class="info-item">
+                <div class="info-label">Data de Nascimento</div>
+                <div class="info-value">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Acomodação</div>
+                <div class="info-value">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</div>
+            </div>
         </div>
 
         <div class="info-section">
