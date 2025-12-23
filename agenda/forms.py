@@ -23,6 +23,20 @@ class ProcedimentoForm(forms.ModelForm):
         label='Procedimento Principal',
     )
 
+    cirurgiao = forms.CharField(
+        label='Cirurgião',
+        required=False,
+        widget=dal_widgets.Select2(
+            url='surgeon-autocomplete',
+            attrs={
+                'data-placeholder': 'Busque ou digite o nome do cirurgião...',
+                'data-minimum-input-length': 1,
+                'data-tags': 'true',
+                'class': 'form-control'
+            }
+        ),
+    )
+
     convenio = forms.ModelChoiceField(
         queryset=Convenios.objects.all(),
         widget=dal_widgets.ModelSelect2(
@@ -127,7 +141,6 @@ class ProcedimentoForm(forms.ModelForm):
         fields = [
             'nome_paciente', 'email_paciente', 'cpf_paciente', 'data_nascimento', 'acomodacao',
             'convenio', 'convenio_nome_novo', 'procedimento_principal', 'hospital', 'outro_local',
-            'cirurgiao', 'cirurgiao_nome',
             'cooperado',
             'anestesistas_livres',
             'visita_pre_anestesica',
@@ -145,7 +158,6 @@ class ProcedimentoForm(forms.ModelForm):
         if user:
             self.user_group = user.group
             anesthesiologist_qs = Anesthesiologist.objects.filter(group=user.group).order_by('name')
-            self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
             self.fields['cooperado'].queryset = anesthesiologist_qs
             self.fields['convenio'].queryset = Convenios.objects.all().order_by('name')
@@ -154,10 +166,6 @@ class ProcedimentoForm(forms.ModelForm):
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['foto_anexo'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['nome_responsavel_visita'].widget.attrs.update({'class': 'form-control conditional-field'})
-        self.fields['cirurgiao_nome'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Digite o nome do cirurgião não cadastrado'
-        })
         # Add placeholder to cooperado selector
         self.fields['cooperado'].empty_label = "--- Selecione ---"
         # Hide the label for the original field in the template using JS/CSS might be better
@@ -198,6 +206,13 @@ class ProcedimentoForm(forms.ModelForm):
             except ProcedimentoFinancas.DoesNotExist:
                 pass
 
+        # Pre-fill surgeon field
+        if self.instance and self.instance.pk:
+            if self.instance.cirurgiao:
+                self.initial['cirurgiao'] = self.instance.cirurgiao.id
+            elif self.instance.cirurgiao_nome:
+                self.initial['cirurgiao'] = self.instance.cirurgiao_nome
+
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -206,6 +221,24 @@ class ProcedimentoForm(forms.ModelForm):
         end_time = self.cleaned_data.get('end_time')
         instance.data_horario = datetime.combine(date, time)
         instance.data_horario_fim = datetime.combine(date, end_time) if end_time else None
+
+        # Handle surgeon field
+        cirurgiao_val = self.cleaned_data.get('cirurgiao')
+        if cirurgiao_val:
+            # Check if cirurgiao_val is an ID (integer) or a string (new name)
+            if cirurgiao_val.isdigit():
+                try:
+                    instance.cirurgiao = Surgeon.objects.get(pk=int(cirurgiao_val))
+                    instance.cirurgiao_nome = None
+                except Surgeon.DoesNotExist:
+                    instance.cirurgiao = None
+                    instance.cirurgiao_nome = cirurgiao_val
+            else:
+                instance.cirurgiao = None
+                instance.cirurgiao_nome = cirurgiao_val
+        else:
+            instance.cirurgiao = None
+            instance.cirurgiao_nome = None
 
         # Auto-classify procedure type
         procedimento_principal = self.cleaned_data.get('procedimento_principal')

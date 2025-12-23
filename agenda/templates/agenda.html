@@ -341,10 +341,6 @@
             <div class="form-group">
                 <label for="{{ form.cirurgiao.id_for_label }}">{{ form.cirurgiao.label }}</label>
                 {{ form.cirurgiao }}
-                <div class="mt-2">
-                    <label for="{{ form.cirurgiao_nome.id_for_label }}">{{ form.cirurgiao_nome.label }}</label>
-                    {{ form.cirurgiao_nome }}
-                </div>
             </div>
 
             <div class="form-group">
@@ -484,6 +480,30 @@
             language: 'pt-BR',
             ajax: {
                 url: '{% url "convenio-autocomplete" %}',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        page: params.page
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('#{{ form.cirurgiao.auto_id }}').select2({
+            placeholder: 'Busque ou digite o nome do cirurgião...',
+            minimumInputLength: 1,
+            language: 'pt-BR',
+            tags: true,
+            ajax: {
+                url: '{% url "surgeon-autocomplete" %}',
                 dataType: 'json',
                 delay: 250,
                 data: function(params) {
@@ -1171,8 +1191,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
-                document.getElementById('id_cirurgiao').value = data.cirurgiao;
-                document.getElementById('id_cirurgiao_nome').value = data.cirurgiao_nome;
+                
+                // Fix for cirurgiao (Select2 with tags)
+                if (data.cirurgiao_id || data.cirurgiao_nome) {
+                    const surgeonText = data.cirurgiao_nome || data.cirurgiao_text;
+                    const surgeonValue = data.cirurgiao_id || data.cirurgiao_nome;
+                    const newOption = new Option(surgeonText, surgeonValue, true, true);
+                    $('#id_cirurgiao').empty().append(newOption).trigger('change');
+                } else {
+                    $('#id_cirurgiao').val(null).trigger('change');
+                }
+
                 document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
@@ -1375,6 +1404,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear Select2 fields
         $('#id_procedimento_principal').val(null).trigger('change');
         $('#id_convenio').val(null).trigger('change');
+        $('#id_cirurgiao').val(null).trigger('change');
         // Clear anesthesiologists free-text list and cooperado
         const selectedAnesthesiologistsContainer = document.getElementById('selected-anesthesiologists-container');
         if (selectedAnesthesiologistsContainer) selectedAnesthesiologistsContainer.innerHTML = '';
@@ -1704,22 +1734,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const cirurgiaoSelect = document.getElementById('id_cirurgiao');
-    const cirurgiaoNomeInput = document.getElementById('id_cirurgiao_nome');
-
-    // When one field is filled, clear the other
-    cirurgiaoSelect.addEventListener('change', function() {
-        if (this.value) {
-            cirurgiaoNomeInput.value = '';
-        }
-    });
-
-    cirurgiaoNomeInput.addEventListener('input', function() {
-        if (this.value) {
-            cirurgiaoSelect.value = '';
-        }
-    });
-
     const convenioSelect = $('#id_convenio');
     const convenioNomeNovoInput = document.getElementById('id_convenio_nome_novo');
 

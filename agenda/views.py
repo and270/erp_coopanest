@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
-from registration.models import Anesthesiologist, CustomUser
+from registration.models import Anesthesiologist, CustomUser, Surgeon
 from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes, Convenios
 from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
@@ -256,7 +256,8 @@ def get_procedure(request, procedure_id):
         } if procedure.procedimento_principal else None,
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
-        'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
+        'cirurgiao_id': procedure.cirurgiao.id if procedure.cirurgiao else None,
+        'cirurgiao_text': procedure.cirurgiao.name if procedure.cirurgiao else None,
         'cirurgiao_nome': procedure.cirurgiao_nome or '',
         'cooperado': {'id': procedure.cooperado.id, 'name': procedure.cooperado.name} if procedure.cooperado else None,
         'anestesistas_livres': procedure.anestesistas_livres or '',
@@ -505,6 +506,18 @@ class ConvenioAutocomplete(Select2QuerySetView):
         else:
             # Return some results even when no query is provided
             qs = qs[:20]  # Limit to first 20 results when no search term
+
+        return qs.order_by('name')
+
+class SurgeonAutocomplete(Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Surgeon.objects.none()
+
+        qs = Surgeon.objects.filter(group=self.request.user.group)
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
 
         return qs.order_by('name')
 
