@@ -22,14 +22,11 @@ class SurgeonResource(resources.ModelResource):
         export_order = ('id', 'name', 'crm', 'specialty', 'phone', 'notes')
 
     def __init__(self, **kwargs):
+        # django-import-export may pass extra kwargs depending on version (e.g. file_name)
         super().__init__()
         self.target_group = kwargs.get('group')
 
     def before_import_row(self, row, **kwargs):
-        # Atribui o grupo selecionado no formulário de importação
-        if self.target_group:
-            row['group'] = self.target_group.id
-
         # Lógica de extração de nome/CRM
         raw_value = row.get('name') or row.get('Nome') or row.get('nome') or row.get('SURGEON') or row.get('Cirurgião')
         
@@ -41,14 +38,38 @@ class SurgeonResource(resources.ModelResource):
                     break
         
         if raw_value and isinstance(raw_value, str):
-            # Regex to match: Name (CRM: XX.XXXXX-X) or Name (CRO: XXXXX)
-            # The user's example: DR. AILSON SOARES GOMES (CRM: 52.40783-7)
+            # Regex para capturar: Nome (CRM: XX.XXXXX-X) ou Nome (CRO: XXXXX)
+            # Exemplo: DR. AILSON SOARES GOMES (CRM: 52.40783-7)
             match = re.search(r'^(.*?)\s*\((CRM|CRO):\s*(.*?)\)\s*$', raw_value, re.IGNORECASE)
             if match:
                 row['name'] = match.group(1).strip()
                 row['crm'] = match.group(3).strip()
             else:
                 row['name'] = raw_value.strip()
+
+    def get_instance(self, instance_loader, row):
+        """
+        Evita duplicar cirurgiões quando importar mais de uma vez:
+        se já existir um cirurgião no grupo selecionado com mesmo nome/CRM,
+        atualiza o existente ao invés de criar um novo.
+        """
+        if not self.target_group:
+            return None
+
+        name = (row.get('name') or '').strip()
+        crm = (row.get('crm') or '').strip()
+        if not name:
+            return None
+
+        qs = Surgeon.objects.filter(group=self.target_group, name__iexact=name)
+        if crm:
+            qs = qs.filter(crm__iexact=crm)
+        return qs.first()
+
+    def before_save_instance(self, instance, *args, **kwargs):
+        # Atribui o grupo selecionado no formulário de importação diretamente na instância
+        if self.target_group:
+            instance.group = self.target_group
 
 @admin.register(Surgeon)
 class SurgeonAdmin(ImportExportModelAdmin):
