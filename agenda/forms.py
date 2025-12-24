@@ -3,10 +3,14 @@ from django import forms
 from qualidade.models import ProcedimentoQualidade
 from registration.models import Anesthesiologist, HospitalClinic, Surgeon
 from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes, Convenios
+from financas.models import ProcedimentoFinancas
 from datetime import datetime, timedelta
 from dal import autocomplete
 from dal_select2 import widgets as dal_widgets
-from constants import CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO
+from constants import CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO, ACOMODACAO_CHOICES
+
+AMERICAS_GROUP_NAMES = ('Américas', 'AMCRJ - SERVICOS MEDICOS LTDA')
+AMERICAS_TIPO_COBRANCA_KEYS = ('coi', 'amil')
 
 class ProcedimentoForm(forms.ModelForm):
 
@@ -20,6 +24,20 @@ class ProcedimentoForm(forms.ModelForm):
             }
         ),
         label='Procedimento Principal',
+    )
+
+    cirurgiao = forms.CharField(
+        label='Cirurgião',
+        required=False,
+        widget=dal_widgets.Select2(
+            url='surgeon-autocomplete',
+            attrs={
+                'data-placeholder': 'Busque ou digite o nome do cirurgião...',
+                'data-minimum-input-length': 1,
+                'data-tags': 'true',
+                'class': 'form-control'
+            }
+        ),
     )
 
     convenio = forms.ModelChoiceField(
@@ -77,45 +95,119 @@ class ProcedimentoForm(forms.ModelForm):
         label='Anestesistas (livre)'
     )
 
+    # Financial fields
+    PLANTAO_ELETIVA_CHOICES = [
+        ('', '--- Selecione ---'),
+        ('Plantão', 'Plantão'),
+        ('Eletiva', 'Eletiva'),
+    ]
+
+    plantao_eletiva = forms.ChoiceField(
+        choices=PLANTAO_ELETIVA_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Plantão/Eletiva (Américas)'
+    )
+    tipo_cobranca = forms.ChoiceField(
+        choices=ProcedimentoFinancas.COBRANCA_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
+        required=False,
+        label='Tipo de Cobrança'
+    )
+    valor_faturado = forms.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'id': 'id_valor_faturado'
+        }),
+        label='Valor Faturado'
+    )
+    tipo_pagamento_direto = forms.ChoiceField(
+        choices=ProcedimentoFinancas.DIRECT_PAYMENT_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Forma de Pagamento (Direto)'
+    )
+    data_pagamento = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'dd/mm/aaaa'}),
+        required=False,
+        label='Data do Pagamento (Hospital/Direto)'
+    )
+
+    def clean_valor_faturado(self):
+        valor = self.cleaned_data.get('valor_faturado')
+        # DecimalField might already have parsed it if JS worked
+        # If JS failed, it might be a string or None
+        if not valor:
+            # Check raw data if cleaned_data is empty
+            raw_valor = self.data.get('valor_faturado')
+            if raw_valor and isinstance(raw_valor, str):
+                cleaned_valor = raw_valor.replace('R$', '').replace('.', '').replace(',', '.').replace(' ', '').strip()
+                try:
+                    return cleaned_valor
+                except (ValueError, TypeError):
+                    return None
+        return valor
+
     class Meta:
         model = Procedimento
         fields = [
-            'nome_paciente', 'email_paciente', 'cpf_paciente',
+            'nome_paciente', 'email_paciente', 'cpf_paciente', 'data_nascimento', 'acomodacao',
             'convenio', 'convenio_nome_novo', 'procedimento_principal', 'hospital', 'outro_local',
-            'cirurgiao', 'cirurgiao_nome',
             'cooperado',
             'anestesistas_livres',
             'visita_pre_anestesica',
             'data_visita_pre_anestesica', 'foto_anexo', 'nome_responsavel_visita',
             'tipo_procedimento', # Added new field
-            'tipo_clinica' # New clinic type field (optional)
+            'tipo_clinica', # New clinic type field (optional)
+            'plantao_eletiva', 'tipo_cobranca', 'valor_faturado', 'tipo_pagamento_direto', 'data_pagamento'
         ]
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super(ProcedimentoForm, self).__init__(*args, **kwargs)
+        self.user_group = None
+        self.is_americas_group = False
 
         if user:
+            self.user_group = user.group
+            self.is_americas_group = bool(self.user_group and self.user_group.name in AMERICAS_GROUP_NAMES)
             anesthesiologist_qs = Anesthesiologist.objects.filter(group=user.group).order_by('name')
-            self.fields['cirurgiao'].queryset = Surgeon.objects.filter(group=user.group).order_by('name')
             self.fields['hospital'].queryset = HospitalClinic.objects.filter(group=user.group).order_by('name')
             self.fields['cooperado'].queryset = anesthesiologist_qs
             self.fields['convenio'].queryset = Convenios.objects.all().order_by('name')
             self.fields['procedimento_principal'].queryset = ProcedimentoDetalhes.objects.all().order_by('name')
 
+        # Only show Plantão/Eletiva selector for Américas groups
+        if not self.is_americas_group:
+            self.fields['plantao_eletiva'].widget = forms.HiddenInput()
+
+        # Only allow COI/Amil as Fonte Pagadora for Américas groups
+        if not self.is_americas_group and 'tipo_cobranca' in self.fields:
+            self.fields['tipo_cobranca'].choices = [
+                (value, label)
+                for value, label in self.fields['tipo_cobranca'].choices
+                if value not in AMERICAS_TIPO_COBRANCA_KEYS
+            ]
+
         self.fields['data_visita_pre_anestesica'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['foto_anexo'].widget.attrs.update({'class': 'form-control conditional-field'})
         self.fields['nome_responsavel_visita'].widget.attrs.update({'class': 'form-control conditional-field'})
-        self.fields['cirurgiao_nome'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Digite o nome do cirurgião não cadastrado'
-        })
         # Add placeholder to cooperado selector
         self.fields['cooperado'].empty_label = "--- Selecione ---"
         # Hide the label for the original field in the template using JS/CSS might be better
         # self.fields['anestesistas_responsaveis'].label = ''
         self.fields['tipo_procedimento'].widget.attrs.update({'class': 'form-control'})
         self.fields['tipo_procedimento'].empty_label = "--- Selecione o Tipo ---"
+        
+        self.fields['data_nascimento'].widget = forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        self.fields['acomodacao'].widget = forms.Select(
+            attrs={'class': 'form-control'},
+            choices=[('', '--- Selecione ---')] + ACOMODACAO_CHOICES
+        )
+        
         # Style for optional clinic type selector
         if 'tipo_clinica' in self.fields:
             field = self.fields['tipo_clinica']
@@ -132,6 +224,45 @@ class ProcedimentoForm(forms.ModelForm):
             clinic_choices.sort(key=lambda choice: choice[1])
             field.choices = empty_choices + clinic_choices
 
+        # Pre-fill financial fields if editing
+        if self.instance and self.instance.pk:
+            financas_qs = ProcedimentoFinancas.objects.filter(procedimento=self.instance)
+            # Prefer "manual" record (without CPSA) for form-driven finance fields.
+            financas = (
+                financas_qs.filter(cpsa__isnull=True).order_by('-id').first()
+                or financas_qs.order_by('-id').first()
+            )
+            if financas:
+                self.initial['tipo_cobranca'] = financas.tipo_cobranca
+                self.initial['valor_faturado'] = financas.valor_faturado
+                self.initial['tipo_pagamento_direto'] = financas.tipo_pagamento_direto
+                self.initial['data_pagamento'] = financas.data_pagamento
+
+            # Pre-fill Plantão/Eletiva (Américas) from any existing record that has a value.
+            if self.is_americas_group:
+                plantao_value = (
+                    financas_qs.exclude(plantao_eletiva__isnull=True)
+                    .exclude(plantao_eletiva__exact='')
+                    .values_list('plantao_eletiva', flat=True)
+                    .order_by('-id')
+                    .first()
+                )
+                if plantao_value:
+                    # If API returned a value outside our defaults, allow it in the dropdown.
+                    existing_values = {v for v, _ in self.fields['plantao_eletiva'].choices}
+                    if plantao_value not in existing_values:
+                        self.fields['plantao_eletiva'].choices = list(self.fields['plantao_eletiva'].choices) + [
+                            (plantao_value, plantao_value)
+                        ]
+                    self.initial['plantao_eletiva'] = plantao_value
+
+        # Pre-fill surgeon field
+        if self.instance and self.instance.pk:
+            if self.instance.cirurgiao:
+                self.initial['cirurgiao'] = self.instance.cirurgiao.id
+            elif self.instance.cirurgiao_nome:
+                self.initial['cirurgiao'] = self.instance.cirurgiao_nome
+
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -140,6 +271,24 @@ class ProcedimentoForm(forms.ModelForm):
         end_time = self.cleaned_data.get('end_time')
         instance.data_horario = datetime.combine(date, time)
         instance.data_horario_fim = datetime.combine(date, end_time) if end_time else None
+
+        # Handle surgeon field
+        cirurgiao_val = self.cleaned_data.get('cirurgiao')
+        if cirurgiao_val:
+            # Check if cirurgiao_val is an ID (integer) or a string (new name)
+            if cirurgiao_val.isdigit():
+                try:
+                    instance.cirurgiao = Surgeon.objects.get(pk=int(cirurgiao_val))
+                    instance.cirurgiao_nome = None
+                except Surgeon.DoesNotExist:
+                    instance.cirurgiao = None
+                    instance.cirurgiao_nome = cirurgiao_val
+            else:
+                instance.cirurgiao = None
+                instance.cirurgiao_nome = cirurgiao_val
+        else:
+            instance.cirurgiao = None
+            instance.cirurgiao_nome = None
 
         # Auto-classify procedure type
         procedimento_principal = self.cleaned_data.get('procedimento_principal')
@@ -160,8 +309,60 @@ class ProcedimentoForm(forms.ModelForm):
         # as 'convenio' field is not required.
 
         if commit:
+            if self.user_group:
+                instance.group = self.user_group
             instance.save()
             self.save_m2m()
+
+            # Handle financial record (manual fields)
+            tipo_cobranca = self.cleaned_data.get('tipo_cobranca')
+            if tipo_cobranca:
+                try:
+                    financas = (
+                        ProcedimentoFinancas.objects
+                        .filter(procedimento=instance, cpsa__isnull=True)
+                        .order_by('-id')
+                        .first()
+                    )
+                    if not financas:
+                        raise ProcedimentoFinancas.DoesNotExist()
+                except ProcedimentoFinancas.DoesNotExist:
+                    financas = ProcedimentoFinancas(procedimento=instance, group=instance.group)
+
+                if not financas.group and instance.group:
+                    financas.group = instance.group
+                financas.tipo_cobranca = tipo_cobranca
+                if financas.tipo_cobranca == 'cortesia':
+                    financas.valor_faturado = 0
+                    financas.valor_recebido = 0
+                    financas.valor_recuperado = 0
+                else:
+                    financas.valor_faturado = self.cleaned_data.get('valor_faturado')
+
+                financas.tipo_pagamento_direto = self.cleaned_data.get('tipo_pagamento_direto') if financas.tipo_cobranca == 'particular' else None
+                data_pagamento = self.cleaned_data.get('data_pagamento')
+                financas.data_pagamento = data_pagamento
+
+                if data_pagamento:
+                    financas.status_pagamento = 'processo_finalizado'
+                    financas.valor_recebido = financas.valor_faturado
+                elif not financas.status_pagamento or financas.status_pagamento == 'em_processamento':
+                    financas.status_pagamento = 'em_processamento'
+
+                financas.save()
+
+            # Handle Plantão/Eletiva (Américas) for all finance records of the procedure
+            if self.is_americas_group:
+                plantao_value = self.cleaned_data.get('plantao_eletiva')
+                if plantao_value == '':
+                    plantao_value = None
+
+                # If user provided a value but there is no finance record yet, create a minimal one.
+                if plantao_value is not None and not ProcedimentoFinancas.objects.filter(procedimento=instance).exists():
+                    ProcedimentoFinancas.objects.create(procedimento=instance, group=instance.group)
+
+                # Propagate to all records for consistency in Finanças listing/export.
+                ProcedimentoFinancas.objects.filter(procedimento=instance).update(plantao_eletiva=plantao_value)
 
         return instance
 

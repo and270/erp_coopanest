@@ -223,6 +223,38 @@
     justify-content: center;
 }
 
+.refresh-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+}
+
+.refresh-btn:hover {
+    background: #45a049;
+}
+
+.top-scrollbar-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 12px;
+    width: 100%;
+    margin-bottom: 4px;
+    display: none; /* Hidden by default, shown by JS */
+}
+
+#top-scrollbar-content {
+    height: 12px;
+}
+
 .header-actions .add-btn { /* Specific style for add button in header */
     background: #1A73E8;
     color: white;
@@ -500,21 +532,54 @@
     display: none; /* Hide the old button if still in HTML */
 }
 
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0;
+    font-family: Inter;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #3D3D3D;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.pagination-btn:hover {
+    background: #F3F3F3;
+    border-color: #1A73E8;
+    color: #1A73E8;
+}
+
+.pagination-current {
+    font-size: 14px;
+    color: #64748B;
+    font-weight: 500;
+}
+
 /* Generic FAB Styles */
 .fab {
-    position: fixed;
-    bottom: 30px;
+    position: fixed !important;
+    bottom: 30px !important;
     width: 56px;
     height: 56px;
     border-radius: 50%;
     color: white;
     border: none;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 1000;
+    z-index: 9999 !important;
     transition: all 0.3s ease;
 }
 

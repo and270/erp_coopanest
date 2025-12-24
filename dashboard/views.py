@@ -195,6 +195,47 @@ def dashboard_view(request):
         minutes, _ = divmod(remainder, 60)
         duracao_media_formatted = f"{int(hours):02d}:{int(minutes):02d}"
 
+    # Peak Hours Analysis - Using Procedimento model as requested
+    peak_hours_queryset = Procedimento.objects.filter(
+        group=user_group
+    )
+    
+    if procedimento:
+        peak_hours_queryset = peak_hours_queryset.filter(procedimento_principal__name=procedimento)
+
+    if period == 'custom' and start_date_str and end_date_str:
+        try:
+            custom_start_dt = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            custom_end_dt = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            if custom_start_dt > custom_end_dt:
+                custom_start_dt, custom_end_dt = custom_end_dt, custom_start_dt
+            
+            peak_hours_queryset = peak_hours_queryset.filter(
+                data_horario__date__gte=custom_start_dt,
+                data_horario__date__lte=custom_end_dt
+            )
+        except ValueError:
+            # Fallback to same logic as above
+            start_date_fallback = timezone.now() - timedelta(days=180)
+            peak_hours_queryset = peak_hours_queryset.filter(data_horario__gte=start_date_fallback)
+    else:
+        # Interpret period as days
+        try:
+            p_days = int(period) if period else 180
+        except (ValueError, TypeError):
+            p_days = 180
+        start_date_val = timezone.now() - timedelta(days=p_days)
+        peak_hours_queryset = peak_hours_queryset.filter(data_horario__gte=start_date_val)
+
+    peak_hours = defaultdict(int)
+    for p_item in peak_hours_queryset:
+        if p_item.data_horario:
+            hour = p_item.data_horario.hour
+            peak_hours[hour] += 1
+    
+    # Format peak hours for chart (all 24 hours)
+    peak_hours_data = [peak_hours[h] for h in range(24)]
+
     # Monta o dicionário de métricas
     metrics = {
         'eventos_adversos': queryset.filter(eventos_adversos_graves=True).count() / total_count * 100 if total_count > 0 else None,
@@ -216,6 +257,7 @@ def dashboard_view(request):
         'dor_view': dor_view,
         'abreviacao_jejum_percent': queryset.filter(abreviacao_jejum=True).count() / total_count * 100 if total_count > 0 else None,
         'aldrete_maior_que_8_percent': queryset.filter(escala_aldrete__gt=8).count() / total_count * 100 if total_count > 0 else None,
+        'peak_hours_data': peak_hours_data,
     }
 
     # Procedures for the filter

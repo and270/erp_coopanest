@@ -124,6 +124,8 @@
                                     <div class="procedure-modal-content">
                                         <span class="close-modal">&times;</span>
                                         <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                        <p>Data de Nascimento: <strong><span class="modal-birth-date">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</span></strong></p>
+                                        <p>Acomodação: <strong><span class="modal-accommodation">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</span></strong></p>
                                         <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
                                         <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                         <br>
@@ -200,6 +202,8 @@
                                             <div class="procedure-modal-content">
                                                 <span class="close-modal">&times;</span>
                                                 <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
+                                                <p>Data de Nascimento: <strong><span class="modal-birth-date">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</span></strong></p>
+                                                <p>Acomodação: <strong><span class="modal-accommodation">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</span></strong></p>
                                                 <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
                                                 <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
                                                 <br>
@@ -284,6 +288,16 @@
             </div>
 
             <div class="form-group">
+                <label for="{{ form.data_nascimento.id_for_label }}">{{ form.data_nascimento.label }}</label>
+                {{ form.data_nascimento }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.acomodacao.id_for_label }}">{{ form.acomodacao.label }}</label>
+                {{ form.acomodacao }}
+            </div>
+
+            <div class="form-group">
                 <label for="{{ form.convenio.id_for_label }}">{{ form.convenio.label }}</label>
                 {{ form.convenio }}
             </div>
@@ -327,10 +341,6 @@
             <div class="form-group">
                 <label for="{{ form.cirurgiao.id_for_label }}">{{ form.cirurgiao.label }}</label>
                 {{ form.cirurgiao }}
-                <div class="mt-2">
-                    <label for="{{ form.cirurgiao_nome.id_for_label }}">{{ form.cirurgiao_nome.label }}</label>
-                    {{ form.cirurgiao_nome }}
-                </div>
             </div>
 
             <div class="form-group">
@@ -371,6 +381,43 @@
                     {{ form.nome_responsavel_visita }}
                 </div>
             </div>
+
+            <!-- Financial Section -->
+            <hr>
+            <h3>Financeiro</h3>
+
+            {% if is_americas_group %}
+            <div class="form-group" id="plantao_eletiva_container">
+                <label for="{{ form.plantao_eletiva.id_for_label }}">{{ form.plantao_eletiva.label }}</label>
+                {{ form.plantao_eletiva }}
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label>{{ form.tipo_cobranca.label }}</label>
+                <div class="radio-options-container">
+                    {% for radio in form.tipo_cobranca %}
+                        <div class="radio-option" style="display: inline-block; margin-right: 15px;">
+                            <label>{{ radio.tag }} {{ radio.choice_label }}</label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-group" id="valor_faturado_container">
+                <label for="{{ form.valor_faturado.id_for_label }}">{{ form.valor_faturado.label }}</label>
+                {{ form.valor_faturado }}
+            </div>
+
+            <div class="form-group" id="tipo_pagamento_direto_container" style="display: none;">
+                <label for="{{ form.tipo_pagamento_direto.id_for_label }}">{{ form.tipo_pagamento_direto.label }}</label>
+                {{ form.tipo_pagamento_direto }}
+            </div>
+
+            <div class="form-group" id="data_pagamento_container" style="display: none;">
+                <label for="{{ form.data_pagamento.id_for_label }}">{{ form.data_pagamento.label }}</label>
+                {{ form.data_pagamento }}
+            </div>
             
             <button type="submit" class="cadastrar-btn" id="form-submit-btn">Criar Agendamento</button>
         </form>
@@ -403,6 +450,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script src="https://unpkg.com/imask"></script>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -455,6 +503,30 @@
                 cache: true
             }
         });
+
+        $('#{{ form.cirurgiao.auto_id }}').select2({
+            placeholder: 'Busque ou digite o nome do cirurgião...',
+            minimumInputLength: 1,
+            language: 'pt-BR',
+            tags: true,
+            ajax: {
+                url: '{% url "surgeon-autocomplete" %}',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        page: params.page
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            }
+        });
     });
 </script>
 
@@ -476,6 +548,13 @@
     // Reset the form and clear procedure_id
     document.querySelector('#procedimento-form-modal form').reset();
     document.getElementById('procedure_id').value = '';
+    
+    // Manual clear for fields that might not be fully handled by reset()
+    const birthDateField = document.getElementById('id_data_nascimento');
+    const accommodationField = document.getElementById('id_acomodacao');
+    if (birthDateField) birthDateField.value = '';
+    if (accommodationField) accommodationField.value = '';
+
     formSubmitBtn.textContent = 'Criar Agendamento'; // Reset button text to default
 
     // Pre-fill the date and time fields
@@ -786,22 +865,91 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 <script>
+    let moneyMask;
+    let valorFaturadoInput, tipoCobrancaInputs, valorFaturadoContainer, tipoPagamentoDiretoContainer, dataPagamentoContainer, tipoPagamentoDiretoInput, dataPagamentoInput;
+
     document.addEventListener('DOMContentLoaded', function() {
         const visitaPreAnestesicaCheckbox = document.getElementById('id_visita_pre_anestesica');
-        const conditionalContainer = document.querySelector('.conditional-container'); // Change this line
+        const conditionalContainer = document.querySelector('.conditional-container');
 
         function toggleConditionalFields() {
             if (visitaPreAnestesicaCheckbox.checked) {
-                conditionalContainer.style.display = 'block';  // Show the container when checked
+                conditionalContainer.style.display = 'block';
             } else {
-                conditionalContainer.style.display = 'none';  // Hide the container when unchecked
+                conditionalContainer.style.display = 'none';
             }
         }
 
         visitaPreAnestesicaCheckbox.addEventListener('change', toggleConditionalFields);
-        toggleConditionalFields(); // Initial call to set the correct state on page load
-    });
+        toggleConditionalFields();
 
+        // Financial Fields Logic
+        valorFaturadoInput = document.getElementById('id_valor_faturado');
+        tipoCobrancaInputs = document.querySelectorAll('input[name="tipo_cobranca"]');
+        valorFaturadoContainer = document.getElementById('valor_faturado_container');
+        tipoPagamentoDiretoContainer = document.getElementById('tipo_pagamento_direto_container');
+        dataPagamentoContainer = document.getElementById('data_pagamento_container');
+        tipoPagamentoDiretoInput = document.getElementById('id_tipo_pagamento_direto');
+        dataPagamentoInput = document.getElementById('id_data_pagamento');
+
+        if (valorFaturadoInput) {
+            const maskOptions = {
+                mask: 'R$ num',
+                blocks: {
+                    num: {
+                        mask: Number,
+                        scale: 2,
+                        thousandsSeparator: '.',
+                        padFractionalZeros: true,
+                        radix: ',',
+                        mapToRadix: ['.'],
+                        max: 999999.99,
+                        autofix: true
+                    }
+                }
+            };
+            moneyMask = IMask(valorFaturadoInput, maskOptions);
+        }
+
+        function handleTipoCobrancaChange() {
+            const selectedValue = document.querySelector('input[name="tipo_cobranca"]:checked')?.value;
+            
+            if (selectedValue === 'cooperativa') {
+                if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+                if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+                if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+                if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+                if (dataPagamentoInput) dataPagamentoInput.value = '';
+            } else if (selectedValue === 'cortesia') {
+                if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+                if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+                if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+                if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+                if (dataPagamentoInput) dataPagamentoInput.value = '';
+                if (moneyMask) moneyMask.typedValue = 0;
+            } else if (['hospital', 'coi', 'amil', 'particular', 'via_cirurgiao'].includes(selectedValue)) {
+                if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'block';
+                if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'block';
+                if (tipoPagamentoDiretoContainer) {
+                    tipoPagamentoDiretoContainer.style.display = selectedValue === 'particular' ? 'block' : 'none';
+                }
+                if (selectedValue !== 'particular' && tipoPagamentoDiretoInput) {
+                    tipoPagamentoDiretoInput.value = '';
+                }
+            } else {
+                // Nothing selected or "--- Selecione ---"
+                if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+                if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+                if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+            }
+        }
+
+        tipoCobrancaInputs.forEach(input => {
+            input.addEventListener('change', handleTipoCobrancaChange);
+        });
+
+        handleTipoCobrancaChange();
+    });
 </script>
 
 <script>
@@ -884,6 +1032,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData(this);
         const procedureId = document.getElementById('procedure_id').value;
+
+        // Ensure masked values are sent as plain numbers in FormData
+        if (typeof moneyMask !== 'undefined' && moneyMask) {
+            let finalValue = '';
+            // Try typedValue first (returns a number)
+            if (typeof moneyMask.typedValue === 'number' && !isNaN(moneyMask.typedValue)) {
+                finalValue = moneyMask.typedValue.toFixed(2);
+            } else {
+                // Fallback: unmaskedValue and manual cleanup
+                const unmasked = moneyMask.unmaskedValue;
+                if (unmasked) {
+                    // Remove anything that isn't a digit or comma/dot
+                    // Then normalize comma to dot
+                    finalValue = unmasked.replace(/[^\d,.]/g, '').replace(',', '.');
+                }
+            }
+            
+            console.log('DEBUG: valor_faturado finalValue:', finalValue);
+            
+            if (finalValue) {
+                formData.set('valor_faturado', finalValue);
+            } else if (document.querySelector('input[name="tipo_cobranca"]:checked')?.value === 'cortesia') {
+                formData.set('valor_faturado', '0.00');
+            }
+        }
 
         // Debug: Log all form data being submitted
         console.log("FORM SUBMISSION - FormData contents:");
@@ -1019,12 +1192,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 document.getElementById('id_nome_paciente').value = data.nome_paciente;
                 document.getElementById('id_email_paciente').value = data.email_paciente;
+                document.getElementById('id_data_nascimento').value = data.data_nascimento;
+                document.getElementById('id_acomodacao').value = data.acomodacao;
                 document.getElementById('id_convenio_nome_novo').value = data.convenio_nome_novo;
                 document.getElementById('id_cpf_paciente').value = data.cpf_paciente;
                 document.getElementById('id_hospital').value = data.hospital;
                 document.getElementById('id_outro_local').value = data.outro_local;
-                document.getElementById('id_cirurgiao').value = data.cirurgiao;
-                document.getElementById('id_cirurgiao_nome').value = data.cirurgiao_nome;
+                
+                // Fix for cirurgiao (Select2 with tags)
+                if (data.cirurgiao_id || data.cirurgiao_nome) {
+                    const surgeonText = data.cirurgiao_nome || data.cirurgiao_text;
+                    const surgeonValue = data.cirurgiao_id || data.cirurgiao_nome;
+                    const newOption = new Option(surgeonText, surgeonValue, true, true);
+                    $('#id_cirurgiao').empty().append(newOption).trigger('change');
+                } else {
+                    $('#id_cirurgiao').val(null).trigger('change');
+                }
+
                 document.getElementById('id_visita_pre_anestesica').checked = data.visita_pre_anestesica;
                 document.getElementById('id_data_visita_pre_anestesica').value = data.data_visita_pre_anestesica;
                 document.getElementById('id_nome_responsavel_visita').value = data.nome_responsavel_visita;
@@ -1127,6 +1311,47 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
 
+                // Populate Financial Fields
+                if (data.tipo_cobranca) {
+                    const tipoCobrancaRadio = document.querySelector(`input[name="tipo_cobranca"][value="${data.tipo_cobranca}"]`);
+                    if (tipoCobrancaRadio) {
+                        tipoCobrancaRadio.checked = true;
+                        // Trigger change event to update visibility
+                        tipoCobrancaRadio.dispatchEvent(new Event('change'));
+                    }
+                } else {
+                    // Ensure all radios are unchecked and containers hidden
+                    document.querySelectorAll('input[name="tipo_cobranca"]').forEach(r => r.checked = false);
+                    handleTipoCobrancaChange();
+                }
+                
+                if (data.valor_faturado && typeof moneyMask !== 'undefined') {
+                    moneyMask.typedValue = parseFloat(data.valor_faturado);
+                } else if (valorFaturadoInput) {
+                    valorFaturadoInput.value = data.valor_faturado || '';
+                }
+
+                if (tipoPagamentoDiretoInput) {
+                    tipoPagamentoDiretoInput.value = data.tipo_pagamento_direto || '';
+                }
+                
+                if (dataPagamentoInput) {
+                    dataPagamentoInput.value = data.data_pagamento || '';
+                }
+
+                // Populate Plantão/Eletiva (Américas) if field exists in the form
+                const plantaoEletivaSelect = document.getElementById('id_plantao_eletiva');
+                if (plantaoEletivaSelect) {
+                    const val = data.plantao_eletiva || '';
+                    if (val && !Array.from(plantaoEletivaSelect.options).some(o => o.value === val)) {
+                        const opt = document.createElement('option');
+                        opt.value = val;
+                        opt.text = val;
+                        plantaoEletivaSelect.appendChild(opt);
+                    }
+                    plantaoEletivaSelect.value = val;
+                }
+
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Salvar Alterações';
                 hideAgendarButton();
@@ -1191,9 +1416,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset form when opening for a new procedure
     document.getElementById('agendar-btn').addEventListener('click', function() {
         document.querySelector('#procedimento-form-modal form').reset();
+        
+        // Manual clear for fields that might not be fully handled by reset()
+        document.getElementById('id_data_nascimento').value = '';
+        document.getElementById('id_acomodacao').value = '';
+
         // Clear Select2 fields
         $('#id_procedimento_principal').val(null).trigger('change');
         $('#id_convenio').val(null).trigger('change');
+        $('#id_cirurgiao').val(null).trigger('change');
         // Clear anesthesiologists free-text list and cooperado
         const selectedAnesthesiologistsContainer = document.getElementById('selected-anesthesiologists-container');
         if (selectedAnesthesiologistsContainer) selectedAnesthesiologistsContainer.innerHTML = '';
@@ -1201,6 +1432,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hiddenAnestLivres) hiddenAnestLivres.value = '';
         const coopSelect = document.getElementById('id_cooperado');
         if (coopSelect) coopSelect.value = '';
+
+        // Reset financial fields
+        const tipoCobrancaRadios = document.querySelectorAll('input[name="tipo_cobranca"]');
+        tipoCobrancaRadios.forEach(radio => radio.checked = false);
+        // Explicitly hide containers since no radio is checked
+        if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'none';
+        if (tipoPagamentoDiretoContainer) tipoPagamentoDiretoContainer.style.display = 'none';
+        if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'none';
+
+        if (typeof moneyMask !== 'undefined' && moneyMask) {
+            moneyMask.typedValue = 0;
+            moneyMask.value = '';
+        }
+        if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
+        if (dataPagamentoInput) dataPagamentoInput.value = '';
+        const plantaoEletivaSelect = document.getElementById('id_plantao_eletiva');
+        if (plantaoEletivaSelect) plantaoEletivaSelect.value = '';
 
         document.getElementById('procedure_id').value = '';
         formSubmitBtn.textContent = 'Criar Agendamento';
@@ -1508,22 +1756,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const cirurgiaoSelect = document.getElementById('id_cirurgiao');
-    const cirurgiaoNomeInput = document.getElementById('id_cirurgiao_nome');
-
-    // When one field is filled, clear the other
-    cirurgiaoSelect.addEventListener('change', function() {
-        if (this.value) {
-            cirurgiaoNomeInput.value = '';
-        }
-    });
-
-    cirurgiaoNomeInput.addEventListener('input', function() {
-        if (this.value) {
-            cirurgiaoSelect.value = '';
-        }
-    });
-
     const convenioSelect = $('#id_convenio');
     const convenioNomeNovoInput = document.getElementById('id_convenio_nome_novo');
 

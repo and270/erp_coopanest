@@ -40,3 +40,8 @@ CLINIC_TYPE_CHOICES = [
     ('urologia', 'Urologia'),
     ('vascular', 'Vascular'),
 ]
+
+ACOMODACAO_CHOICES = [
+    ('apartamento', 'Apartamento'),
+    ('enfermaria', 'Enfermaria'),
+]

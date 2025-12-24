@@ -174,6 +174,13 @@
                 </div>
                 <div class="metric-value">{% if metrics.dor_pos_operatoria %}{{ metrics.dor_pos_operatoria|floatformat:0 }}%{% else %}0%{% endif %}</div>
             </div>
+
+            <div class="metric-card peak-hours-card">
+                <h3>Horários de Pico de Cirurgia</h3>
+                <div class="chart-container">
+                    <canvas id="peakHoursChart"></canvas>
+                </div>
+            </div>
         </div>
 
         <!-- Column 4 -->
@@ -236,8 +243,77 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Peak Hours Chart
+    const peakHoursCtx = document.getElementById('peakHoursChart').getContext('2d');
+    const peakHoursData = {{ metrics.peak_hours_data|safe }};
+    
+    new Chart(peakHoursCtx, {
+        type: 'bar',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => `${i}h`),
+            datasets: [{
+                label: 'Cirurgias',
+                data: peakHoursData,
+                backgroundColor: '#1A73E8',
+                borderRadius: 4,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    bottom: 10
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            return `Horário: ${context[0].label}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: {
+                            size: 10
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 9
+                        },
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 12
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+});
+
 document.getElementById('procedimentoFilter').addEventListener('change', function() {
     const selectedValue = this.value;
     console.log('Selected value:', selectedValue);

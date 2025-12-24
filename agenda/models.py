@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.db import models
 from constants import (
     PLANTONISTA_ESCALA, STATUS_FINISHED, STATUS_PENDING, SUBSTITUTO_ESCALA, FERIAS_ESCALA,
-    CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO, CLINIC_TYPE_CHOICES
+    CONSULTA_PROCEDIMENTO, CIRURGIA_AMBULATORIAL_PROCEDIMENTO, CLINIC_TYPE_CHOICES, ACOMODACAO_CHOICES
 )
 from registration.models import Anesthesiologist, Surgeon, HospitalClinic, Groups
 import uuid
@@ -113,6 +113,14 @@ class Procedimento(models.Model):
         verbose_name='Clínica (Perfil Cirúrgico)',
         null=True,
         blank=True
+    )
+    data_nascimento = models.DateField(null=True, blank=True, verbose_name='Data de Nascimento')
+    acomodacao = models.CharField(
+        max_length=100, 
+        null=True, 
+        blank=True, 
+        choices=ACOMODACAO_CHOICES,
+        verbose_name='Acomodação'
     )
 
     class Meta:

@@ -28,6 +28,14 @@
                 <div class="info-label">Paciente</div>
                 <div class="info-value">{{ procedimento.nome_paciente|default:"Não informado" }}</div>
             </div>
+            <div class="info-item">
+                <div class="info-label">Data de Nascimento</div>
+                <div class="info-value">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Acomodação</div>
+                <div class="info-value">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</div>
+            </div>
         </div>
 
         <div class="info-section">
@@ -628,9 +636,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('DEBUG: Submit - Using typedValue, formatted to:', finalSubmitValue);
                     } else {
                         const unmasked = moneyMask.unmaskedValue;
-                        if (unmasked && unmasked.trim() !== '') {
-                            finalSubmitValue = unmasked.replace(',', '.');
-                            console.log('DEBUG: Submit - Using unmaskedValue, converted to:', finalSubmitValue);
+                        if (unmasked) {
+                            // Remove anything that isn't a digit or comma/dot
+                            // Then normalize comma to dot
+                            finalSubmitValue = unmasked.replace(/[^\d,.]/g, '').replace(',', '.');
+                            console.log('DEBUG: Submit - Using cleaned unmaskedValue, converted to:', finalSubmitValue);
                         } else {
                             console.log('DEBUG: Submit - Input is considered empty.');
                         }
