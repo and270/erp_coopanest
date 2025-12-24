@@ -392,6 +392,10 @@
                     <select id="tipo_cobranca" name="tipo_cobranca">
                         <option value="cooperativa">Cooperativa</option>
                         <option value="hospital">Hospital</option>
+                        {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}
+                            <option value="coi">COI</option>
+                            <option value="amil">Amil</option>
+                        {% endif %}
                         <option value="particular">Direta</option>
                         <option value="via_cirurgiao">Via Cirurgião</option>
                         <option value="cortesia">Cortesia</option>

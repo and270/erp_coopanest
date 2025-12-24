@@ -40,6 +40,8 @@ MONTH_NAMES_PT = {
     9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
 }
 
+AMERICAS_GROUP_NAMES = ('Américas', 'AMCRJ - SERVICOS MEDICOS LTDA')
+
 def _send_brand_email(subject: str, html_body: str, recipients: list[str]) -> None:
     plain_body = strip_tags(html_body)
     email = EmailMultiAlternatives(
@@ -270,20 +272,35 @@ def get_procedure(request, procedure_id):
     }
 
     # Add financial data if available
-    try:
-        financas = ProcedimentoFinancas.objects.get(procedimento=procedure)
+    financas_qs = ProcedimentoFinancas.objects.filter(procedimento=procedure)
+    # Prefer "manual" record (without CPSA) for form-driven finance fields
+    financas = (
+        financas_qs.filter(cpsa__isnull=True).order_by('-id').first()
+        or financas_qs.order_by('-id').first()
+    )
+    if financas:
+        plantao_value = (
+            financas_qs.exclude(plantao_eletiva__isnull=True)
+            .exclude(plantao_eletiva__exact='')
+            .values_list('plantao_eletiva', flat=True)
+            .order_by('-id')
+            .first()
+            or ''
+        )
         data.update({
             'tipo_cobranca': financas.tipo_cobranca or '',
             'valor_faturado': str(financas.valor_faturado) if financas.valor_faturado else '',
             'tipo_pagamento_direto': financas.tipo_pagamento_direto or '',
             'data_pagamento': financas.data_pagamento.strftime('%Y-%m-%d') if financas.data_pagamento else '',
+            'plantao_eletiva': plantao_value,
         })
-    except ProcedimentoFinancas.DoesNotExist:
+    else:
         data.update({
             'tipo_cobranca': '',
             'valor_faturado': '',
             'tipo_pagamento_direto': '',
             'data_pagamento': '',
+            'plantao_eletiva': '',
         })
 
     return JsonResponse(data)
@@ -408,6 +425,8 @@ def search_agenda(request):
         'highlight_date': highlight_date,
         'search_type': search_type,
         'form': form,
+        'user_group_name': user.group.name if user.group else '',
+        'is_americas_group': bool(user.group and user.group.name in AMERICAS_GROUP_NAMES),
     }
     return render(request, 'agenda.html', context)
 
@@ -605,6 +624,8 @@ def agenda_view(request):
         'form': form,
         'mini_calendar_year': year,
         'mini_calendar_month': month,
+        'user_group_name': user.group.name if user.group else '',
+        'is_americas_group': bool(user.group and user.group.name in AMERICAS_GROUP_NAMES),
     }
     
     return render(request, 'agenda.html', context)

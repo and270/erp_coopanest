@@ -385,6 +385,13 @@
             <!-- Financial Section -->
             <hr>
             <h3>Financeiro</h3>
+
+            {% if is_americas_group %}
+            <div class="form-group" id="plantao_eletiva_container">
+                <label for="{{ form.plantao_eletiva.id_for_label }}">{{ form.plantao_eletiva.label }}</label>
+                {{ form.plantao_eletiva }}
+            </div>
+            {% endif %}
             
             <div class="form-group">
                 <label>{{ form.tipo_cobranca.label }}</label>
@@ -920,7 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
                 if (dataPagamentoInput) dataPagamentoInput.value = '';
                 if (moneyMask) moneyMask.typedValue = 0;
-            } else if (['hospital', 'particular', 'via_cirurgiao'].includes(selectedValue)) {
+            } else if (['hospital', 'coi', 'amil', 'particular', 'via_cirurgiao'].includes(selectedValue)) {
                 if (valorFaturadoContainer) valorFaturadoContainer.style.display = 'block';
                 if (dataPagamentoContainer) dataPagamentoContainer.style.display = 'block';
                 if (tipoPagamentoDiretoContainer) {
@@ -1332,6 +1339,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     dataPagamentoInput.value = data.data_pagamento || '';
                 }
 
+                // Populate Plantão/Eletiva (Américas) if field exists in the form
+                const plantaoEletivaSelect = document.getElementById('id_plantao_eletiva');
+                if (plantaoEletivaSelect) {
+                    const val = data.plantao_eletiva || '';
+                    if (val && !Array.from(plantaoEletivaSelect.options).some(o => o.value === val)) {
+                        const opt = document.createElement('option');
+                        opt.value = val;
+                        opt.text = val;
+                        plantaoEletivaSelect.appendChild(opt);
+                    }
+                    plantaoEletivaSelect.value = val;
+                }
+
                 procedureFormModal.style.display = 'block';
                 formSubmitBtn.textContent = 'Salvar Alterações';
                 hideAgendarButton();
@@ -1427,6 +1447,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (tipoPagamentoDiretoInput) tipoPagamentoDiretoInput.value = '';
         if (dataPagamentoInput) dataPagamentoInput.value = '';
+        const plantaoEletivaSelect = document.getElementById('id_plantao_eletiva');
+        if (plantaoEletivaSelect) plantaoEletivaSelect.value = '';
 
         document.getElementById('procedure_id').value = '';
         formSubmitBtn.textContent = 'Criar Agendamento';
