@@ -20,8 +20,24 @@ from django.conf import settings
 from django.db import transaction
 import re
 from decimal import Decimal, InvalidOperation
+import pytz
+
+# Timezone de São Paulo - usar sempre este para processar horários do Brasil
+SAO_PAULO_TZ = pytz.timezone('America/Sao_Paulo')
+
+def make_aware_sao_paulo(dt):
+    """
+    Torna um datetime naive em datetime aware no fuso de São Paulo.
+    Se já for aware, retorna sem alteração.
+    """
+    if dt is None:
+        return None
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt, SAO_PAULO_TZ)
+    return dt
 
 DATA_INICIO_PUXAR_GUIAS_API = datetime(2025, 1, 1).date()
+
 
 def clean_money_value(value_str):
     """
@@ -943,7 +959,7 @@ def update_procedimento_with_api_data(procedimento, guia, group):
     
     if guia_date and guia_hora_inicial:
         new_data_horario = datetime.combine(guia_date, guia_hora_inicial)
-        new_data_horario = timezone.make_aware(new_data_horario) if timezone.is_naive(new_data_horario) else new_data_horario
+        new_data_horario = make_aware_sao_paulo(new_data_horario)
         
         current_time = procedimento.data_horario.time() if procedimento.data_horario else None
         if not current_time or current_time == time(0, 0) or current_time != guia_hora_inicial:
@@ -953,7 +969,7 @@ def update_procedimento_with_api_data(procedimento, guia, group):
     if guia_date and guia_hora_final:
         if guia_hora_final != guia_hora_inicial:
             new_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
-            new_data_horario_fim = timezone.make_aware(new_data_horario_fim) if timezone.is_naive(new_data_horario_fim) else new_data_horario_fim
+            new_data_horario_fim = make_aware_sao_paulo(new_data_horario_fim)
             
             if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
                 procedimento.data_horario_fim = new_data_horario_fim
@@ -1479,11 +1495,11 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
     if guia_date:
         start_time = guia_hora_inicial if guia_hora_inicial else time(8, 0)  # Default to 8:00 AM
         proc_data_horario = datetime.combine(guia_date, start_time)
-        proc_data_horario = timezone.make_aware(proc_data_horario) if timezone.is_naive(proc_data_horario) else proc_data_horario
+        proc_data_horario = make_aware_sao_paulo(proc_data_horario)
         
         if guia_hora_final:
             proc_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
-            proc_data_horario_fim = timezone.make_aware(proc_data_horario_fim) if timezone.is_naive(proc_data_horario_fim) else proc_data_horario_fim
+            proc_data_horario_fim = make_aware_sao_paulo(proc_data_horario_fim)
         else:
             # Default end time to start time + 2 hours
             proc_data_horario_fim = proc_data_horario + timedelta(hours=2)
