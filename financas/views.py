@@ -665,13 +665,21 @@ def export_finances(request):
             
             anest_name = ", ".join(anest_name_list) if anest_name_list else (item.api_cooperado_nome or '')
 
+            # Convert datetimes to São Paulo timezone for correct export
+            data_horario_local = None
+            data_horario_fim_local = None
+            if item.procedimento and item.procedimento.data_horario:
+                data_horario_local = timezone.localtime(item.procedimento.data_horario, SAO_PAULO_TZ)
+            if item.procedimento and item.procedimento.data_horario_fim:
+                data_horario_fim_local = timezone.localtime(item.procedimento.data_horario_fim, SAO_PAULO_TZ)
+
             row = {
                 'Paciente': item.procedimento.nome_paciente if item.procedimento else item.api_paciente_nome or '',
                 'CPF': item.procedimento.cpf_paciente if item.procedimento else '',
                 'Nascimento': item.procedimento.data_nascimento.strftime('%d/%m/%Y') if item.procedimento and item.procedimento.data_nascimento else '',
-                'Data Cirurgia': (item.procedimento.data_horario.strftime('%d/%m/%Y') if item.procedimento and item.procedimento.data_horario else 
+                'Data Cirurgia': (data_horario_local.strftime('%d/%m/%Y') if data_horario_local else 
                                   item.api_data_cirurgia.strftime('%d/%m/%Y') if item.api_data_cirurgia else ''),
-                'Horário': (f"{item.procedimento.data_horario.strftime('%H:%M')}" + (f" - {item.procedimento.data_horario_fim.strftime('%H:%M')}" if item.procedimento.data_horario_fim else "") if item.procedimento and item.procedimento.data_horario else ''),
+                'Horário': (f"{data_horario_local.strftime('%H:%M')}" + (f" - {data_horario_fim_local.strftime('%H:%M')}" if data_horario_fim_local else "") if data_horario_local else ''),
                 'Valor Faturado': float(item.valor_faturado) if item.valor_faturado is not None else 0.0,
                 'Valor Recebido': float(item.valor_recebido) if item.valor_recebido is not None else 0.0,
                 'Valor Recuperado': float(item.valor_recuperado) if item.valor_recuperado is not None else 0.0,
@@ -699,6 +707,7 @@ def export_finances(request):
             })
 
             data.append(row)
+
 
     else: # view_type == 'despesas'
         # --- Replicate financas_view logic to fetch both Despesas and DespesasRecorrentes ---
