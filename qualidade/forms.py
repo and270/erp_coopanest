@@ -6,6 +6,9 @@ from .models import BPS_DESCRIPTIONS, EVA_DESCRIPTIONS, FLACC_DESCRIPTIONS, PAIN
 from financas.models import ProcedimentoFinancas
 import pytz
 
+AMERICAS_GROUP_NAMES = ('Américas', 'AMCRJ - SERVICOS MEDICOS LTDA')
+AMERICAS_TIPO_COBRANCA_KEYS = ('coi', 'amil')
+
 class AvaliacaoRPAForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -128,6 +131,23 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Restrict Fonte Pagadora options to Américas groups only
+        try:
+            group_name = (
+                self.instance.procedimento.group.name
+                if getattr(self.instance, 'procedimento', None) and getattr(self.instance.procedimento, 'group', None)
+                else ''
+            )
+        except Exception:
+            group_name = ''
+        is_americas_group = group_name in AMERICAS_GROUP_NAMES
+        if not is_americas_group and 'tipo_cobranca' in self.fields:
+            self.fields['tipo_cobranca'].choices = [
+                (value, label)
+                for value, label in self.fields['tipo_cobranca'].choices
+                if value not in AMERICAS_TIPO_COBRANCA_KEYS
+            ]
+
         # Prefill clinic type from linked Procedimento if available
         try:
             procedimento = self.instance.procedimento
@@ -430,7 +450,7 @@ class ProcedimentoFinalizacaoForm(forms.ModelForm):
             cleaned_data['valor_faturado'] = 0
             cleaned_data['tipo_pagamento_direto'] = None
         # Require value for Hospital, Direta (particular) and Via Cirurgião
-        if tipo_cobranca in ['hospital', 'particular', 'via_cirurgiao'] and not cleaned_data.get('valor_faturado'):
+        if tipo_cobranca in ['hospital', 'coi', 'amil', 'particular', 'via_cirurgiao'] and not cleaned_data.get('valor_faturado'):
             self.add_error('valor_faturado', 'Este campo é obrigatório para este tipo de cobrança.')
 
         if eventos_adversos_graves and not eventos_adversos_graves_desc:

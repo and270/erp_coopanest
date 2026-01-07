@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from financas.models import ProcedimentoFinancas
 from qualidade.models import ProcedimentoQualidade
-from registration.models import Anesthesiologist, CustomUser
+from registration.models import Anesthesiologist, CustomUser, Surgeon
 from .models import Procedimento, EscalaAnestesiologista, ProcedimentoDetalhes, Convenios
 from .forms import ProcedimentoForm, EscalaForm, SingleDayEscalaForm, SurveyForm
 from django.contrib.auth.decorators import login_required
@@ -39,6 +39,8 @@ MONTH_NAMES_PT = {
     5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
     9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
 }
+
+AMERICAS_GROUP_NAMES = ('Américas', 'AMCRJ - SERVICOS MEDICOS LTDA')
 
 def _send_brand_email(subject: str, html_body: str, recipients: list[str]) -> None:
     plain_body = strip_tags(html_body)
@@ -156,9 +158,7 @@ def create_procedure(request):
         for key, value in form.cleaned_data.items():
             print(f"{key}: {value}")
             
-        procedure = form.save(commit=False)
-        procedure.group = request.user.group
-        procedure.save()
+        procedure = form.save(commit=True)
         
         email_sent = False
         email_error = None
@@ -244,6 +244,8 @@ def get_procedure(request, procedure_id):
         'end_time': end_time.strftime('%H:%M') if end_time else '',
         'nome_paciente': procedure.nome_paciente,
         'email_paciente': procedure.email_paciente,
+        'data_nascimento': procedure.data_nascimento.strftime('%Y-%m-%d') if procedure.data_nascimento else '',
+        'acomodacao': procedure.acomodacao or '',
         'convenio': {
             'id': procedure.convenio.id,
             'text': procedure.convenio.name
@@ -256,7 +258,8 @@ def get_procedure(request, procedure_id):
         } if procedure.procedimento_principal else None,
         'hospital': procedure.hospital.id if procedure.hospital else '',
         'outro_local': procedure.outro_local,
-        'cirurgiao': procedure.cirurgiao.id if procedure.cirurgiao else '',
+        'cirurgiao_id': procedure.cirurgiao.id if procedure.cirurgiao else None,
+        'cirurgiao_text': procedure.cirurgiao.name if procedure.cirurgiao else None,
         'cirurgiao_nome': procedure.cirurgiao_nome or '',
         'cooperado': {'id': procedure.cooperado.id, 'name': procedure.cooperado.name} if procedure.cooperado else None,
         'anestesistas_livres': procedure.anestesistas_livres or '',
@@ -267,6 +270,39 @@ def get_procedure(request, procedure_id):
         'tipo_clinica': procedure.tipo_clinica,
         'tipo_clinica_label': clinic_label_map.get(procedure.tipo_clinica, procedure.tipo_clinica or ''),
     }
+
+    # Add financial data if available
+    financas_qs = ProcedimentoFinancas.objects.filter(procedimento=procedure)
+    # Prefer "manual" record (without CPSA) for form-driven finance fields
+    financas = (
+        financas_qs.filter(cpsa__isnull=True).order_by('-id').first()
+        or financas_qs.order_by('-id').first()
+    )
+    if financas:
+        plantao_value = (
+            financas_qs.exclude(plantao_eletiva__isnull=True)
+            .exclude(plantao_eletiva__exact='')
+            .values_list('plantao_eletiva', flat=True)
+            .order_by('-id')
+            .first()
+            or ''
+        )
+        data.update({
+            'tipo_cobranca': financas.tipo_cobranca or '',
+            'valor_faturado': str(financas.valor_faturado) if financas.valor_faturado else '',
+            'tipo_pagamento_direto': financas.tipo_pagamento_direto or '',
+            'data_pagamento': financas.data_pagamento.strftime('%Y-%m-%d') if financas.data_pagamento else '',
+            'plantao_eletiva': plantao_value,
+        })
+    else:
+        data.update({
+            'tipo_cobranca': '',
+            'valor_faturado': '',
+            'tipo_pagamento_direto': '',
+            'data_pagamento': '',
+            'plantao_eletiva': '',
+        })
+
     return JsonResponse(data)
 
 def get_calendar_dates(year, month):
@@ -389,6 +425,8 @@ def search_agenda(request):
         'highlight_date': highlight_date,
         'search_type': search_type,
         'form': form,
+        'user_group_name': user.group.name if user.group else '',
+        'is_americas_group': bool(user.group and user.group.name in AMERICAS_GROUP_NAMES),
     }
     return render(request, 'agenda.html', context)
 
@@ -490,6 +528,18 @@ class ConvenioAutocomplete(Select2QuerySetView):
 
         return qs.order_by('name')
 
+class SurgeonAutocomplete(Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Surgeon.objects.none()
+
+        qs = Surgeon.objects.filter(group=self.request.user.group)
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs.order_by('name')
+
 @login_required
 def agenda_view(request):
     if not request.user.validado:
@@ -500,9 +550,7 @@ def agenda_view(request):
     if request.method == 'POST':
         form = ProcedimentoForm(request.POST, request.FILES, user=user)
         if form.is_valid():
-            procedimento = form.save(commit=False)
-            procedimento.group = user.group 
-            procedimento.save()
+            form.save()
             return redirect('agenda')
     else:
         form = ProcedimentoForm(user=user)
@@ -576,6 +624,8 @@ def agenda_view(request):
         'form': form,
         'mini_calendar_year': year,
         'mini_calendar_month': month,
+        'user_group_name': user.group.name if user.group else '',
+        'is_americas_group': bool(user.group and user.group.name in AMERICAS_GROUP_NAMES),
     }
     
     return render(request, 'agenda.html', context)

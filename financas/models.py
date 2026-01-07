@@ -8,6 +8,8 @@ class ProcedimentoFinancas(models.Model):
     COBRANCA_CHOICES = [
         ('cooperativa', 'Cooperativa'),
         ('hospital', 'Hospital'),
+        ('coi', 'COI'),
+        ('amil', 'Amil'),
         ('particular', 'Direta'),
         ('via_cirurgiao', 'Via Cirurgião'),
         ('cortesia', 'Cortesia'),

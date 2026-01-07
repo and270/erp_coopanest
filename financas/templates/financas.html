@@ -83,19 +83,32 @@
         <button class="export-btn" onclick="exportFinances()">
             <i class="fas fa-file-excel"></i> Exportar {# Added icon #}
         </button>
+
+        {% if active_role == 'gestor' or user.is_superuser %}
+        <button id="conciliate-header-btn" class="refresh-btn" onclick="runConciliation()" title="Conciliar Dados da API">
+            <i class="fas fa-sync"></i>
+        </button>
+        {% endif %}
         
     </div>
 
-    <div class="financas-table">
+    <div id="top-scrollbar-wrapper" class="top-scrollbar-wrapper">
+        <div id="top-scrollbar-content"></div>
+    </div>
+
+    <div class="financas-table" id="main-table-wrapper">
         <table>
             <thead>
                 <tr>
                     {% if view_type == 'receitas' %}
                         <th>Paciente</th>
                         <th>CPF</th>
+                        <th>Nasc.</th>
                         <th>Data Cirurgia</th>
+                        <th>Horário</th>
                         <th>Eletiva / Urgência</th>
                         {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}<th>Plantão/Eletiva</th>{% endif %}
+                        <th>Acomod.</th>
                         <th>Valor Faturado</th>
                         <th>Valor Recebido</th>
                         <th>Valor Recuperado</th>
@@ -107,6 +120,7 @@
                         <th>Senha</th>
                         <th>Cooperado</th>
                         <th>Anestesistas</th>
+                        <th>Cirurgião</th>
                         <th>Situação</th>
                         <th>Data Pagamento</th>
                         <th>Ações</th> {# Renamed Header #}
@@ -134,11 +148,19 @@
                                 {% endif %}
                             </td>
                             <td>{{ item.procedimento.cpf_paciente|default:"--" }}</td> {# CPF only if linked #}
+                            <td>{{ item.procedimento.data_nascimento|date:"d/m/Y"|default:"--" }}</td>
                             <td>
                                 {% if item.procedimento and item.procedimento.data_horario %}
                                     {{ item.procedimento.data_horario|date:"d/m/Y" }}
                                 {% elif item.api_data_cirurgia %}
                                     {{ item.api_data_cirurgia|date:"d/m/Y" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.procedimento and item.procedimento.data_horario %}
+                                    {{ item.procedimento.data_horario|date:"H:i" }}{% if item.procedimento.data_horario_fim %} - {{ item.procedimento.data_horario_fim|date:"H:i" }}{% endif %}
                                 {% else %}
                                     --
                                 {% endif %}
@@ -153,6 +175,7 @@
                             {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}
                                 <td>{{ item.plantao_eletiva|default:"--" }}</td>
                             {% endif %}
+                            <td>{{ item.procedimento.acomodacao|default:"--" }}</td>
                             {# Revert to original formatting #}
                             <td>{% if item.valor_faturado is not None %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.valor_recebido is not None %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
@@ -179,6 +202,15 @@
                             <td>
                                 {% if item.procedimento %}
                                     {{ item.procedimento.anestesistas_livres|default:"--" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.procedimento and item.procedimento.cirurgiao %}
+                                    {{ item.procedimento.cirurgiao.name }}{% if item.procedimento.cirurgiao.crm %} ({{ item.procedimento.cirurgiao.crm }}){% endif %}
+                                {% elif item.procedimento and item.procedimento.cirurgiao_nome %}
+                                    {{ item.procedimento.cirurgiao_nome }}
                                 {% else %}
                                     --
                                 {% endif %}
@@ -237,12 +269,30 @@
                     </tr>
                 {% empty %}
                 <tr>
-                   <td colspan="{% if view_type == 'receitas' %}{% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}19{% else %}18{% endif %}{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
+                   <td colspan="{% if view_type == 'receitas' %}{% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}23{% else %}22{% endif %}{% else %}7{% endif %}" style="text-align: center; padding: 20px;">Nenhum item encontrado para os filtros selecionados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    {% if items.has_other_pages %}
+    <div class="pagination">
+        {% if items.has_previous %}
+            <a href="?page=1{% if view_type %}&view={{ view_type }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if custom_start_date %}&start_date={{ custom_start_date }}{% endif %}{% if custom_end_date %}&end_date={{ custom_end_date }}{% endif %}" class="pagination-btn">&laquo; Primeiro</a>
+            <a href="?page={{ items.previous_page_number }}{% if view_type %}&view={{ view_type }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if custom_start_date %}&start_date={{ custom_start_date }}{% endif %}{% if custom_end_date %}&end_date={{ custom_end_date }}{% endif %}" class="pagination-btn">Anterior</a>
+        {% endif %}
+
+        <span class="pagination-current">
+            Página {{ items.number }} de {{ items.paginator.num_pages }}
+        </span>
+
+        {% if items.has_next %}
+            <a href="?page={{ items.next_page_number }}{% if view_type %}&view={{ view_type }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if custom_start_date %}&start_date={{ custom_start_date }}{% endif %}{% if custom_end_date %}&end_date={{ custom_end_date }}{% endif %}" class="pagination-btn">Próxima</a>
+            <a href="?page={{ items.paginator.num_pages }}{% if view_type %}&view={{ view_type }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if custom_start_date %}&start_date={{ custom_start_date }}{% endif %}{% if custom_end_date %}&end_date={{ custom_end_date }}{% endif %}" class="pagination-btn">Último &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
     
     {% if view_type == 'despesas' %}
     <div class="add-buttons-container">
@@ -342,6 +392,10 @@
                     <select id="tipo_cobranca" name="tipo_cobranca">
                         <option value="cooperativa">Cooperativa</option>
                         <option value="hospital">Hospital</option>
+                        {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}
+                            <option value="coi">COI</option>
+                            <option value="amil">Amil</option>
+                        {% endif %}
                         <option value="particular">Direta</option>
                         <option value="via_cirurgiao">Via Cirurgião</option>
                         <option value="cortesia">Cortesia</option>
@@ -448,20 +502,51 @@
 </div>
 
 
-{# Add FABs here, outside the main container typically #}
-{% if active_role == 'gestor' or user.is_superuser %} {# Only show FABs to relevant users #}
-    {# Removed Add Receita FAB - moved to header actions #}
-    <button id="conciliate-fab" class="fab conciliate" onclick="runConciliation()" title="Conciliar Dados da API">
-        <i class="fas fa-sync"></i>
-    </button>
-{% endif %}
-
-
 {# --- SCRIPTS --- #}
 <script src="https://unpkg.com/imask"></script> {# Keep iMask #}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Double Scrollbar Synchronization ---
+    const topWrapper = document.getElementById('top-scrollbar-wrapper');
+    const topContent = document.getElementById('top-scrollbar-content');
+    const tableWrapper = document.getElementById('main-table-wrapper');
+    
+    if (topWrapper && tableWrapper) {
+        const table = tableWrapper.querySelector('table');
+        
+        const updateTopScroll = () => {
+            const tableWidth = table.scrollWidth;
+            const wrapperWidth = tableWrapper.clientWidth;
+            
+            if (tableWidth > wrapperWidth) {
+                topWrapper.style.display = 'block';
+                topContent.style.width = tableWidth + 'px';
+                // Sync initial positions
+                topWrapper.scrollLeft = tableWrapper.scrollLeft;
+            } else {
+                topWrapper.style.display = 'none';
+            }
+        };
+
+        // Initial update
+        setTimeout(updateTopScroll, 100); // Small delay to ensure table is rendered
+        
+        window.addEventListener('resize', updateTopScroll);
+        
+        // Use a mutation observer to update when table content changes (e.g. search)
+        const observer = new MutationObserver(updateTopScroll);
+        observer.observe(table, { childList: true, subtree: true });
+
+        // Sync scrolls
+        topWrapper.onscroll = function() {
+            tableWrapper.scrollLeft = topWrapper.scrollLeft;
+        };
+        tableWrapper.onscroll = function() {
+            topWrapper.scrollLeft = tableWrapper.scrollLeft;
+        };
+    }
+
     const form = document.getElementById('edit-finance-form');
     const editModal = document.getElementById('edit-finance-modal'); 
     
@@ -1144,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // --- Conciliation Trigger ---
     window.runConciliation = function() {
-         const conciliateButton = document.getElementById('conciliate-fab'); // Target FAB now
+         const conciliateButton = document.getElementById('conciliate-header-btn'); // Target Header button now
          if (!conciliateButton) return;
          conciliateButton.disabled = true;
          conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Just spinner
