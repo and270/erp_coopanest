@@ -990,14 +990,14 @@ def update_procedimento_with_api_data(procedimento, guia, group):
         procedimento.cpf_paciente = api_cpf
         updated = True
 
-    # Update Data Nascimento if present and missing in procedure
-    api_nascimento = parse_api_date(guia.get('dt_nascimento'))
+    # Update Data Nascimento if present and missing in procedure (API sends as 'data_nascimento')
+    api_nascimento = parse_api_date(guia.get('data_nascimento'))
     if api_nascimento and not procedimento.data_nascimento:
         procedimento.data_nascimento = api_nascimento
         updated = True
 
-    # Update Acomodação if present
-    api_acomodacao = guia.get('acomodacao')
+    # Update Acomodação if present (API sends as 'tip_acomod')
+    api_acomodacao = guia.get('tip_acomod')
     if api_acomodacao and not procedimento.acomodacao:
         procedimento.acomodacao = api_acomodacao
         updated = True
@@ -1347,6 +1347,8 @@ def conciliar_financas(request):
                               newly_linked_count += 1 
                               if financa not in financas_to_update: financas_to_update.append(financa)
                 elif financa.procedimento:
+                     # Also update existing linked procedures with any new API data
+                     update_procedimento_with_api_data(financa.procedimento, guia, group)
                      processed_cpsa_ids.add(financa.cpsa)
 
             else: # No existing Finanças with this CPSA
@@ -1565,8 +1567,8 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
         group=group,
         nome_paciente=paciente_nome_para_proc,
         cpf_paciente=guia.get('cpf') or guia.get('nr_cpf'), # Capture CPF
-        data_nascimento=parse_api_date(guia.get('dt_nascimento')), # Capture birth date
-        acomodacao=guia.get('acomodacao'), # Capture accommodation
+        data_nascimento=parse_api_date(guia.get('data_nascimento')), # Capture birth date (API sends as 'data_nascimento')
+        acomodacao=guia.get('tip_acomod'), # Capture accommodation (API sends as 'tip_acomod')
         data_horario=proc_data_horario,
         data_horario_fim=proc_data_horario_fim,
         hospital=hospital_obj,
