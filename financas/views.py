@@ -928,11 +928,9 @@ def find_or_create_surgeon(group, surgeon_name, surgeon_crm=None):
     
     # Try to find existing surgeon by CRM first (if provided)
     if surgeon_crm:
-        try:
-            surgeon = Surgeon.objects.get(group=group, crm=surgeon_crm)
+        surgeon = Surgeon.objects.filter(group=group, crm=surgeon_crm).first()
+        if surgeon:
             return surgeon
-        except Surgeon.DoesNotExist:
-            pass
     
     # Try to find by name similarity
     surgeons_in_group = Surgeon.objects.filter(group=group)
@@ -957,8 +955,12 @@ def find_or_create_surgeon(group, surgeon_name, surgeon_crm=None):
     )
     return new_surgeon
 
-def update_procedimento_with_api_data(procedimento, guia, group):
-    """Update existing Procedimento with API data if it's more complete."""
+def update_procedimento_with_api_data(procedimento, guia, group, save_immediately=True):
+    """
+    Update existing Procedimento with API data if it's more complete.
+    If save_immediately is False, the caller must handle saving the procedimento.
+    Returns (updated, procedimento) tuple - updated is True if any changes were made.
+    """
     updated = False
     
     # Update times if API has them and they're more precise
@@ -1055,10 +1057,10 @@ def update_procedimento_with_api_data(procedimento, guia, group):
                     procedimento.procedimento_type = CIRURGIA_AMBULATORIAL_PROCEDIMENTO
                 updated = True
     
-    if updated:
+    if updated and save_immediately:
         procedimento.save()
     
-    return updated
+    return (updated, procedimento)
 
 def find_comprehensive_procedure_match(all_procs_list, guia, group):
     """
@@ -1257,13 +1259,48 @@ def conciliar_financas(request):
         financas_dict_by_cpsa = {f.cpsa: f for f in financas_qs if f.cpsa}
         print(f"DB Fetch: Found {len(financas_dict_by_cpsa)} existing financas records with CPSA.")
 
+        # --- Build O(1) lookup dictionary for procedures by (patient_name_lower, date) ---
+        # This avoids O(n) iteration for each guide
+        from collections import defaultdict
+        proc_lookup_dict = defaultdict(list)
+        for proc in all_procs_list:
+            if proc.nome_paciente and proc.data_horario:
+                key = (proc.nome_paciente.strip().lower(), proc.data_horario.date())
+                proc_lookup_dict[key].append(proc)
+        print(f"Built procedure lookup with {len(proc_lookup_dict)} unique (patient, date) keys.")
+
+        # --- Build caches for related entities to avoid repeated get_or_create queries ---
+        # Cache hospitals by name (lowercase)
+        hospital_cache = {h.name.lower(): h for h in HospitalClinic.objects.filter(group=group)}
+        # Cache convenios by name (lowercase)
+        convenio_cache = {c.name.lower(): c for c in Convenios.objects.all()}
+        # Cache surgeons by name (lowercase)
+        surgeon_cache = {s.name.lower(): s for s in Surgeon.objects.filter(group=group) if s.name}
+        # Cache anesthesiologists by name (lowercase)
+        anesthesiologist_cache = {a.name.lower(): a for a in Anesthesiologist.objects.filter(group=group) if a.name}
+        # Cache procedimento detalhes by codigo
+        proc_detalhes_cache = {pd.codigo_procedimento: pd for pd in ProcedimentoDetalhes.objects.all() if pd.codigo_procedimento}
+        print(f"Built entity caches: {len(hospital_cache)} hospitals, {len(convenio_cache)} convenios, {len(surgeon_cache)} surgeons, {len(anesthesiologist_cache)} anesthesiologists, {len(proc_detalhes_cache)} proc_detalhes.")
+
         # --- Processing ---
         financas_to_update = []
         financas_to_create = []
+        procedimentos_to_update = {}  # Dict by id to avoid duplicates
         processed_cpsa_ids = set()
         
-        # Define batch size for processing
-        BATCH_SIZE = 50
+        # Define batch size for processing - increased for better performance
+        BATCH_SIZE = 200
+        
+        # Fields to update for bulk_update
+        FINANCAS_UPDATE_FIELDS = [
+            'valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado',
+            'status_pagamento', 'api_paciente_nome', 'api_hospital_nome', 'api_cooperado_nome',
+            'matricula', 'senha', 'api_data_cirurgia', 'plantao_eletiva', 'procedimento'
+        ]
+        PROCEDIMENTO_UPDATE_FIELDS = [
+            'data_horario', 'data_horario_fim', 'cpf_paciente', 'data_nascimento',
+            'acomodacao', 'cirurgiao', 'hospital', 'cooperado', 'procedimento_principal', 'procedimento_type'
+        ]
         
         print("--- Processing API Guides ---")
         for cpsa_id, guia in guias_dict.items():
@@ -1325,7 +1362,24 @@ def conciliar_financas(request):
                      best_match_proc = None
                      highest_similarity = 0.7 
                      if guia_paciente and guia_date:
-                          for proc in all_procs_list:
+                          # Use O(1) lookup first
+                          lookup_key = (guia_paciente.strip().lower(), guia_date)
+                          candidate_procs = proc_lookup_dict.get(lookup_key, [])
+                          
+                          # If no exact match, try adjacent dates
+                          if not candidate_procs:
+                              next_day = guia_date + timedelta(days=1)
+                              prev_day = guia_date - timedelta(days=1)
+                              candidate_procs = (
+                                  proc_lookup_dict.get((guia_paciente.strip().lower(), next_day), []) +
+                                  proc_lookup_dict.get((guia_paciente.strip().lower(), prev_day), [])
+                              )
+                          
+                          # If still no match, fall back to similarity search (limited)
+                          if not candidate_procs and len(all_procs_list) <= 100:
+                              candidate_procs = all_procs_list
+                          
+                          for proc in candidate_procs:
                               name_similarity = similar(guia_paciente.lower(), proc.nome_paciente.lower())
                               proc_date = proc.data_horario.date() if proc.data_horario else None
                               date_diff = abs((guia_date - proc_date).days) if proc_date else float('inf')
@@ -1347,8 +1401,10 @@ def conciliar_financas(request):
                               newly_linked_count += 1 
                               if financa not in financas_to_update: financas_to_update.append(financa)
                 elif financa.procedimento:
-                     # Also update existing linked procedures with any new API data
-                     update_procedimento_with_api_data(financa.procedimento, guia, group)
+                     # Also update existing linked procedures (deferred save for bulk_update)
+                     was_updated, updated_proc = update_procedimento_with_api_data(financa.procedimento, guia, group, save_immediately=False)
+                     if was_updated:
+                         procedimentos_to_update[updated_proc.id] = updated_proc
                      processed_cpsa_ids.add(financa.cpsa)
 
             else: # No existing Finanças with this CPSA
@@ -1359,8 +1415,10 @@ def conciliar_financas(request):
                     best_match_proc = find_comprehensive_procedure_match(all_procs_list, guia, group)
 
                 if best_match_proc: # Matching procedure found
-                    # Update the matched procedure with API data
-                    update_procedimento_with_api_data(best_match_proc, guia, group)
+                    # Update the matched procedure with API data (deferred save)
+                    was_updated, updated_proc = update_procedimento_with_api_data(best_match_proc, guia, group, save_immediately=False)
+                    if was_updated:
+                        procedimentos_to_update[updated_proc.id] = updated_proc
                     
                     new_financa = ProcedimentoFinancas(
                         procedimento=best_match_proc,
@@ -1385,12 +1443,18 @@ def conciliar_financas(request):
                     newly_linked_count += 1
                 else: # No matching procedure found OR guide data was insufficient to search
                     if guia_paciente and guia_date:
-                        # Create new procedures in individual transactions
+                        # Create new procedure using cached entities (much faster)
                         try:
-                            with transaction.atomic():
-                                newly_created_procedimento = create_new_procedimento_from_guia(guia, cpsa_id, group)
-                                if newly_created_procedimento:
-                                    all_procs_list.append(newly_created_procedimento)
+                            newly_created_procedimento = create_new_procedimento_from_guia_cached(
+                                guia, cpsa_id, group,
+                                hospital_cache, convenio_cache, surgeon_cache,
+                                anesthesiologist_cache, proc_detalhes_cache
+                            )
+                            if newly_created_procedimento:
+                                all_procs_list.append(newly_created_procedimento)
+                                # Add to lookup dict for future matching
+                                lookup_key = (newly_created_procedimento.nome_paciente.strip().lower(), newly_created_procedimento.data_horario.date())
+                                proc_lookup_dict[lookup_key].append(newly_created_procedimento)
                         except Exception as e_proc_create:
                             print(f"Error creating new Procedimento for Guide CPSA {cpsa_id}: {str(e_proc_create)}")
                             api_errors.append(f"Erro ao criar procedimento para guia {cpsa_id}: {str(e_proc_create)}")
@@ -1422,11 +1486,17 @@ def conciliar_financas(request):
             # Process updates in batches to prevent large transactions
             if len(financas_to_update) >= BATCH_SIZE:
                 with transaction.atomic():
-                    for item_to_update in financas_to_update:
-                        item_to_update.save()
+                    ProcedimentoFinancas.objects.bulk_update(financas_to_update, FINANCAS_UPDATE_FIELDS)
                     updated_records_count += len(financas_to_update)
-                    print(f"--- Saved batch of {len(financas_to_update)} updates ---")
+                    print(f"--- Bulk updated batch of {len(financas_to_update)} financas ---")
                 financas_to_update = []
+            
+            # Process procedure updates in batches
+            if len(procedimentos_to_update) >= BATCH_SIZE:
+                with transaction.atomic():
+                    Procedimento.objects.bulk_update(list(procedimentos_to_update.values()), PROCEDIMENTO_UPDATE_FIELDS)
+                    print(f"--- Bulk updated batch of {len(procedimentos_to_update)} procedimentos ---")
+                procedimentos_to_update = {}
 
             # Process creates in batches to prevent large transactions
             if len(financas_to_create) >= BATCH_SIZE:
@@ -1436,13 +1506,18 @@ def conciliar_financas(request):
                 financas_to_create = []
 
         # --- Perform Final DB Operations ---
-        # Save any remaining updates
+        # Save any remaining procedure updates
+        if procedimentos_to_update:
+            with transaction.atomic():
+                Procedimento.objects.bulk_update(list(procedimentos_to_update.values()), PROCEDIMENTO_UPDATE_FIELDS)
+                print(f"--- Bulk updated final batch of {len(procedimentos_to_update)} procedimentos ---")
+        
+        # Save any remaining financas updates
         if financas_to_update:
             with transaction.atomic():
-                for item_to_update in financas_to_update:
-                    item_to_update.save()
+                ProcedimentoFinancas.objects.bulk_update(financas_to_update, FINANCAS_UPDATE_FIELDS)
                 updated_records_count += len(financas_to_update)
-                print(f"--- Saved final batch of {len(financas_to_update)} updates ---")
+                print(f"--- Bulk updated final batch of {len(financas_to_update)} financas ---")
 
         # Save any remaining creates
         if financas_to_create:
@@ -1592,7 +1667,149 @@ def create_new_procedimento_from_guia(guia, cpsa_id, group):
     return newly_created_procedimento
 
 
-# --- Despesas Recorrentes Views ---
+def create_new_procedimento_from_guia_cached(guia, cpsa_id, group, hospital_cache, convenio_cache, 
+                                              surgeon_cache, anesthesiologist_cache, proc_detalhes_cache):
+    """
+    Optimized version of create_new_procedimento_from_guia that uses pre-built caches
+    instead of get_or_create for each entity. This dramatically reduces database queries.
+    """
+    guia_paciente = guia.get('paciente')
+    guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+    
+    # Parse API time information
+    guia_hora_inicial = parse_api_time(guia.get('hora_inicial'))
+    guia_hora_final = parse_api_time(guia.get('hora_final'))
+    
+    # Create datetime with time if available
+    proc_data_horario = None
+    proc_data_horario_fim = None
+    
+    if guia_date:
+        start_time = guia_hora_inicial if guia_hora_inicial else time(8, 0)
+        proc_data_horario = datetime.combine(guia_date, start_time)
+        proc_data_horario = make_aware_sao_paulo(proc_data_horario)
+        
+        if guia_hora_final:
+            proc_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
+            proc_data_horario_fim = make_aware_sao_paulo(proc_data_horario_fim)
+        else:
+            proc_data_horario_fim = proc_data_horario + timedelta(hours=2)
+    
+    # Use cache for hospital (only 1 query if creating new)
+    hospital_obj = None
+    api_hospital_name = guia.get('hospital')
+    if api_hospital_name and api_hospital_name.strip():
+        cache_key = api_hospital_name.strip().lower()
+        if cache_key in hospital_cache:
+            hospital_obj = hospital_cache[cache_key]
+        else:
+            hospital_obj, _ = HospitalClinic.objects.get_or_create(
+                name__iexact=api_hospital_name.strip(),
+                defaults={'name': api_hospital_name.strip(), 'group': group}
+            )
+            hospital_cache[cache_key] = hospital_obj  # Update cache
+    
+    # Use cache for convenio
+    convenio_obj = None
+    api_convenio_name = guia.get('convenio')
+    if api_convenio_name and api_convenio_name.strip():
+        cache_key = api_convenio_name.strip().lower()
+        if cache_key in convenio_cache:
+            convenio_obj = convenio_cache[cache_key]
+        else:
+            convenio_obj, _ = Convenios.objects.get_or_create(
+                name__iexact=api_convenio_name.strip(),
+                defaults={'name': api_convenio_name.strip()}
+            )
+            convenio_cache[cache_key] = convenio_obj
+    
+    # Use cache for surgeon (with similarity fallback)
+    surgeon_obj = None
+    api_surgeon_name = guia.get('cirurgiao')
+    if api_surgeon_name and api_surgeon_name.strip():
+        cache_key = api_surgeon_name.strip().lower()
+        if cache_key in surgeon_cache:
+            surgeon_obj = surgeon_cache[cache_key]
+        else:
+            # Try similarity match from cache
+            best_match = None
+            for cached_name, cached_surgeon in surgeon_cache.items():
+                if similar(cache_key, cached_name) > 0.85:
+                    best_match = cached_surgeon
+                    break
+            if best_match:
+                surgeon_obj = best_match
+            else:
+                # Create new
+                surgeon_obj = Surgeon.objects.create(
+                    name=api_surgeon_name.strip(),
+                    crm=guia.get('crm_cirurgiao'),
+                    group=group
+                )
+                surgeon_cache[cache_key] = surgeon_obj
+
+    paciente_nome_para_proc = guia_paciente or f"Paciente CPSA {cpsa_id}"
+
+    # Use cache for procedimento principal
+    procedimento_principal_obj = None
+    proc_type = CIRURGIA_AMBULATORIAL_PROCEDIMENTO
+    api_procedimentos = guia.get('procedimentos')
+    if api_procedimentos and isinstance(api_procedimentos, list) and len(api_procedimentos) > 0:
+        principal_proc_data = api_procedimentos[0]
+        api_codigo = principal_proc_data.get('codigo')
+        api_descricao = principal_proc_data.get('descricao')
+        if api_codigo and api_descricao:
+            if api_codigo in proc_detalhes_cache:
+                procedimento_principal_obj = proc_detalhes_cache[api_codigo]
+            else:
+                procedimento_principal_obj, _ = ProcedimentoDetalhes.objects.get_or_create(
+                    codigo_procedimento=api_codigo,
+                    defaults={'name': api_descricao}
+                )
+                proc_detalhes_cache[api_codigo] = procedimento_principal_obj
+            
+            if procedimento_principal_obj.codigo_procedimento == '10101012':
+                proc_type = CONSULTA_PROCEDIMENTO
+
+    # Create the procedure (single query)
+    newly_created_procedimento = Procedimento.objects.create(
+        group=group,
+        nome_paciente=paciente_nome_para_proc,
+        cpf_paciente=guia.get('cpf') or guia.get('nr_cpf'),
+        data_nascimento=parse_api_date(guia.get('data_nascimento')),
+        acomodacao=guia.get('tip_acomod'),
+        data_horario=proc_data_horario,
+        data_horario_fim=proc_data_horario_fim,
+        hospital=hospital_obj,
+        convenio=convenio_obj,
+        cirurgiao=surgeon_obj,
+        procedimento_principal=procedimento_principal_obj,
+        procedimento_type=proc_type,
+        status=STATUS_PENDING
+    )
+
+    # Handle anesthesiologist using cache
+    guia_cooperado = guia.get('cooperado')
+    if guia_cooperado:
+        cache_key = guia_cooperado.strip().lower()
+        anest_final = None
+        if cache_key in anesthesiologist_cache:
+            anest_final = anesthesiologist_cache[cache_key]
+        else:
+            # Try similarity match
+            for cached_name, cached_anest in anesthesiologist_cache.items():
+                if similar(cache_key, cached_name) > 0.85:
+                    anest_final = cached_anest
+                    break
+            if not anest_final:
+                anest_final = Anesthesiologist.objects.create(name=guia_cooperado.strip(), group=group)
+                anesthesiologist_cache[cache_key] = anest_final
+        
+        if anest_final:
+            newly_created_procedimento.cooperado = anest_final
+            newly_created_procedimento.save(update_fields=['cooperado'])
+
+    return newly_created_procedimento
 
 @login_required
 def get_despesa_recorrente_item(request, id):
