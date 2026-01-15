@@ -10,6 +10,9 @@ urlpatterns = [
     path('financas/export/', views.export_finances, name='export_finances'),
     path('financas/delete-item/', views.delete_finance_item, name='delete_finance_item'),
     path('financas/conciliar/', views.conciliar_financas, name='conciliar_financas'),
+    # Background conciliation (async)
+    path('financas/conciliar-async/', views.iniciar_conciliacao_async, name='iniciar_conciliacao_async'),
+    path('financas/conciliar-status/<int:job_id>/', views.status_conciliacao, name='status_conciliacao'),
     # Despesas Recorrentes URLs
     path('financas/get-despesa-recorrente/<int:id>/', views.get_despesa_recorrente_item, name='get-despesa-recorrente-item'),
     path('financas/create-despesa-recorrente/', views.create_despesa_recorrente_item, name='create_despesa_recorrente_item'),

@@ -1227,46 +1227,137 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // --- Conciliation Trigger ---
+    // --- Conciliation Trigger (ASYNC VERSION) ---
+    let conciliationJobId = null;
+    let conciliationPollInterval = null;
+    
     window.runConciliation = function() {
-         const conciliateButton = document.getElementById('conciliate-header-btn'); // Target Header button now
-         if (!conciliateButton) return;
-         conciliateButton.disabled = true;
-         conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Just spinner
-        fetch('/financas/conciliar/') 
-            .then(async (response) => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                    // Stop further handling since we're navigating away
-                    return Promise.reject('redirected');
+        const conciliateButton = document.getElementById('conciliate-header-btn');
+        if (!conciliateButton) return;
+        
+        conciliateButton.disabled = true;
+        conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Start async conciliation
+        fetch('/financas/conciliar-async/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.job_id) {
+                    conciliationJobId = data.job_id;
+                    showConciliationModal();
+                    startPollingConciliationStatus();
+                } else if (data.error) {
+                    // If there's already a running job, track it
+                    if (data.job_id) {
+                        conciliationJobId = data.job_id;
+                        showConciliationModal();
+                        startPollingConciliationStatus();
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } else {
+                    throw new Error('Erro ao iniciar conciliação');
                 }
-                const contentType = response.headers.get('content-type') || '';
-                const isJson = contentType.includes('application/json');
-                const data = isJson ? await response.json() : {};
-                return { ok: response.ok, status: response.status, data };
             })
-            .then(({ ok, status, data }) => {
-                if (ok && data.success) {
-                    alert(data.message || 'Conciliação concluída.');
-                    window.location.reload(); 
-                    return;
-                }
-                if (status === 401) {
-                    const target = (data && data.redirect_url) || '/login/';
-                    window.location.href = target;
-                    return;
-                }
-                throw new Error((data && data.error) || 'Erro durante a conciliação.');
-            })
-            .catch(error => { 
-                if (error === 'redirected') return;
-                console.error('Error conciliation:', error); 
-                alert('Erro: ' + (error?.message || error)); 
-            })
-            .finally(() => {
+            .catch(error => {
+                console.error('Error starting conciliation:', error);
+                alert('Erro: ' + error.message);
                 conciliateButton.disabled = false;
-                conciliateButton.innerHTML = '<i class="fas fa-sync"></i>'; // Reset icon
+                conciliateButton.innerHTML = '<i class="fas fa-sync"></i>';
             });
+    }
+    
+    function showConciliationModal() {
+        let modal = document.getElementById('conciliation-progress-modal');
+        if (!modal) {
+            // Create modal dynamically
+            modal = document.createElement('div');
+            modal.id = 'conciliation-progress-modal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <h2><i class="fas fa-sync fa-spin"></i> Conciliação em Andamento</h2>
+                    <p id="conciliation-step">Iniciando...</p>
+                    <div style="background: #e0e0e0; border-radius: 10px; height: 20px; margin: 20px 0; overflow: hidden;">
+                        <div id="conciliation-progress-bar" style="background: linear-gradient(90deg, #4CAF50, #45a049); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <p id="conciliation-stats" style="color: #666; font-size: 0.9em;"></p>
+                    <p style="color: #888; font-size: 0.85em; margin-top: 15px;">
+                        <i class="fas fa-info-circle"></i> Você pode fechar este modal e continuar usando o sistema. 
+                        A conciliação continuará em background.
+                    </p>
+                    <button id="close-conciliation-modal" class="btn-secondary" style="margin-top: 15px;">Fechar</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('close-conciliation-modal').onclick = function() {
+                modal.style.display = 'none';
+                const conciliateButton = document.getElementById('conciliate-header-btn');
+                if (conciliateButton) {
+                    conciliateButton.disabled = false;
+                    conciliateButton.innerHTML = '<i class="fas fa-sync"></i>';
+                }
+            };
+        }
+        modal.style.display = 'block';
+    }
+    
+    function startPollingConciliationStatus() {
+        if (conciliationPollInterval) clearInterval(conciliationPollInterval);
+        
+        const pollStatus = () => {
+            if (!conciliationJobId) return;
+            
+            fetch(`/financas/conciliar-status/${conciliationJobId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    updateConciliationUI(data);
+                    
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(conciliationPollInterval);
+                        conciliationPollInterval = null;
+                        
+                        if (data.status === 'completed') {
+                            setTimeout(() => {
+                                const modal = document.getElementById('conciliation-progress-modal');
+                                if (modal) modal.style.display = 'none';
+                                alert('Conciliação concluída com sucesso!');
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            alert('Erro na conciliação: ' + (data.error_message || 'Erro desconhecido'));
+                        }
+                        
+                        const conciliateButton = document.getElementById('conciliate-header-btn');
+                        if (conciliateButton) {
+                            conciliateButton.disabled = false;
+                            conciliateButton.innerHTML = '<i class="fas fa-sync"></i>';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                });
+        };
+        
+        pollStatus(); // Immediate first poll
+        conciliationPollInterval = setInterval(pollStatus, 2000); // Poll every 2 seconds
+    }
+    
+    function updateConciliationUI(data) {
+        const stepEl = document.getElementById('conciliation-step');
+        const progressBar = document.getElementById('conciliation-progress-bar');
+        const statsEl = document.getElementById('conciliation-stats');
+        
+        if (stepEl) stepEl.textContent = data.current_step || 'Processando...';
+        if (progressBar) progressBar.style.width = `${data.progress_percent || 0}%`;
+        if (statsEl) {
+            statsEl.innerHTML = `
+                📊 Progresso: ${data.processed_count || 0} / ${data.total_guias || 0} guias<br>
+                ✅ Criados: ${data.created_count || 0} | 🔄 Atualizados: ${data.updated_count || 0} | 🔗 Vinculados: ${data.linked_count || 0}
+            `;
+        }
     }
 
     // --- Re-focus on search input after search ---
