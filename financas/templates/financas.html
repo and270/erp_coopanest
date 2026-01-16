@@ -1230,6 +1230,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Conciliation Trigger (ASYNC VERSION) ---
     let conciliationJobId = null;
     let conciliationPollInterval = null;
+    let lastTableRefreshProcessed = 0;
+    let lastTableRefreshTs = 0;
     
     // IMPORTANT: Clear any stale localStorage on page load to prevent cross-user interference
     // Each user/session should only track jobs they explicitly started
@@ -1350,6 +1352,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     updateConciliationUI(data);
+                    maybeRefreshTable(data);
                     
                     if (data.status === 'completed' || data.status === 'failed') {
                         clearInterval(conciliationPollInterval);
@@ -1392,6 +1395,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 ✅ Criados: ${data.created_count || 0} | 🔄 Atualizados: ${data.updated_count || 0} | 🔗 Vinculados: ${data.linked_count || 0}
             `;
         }
+    }
+
+    function maybeRefreshTable(data) {
+        const processed = data.processed_count || 0;
+        const total = data.total_guias || 0;
+        const now = Date.now();
+        const progressedEnough = (processed - lastTableRefreshProcessed) >= 100;
+        const waitedEnough = (now - lastTableRefreshTs) >= 30000;
+        const hasProgress = processed > 0 && total > 0;
+
+        if (!hasProgress) return;
+        if (!progressedEnough && !waitedEnough) return;
+
+        lastTableRefreshProcessed = processed;
+        lastTableRefreshTs = now;
+
+        refreshTableFromServer();
+    }
+
+    function refreshTableFromServer() {
+        const tableWrapper = document.getElementById('main-table-wrapper');
+        if (!tableWrapper) return;
+
+        fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newTbody = doc.querySelector('#main-table-wrapper table tbody');
+                const currentTbody = tableWrapper.querySelector('table tbody');
+                if (newTbody && currentTbody) {
+                    currentTbody.innerHTML = newTbody.innerHTML;
+                }
+            })
+            .catch(err => {
+                console.warn('Table refresh failed:', err);
+            });
     }
 
     // --- Re-focus on search input after search ---
