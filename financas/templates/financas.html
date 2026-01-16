@@ -1230,7 +1230,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Conciliation Trigger (ASYNC VERSION) ---
     let conciliationJobId = null;
     let conciliationPollInterval = null;
-    const CONCILIATION_JOB_KEY = 'financas_conciliation_job_id';
+    
+    // IMPORTANT: Clear any stale localStorage on page load to prevent cross-user interference
+    // Each user/session should only track jobs they explicitly started
+    localStorage.removeItem('financas_conciliation_job_id');
     
     function setConciliationButtonLoading(isLoading) {
         const conciliateButton = document.getElementById('conciliate-header-btn');
@@ -1239,12 +1242,15 @@ document.addEventListener('DOMContentLoaded', function() {
         conciliateButton.innerHTML = isLoading ? '<i class="fas fa-spinner fa-spin"></i>' : '<i class="fas fa-sync"></i>';
     }
 
-    function persistConciliationJob(jobId) {
-        if (jobId) {
-            localStorage.setItem(CONCILIATION_JOB_KEY, String(jobId));
-        } else {
-            localStorage.removeItem(CONCILIATION_JOB_KEY);
+    function stopPollingAndReset() {
+        if (conciliationPollInterval) {
+            clearInterval(conciliationPollInterval);
+            conciliationPollInterval = null;
         }
+        conciliationJobId = null;
+        setConciliationButtonLoading(false);
+        const modal = document.getElementById('conciliation-progress-modal');
+        if (modal) modal.style.display = 'none';
     }
 
     window.runConciliation = function() {
@@ -1258,14 +1264,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success && data.job_id) {
                     conciliationJobId = data.job_id;
-                    persistConciliationJob(conciliationJobId);
                     showConciliationModal();
                     startPollingConciliationStatus();
                 } else if (data.error) {
-                    // If there's already a running job, track it
+                    // If there's already a running job for THIS user's group, track it
                     if (data.job_id) {
                         conciliationJobId = data.job_id;
-                        persistConciliationJob(conciliationJobId);
                         showConciliationModal();
                         startPollingConciliationStatus();
                     } else {
@@ -1320,14 +1324,36 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!conciliationJobId) return;
             
             fetch(`/financas/conciliar-status/${conciliationJobId}/`)
-                .then(response => response.json())
+                .then(response => {
+                    // Handle Forbidden (403) - job belongs to different group
+                    if (response.status === 403) {
+                        console.warn('Conciliation job not accessible (different group or expired)');
+                        stopPollingAndReset();
+                        return null;
+                    }
+                    // Handle Not Found (404) - job doesn't exist
+                    if (response.status === 404) {
+                        console.warn('Conciliation job not found');
+                        stopPollingAndReset();
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data) return; // Was handled above
+                    
+                    // Handle error response from server
+                    if (data.error) {
+                        console.error('Conciliation status error:', data.error);
+                        stopPollingAndReset();
+                        return;
+                    }
+                    
                     updateConciliationUI(data);
                     
                     if (data.status === 'completed' || data.status === 'failed') {
                         clearInterval(conciliationPollInterval);
                         conciliationPollInterval = null;
-                        persistConciliationJob(null);
                         
                         if (data.status === 'completed') {
                             setTimeout(() => {
@@ -1338,12 +1364,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             }, 1000);
                         } else {
                             alert('Erro na conciliação: ' + (data.error_message || 'Erro desconhecido'));
+                            stopPollingAndReset();
                         }
                         setConciliationButtonLoading(false);
                     }
                 })
                 .catch(error => {
                     console.error('Error polling status:', error);
+                    // Don't stop polling on network errors - might be temporary
                 });
         };
         
@@ -1364,15 +1392,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ✅ Criados: ${data.created_count || 0} | 🔄 Atualizados: ${data.updated_count || 0} | 🔗 Vinculados: ${data.linked_count || 0}
             `;
         }
-    }
-
-    // Resume polling if a job is already in progress (e.g., after navigation)
-    const storedJobId = localStorage.getItem(CONCILIATION_JOB_KEY);
-    if (storedJobId) {
-        conciliationJobId = storedJobId;
-        showConciliationModal();
-        setConciliationButtonLoading(true);
-        startPollingConciliationStatus();
     }
 
     // --- Re-focus on search input after search ---
