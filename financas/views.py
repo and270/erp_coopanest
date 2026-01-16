@@ -903,6 +903,129 @@ def delete_finance_item(request):
         return JsonResponse({'success': False, 'error': f'Erro ao excluir item: {str(e)}'}, status=500)
 
 
+def update_procedimento_with_api_data_cached(procedimento, guia, group, hospital_cache, convenio_cache, 
+                                             surgeon_cache, anesthesiologist_cache, proc_detalhes_cache, 
+                                             save_immediately=True):
+    """
+    Optimized version of update_procedimento_with_api_data using caches.
+    """
+    updated = False
+    
+    # Times and Dates
+    guia_hora_inicial = parse_api_time(guia.get('hora_inicial'))
+    guia_hora_final = parse_api_time(guia.get('hora_final'))
+    guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+    
+    if guia_date and guia_hora_inicial:
+        new_data_horario = datetime.combine(guia_date, guia_hora_inicial)
+        new_data_horario = make_aware_sao_paulo(new_data_horario)
+        current_time = procedimento.data_horario.time() if procedimento.data_horario else None
+        if not current_time or current_time == time(0, 0) or current_time != guia_hora_inicial:
+            procedimento.data_horario = new_data_horario
+            updated = True
+    
+    if guia_date and guia_hora_final and guia_hora_final != guia_hora_inicial:
+        new_data_horario_fim = datetime.combine(guia_date, guia_hora_final)
+        new_data_horario_fim = make_aware_sao_paulo(new_data_horario_fim)
+        if not procedimento.data_horario_fim or procedimento.data_horario_fim != new_data_horario_fim:
+            procedimento.data_horario_fim = new_data_horario_fim
+            updated = True
+
+    # CPF
+    api_cpf = guia.get('cpf') or guia.get('nr_cpf')
+    if api_cpf and not procedimento.cpf_paciente:
+        procedimento.cpf_paciente = api_cpf
+        updated = True
+
+    # Birth Date
+    api_nascimento = parse_api_date(guia.get('data_nascimento'))
+    if api_nascimento and not procedimento.data_nascimento:
+        procedimento.data_nascimento = api_nascimento
+        updated = True
+
+    # Accommodation
+    api_acomodacao = guia.get('tip_acomod')
+    if api_acomodacao and not procedimento.acomodacao:
+        procedimento.acomodacao = api_acomodacao
+        updated = True
+    
+    # Surgeon (Cached)
+    api_surgeon_name = guia.get('cirurgiao')
+    if api_surgeon_name and api_surgeon_name.strip():
+        name_key = api_surgeon_name.strip().lower()
+        surgeon_obj = None
+        if name_key in surgeon_cache:
+            surgeon_obj = surgeon_cache[name_key]
+        else:
+            # Fallback to create (already handles duplicate by crm/name inside)
+            surgeon_obj = find_or_create_surgeon(group, api_surgeon_name, guia.get('crm_cirurgiao'))
+            surgeon_cache[name_key] = surgeon_obj
+        
+        if surgeon_obj and (not procedimento.cirurgiao or procedimento.cirurgiao_id != surgeon_obj.id):
+            procedimento.cirurgiao = surgeon_obj
+            updated = True
+    
+    # Hospital (Cached)
+    api_hospital_name = guia.get('hospital')
+    if api_hospital_name and api_hospital_name.strip():
+        name_key = api_hospital_name.strip().lower()
+        hospital_obj = None
+        if name_key in hospital_cache:
+            hospital_obj = hospital_cache[name_key]
+        else:
+            hospital_obj, _ = HospitalClinic.objects.get_or_create(
+                name__iexact=api_hospital_name.strip(),
+                defaults={'name': api_hospital_name.strip(), 'group': group}
+            )
+            hospital_cache[name_key] = hospital_obj
+        
+        if hospital_obj and (not procedimento.hospital or procedimento.hospital_id != hospital_obj.id):
+            procedimento.hospital = hospital_obj
+            updated = True
+
+    # Cooperado (Cached)
+    api_cooperado_name = guia.get('cooperado')
+    if api_cooperado_name:
+        name_key = api_cooperado_name.strip().lower()
+        anest_obj = None
+        if name_key in anesthesiologist_cache:
+            anest_obj = anesthesiologist_cache[name_key]
+        else:
+            anest_obj = find_or_create_anesthesiologist(group, api_cooperado_name)
+            anesthesiologist_cache[name_key] = anest_obj
+            
+        if anest_obj and (not procedimento.cooperado or procedimento.cooperado_id != anest_obj.id):
+            procedimento.cooperado = anest_obj
+            updated = True
+
+    # Procedure Detail (Cached)
+    api_procedimentos = guia.get('procedimentos')
+    if api_procedimentos and isinstance(api_procedimentos, list) and len(api_procedimentos) > 0:
+        principal = api_procedimentos[0]
+        api_codigo = principal.get('codigo')
+        api_descricao = principal.get('descricao')
+        if api_codigo and api_descricao:
+            detalhe = None
+            if api_codigo in proc_detalhes_cache:
+                detalhe = proc_detalhes_cache[api_codigo]
+            else:
+                detalhe, _ = ProcedimentoDetalhes.objects.get_or_create(
+                    codigo_procedimento=api_codigo,
+                    defaults={'name': api_descricao}
+                )
+                proc_detalhes_cache[api_codigo] = detalhe
+            
+            if detalhe and procedimento.procedimento_principal_id != detalhe.id:
+                procedimento.procedimento_principal = detalhe
+                procedimento.procedimento_type = CONSULTA_PROCEDIMENTO if api_codigo == '10101012' else CIRURGIA_AMBULATORIAL_PROCEDIMENTO
+                updated = True
+    
+    if updated and save_immediately:
+        procedimento.save()
+    
+    return (updated, procedimento)
+
+
 def similar(a, b):
     if not a or not b:
         return 0
@@ -1904,7 +2027,7 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
     financas_pending_proc = []
     processed_cpsa_ids = set()
     
-    BATCH_SIZE = 200
+    BATCH_SIZE = 50  # Smaller batch size for faster table refresh
     FINANCAS_UPDATE_FIELDS = [
         'valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado',
         'status_pagamento', 'api_paciente_nome', 'api_hospital_nome', 'api_cooperado_nome',
@@ -1916,7 +2039,7 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
     ]
     
     processed_count = 0
-    update_interval = max(200, job.total_guias // 10)  # Update every 10% or 200 items
+    update_interval = 20  # More granular progress updates
     
     for cpsa_id, guia in guias_items:
         processed_cpsa_ids.add(cpsa_id)
@@ -1949,6 +2072,7 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
                 financa.valor_recuperado = guia_valor_recuperado; updated = True
             if guia_valor_acatado is not None and financa.valor_acatado != guia_valor_acatado:
                 financa.valor_acatado = guia_valor_acatado; updated = True
+            
             api_status = map_api_status(guia.get('STATUS'))
             if financa.status_pagamento != api_status:
                 financa.status_pagamento = api_status; updated = True
@@ -1970,10 +2094,23 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
             if updated:
                 if financa not in financas_to_update: financas_to_update.append(financa)
             
-            if financa.procedimento and needs_procedure_matching:
-                was_updated, updated_proc = update_procedimento_with_api_data(financa.procedimento, guia, group, save_immediately=False)
-                if was_updated:
-                    procedimentos_to_update[updated_proc.id] = updated_proc
+            # PERFORMANCE FIX: Only attempt matching if it's currently unlinked
+            if not financa.procedimento and needs_procedure_matching:
+                best_match_proc = find_comprehensive_procedure_match(all_procs_list, guia, group)
+                if best_match_proc:
+                    # Update procedure using caches (FAST)
+                    was_updated, updated_proc = update_procedimento_with_api_data_cached(
+                        best_match_proc, guia, group, 
+                        hospital_cache, convenio_cache, surgeon_cache, 
+                        anesthesiologist_cache, proc_detalhes_cache,
+                        save_immediately=False
+                    )
+                    if was_updated:
+                        procedimentos_to_update[updated_proc.id] = updated_proc
+                    
+                    financa.procedimento = best_match_proc
+                    job.linked_count += 1
+                    if financa not in financas_to_update: financas_to_update.append(financa)
             
         else:
             # New financa
@@ -1999,7 +2136,12 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
                         best_match_proc = proc
             
             if best_match_proc:
-                was_updated, updated_proc = update_procedimento_with_api_data(best_match_proc, guia, group, save_immediately=False)
+                was_updated, updated_proc = update_procedimento_with_api_data_cached(
+                    best_match_proc, guia, group, 
+                    hospital_cache, convenio_cache, surgeon_cache, 
+                    anesthesiologist_cache, proc_detalhes_cache,
+                    save_immediately=False
+                )
                 if was_updated:
                     procedimentos_to_update[updated_proc.id] = updated_proc
                 
@@ -2007,7 +2149,9 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
                     procedimento=best_match_proc, group=group, tipo_cobranca='cooperativa', cpsa=cpsa_id,
                     valor_faturado=guia.get('valor_faturado'), valor_recebido=guia.get('valor_recebido'),
                     status_pagamento=map_api_status(guia.get('STATUS')), api_paciente_nome=guia.get('paciente'),
-                    api_data_cirurgia=guia_date, api_hospital_nome=guia.get('hospital')
+                    api_data_cirurgia=guia_date, api_hospital_nome=guia.get('hospital'),
+                    api_cooperado_nome=guia.get('cooperado'), matricula=guia.get('matricula'),
+                    senha=guia.get('senha'), plantao_eletiva=guia.get('classificacao')
                 )
                 financas_to_create.append(new_financa)
                 job.linked_count += 1
