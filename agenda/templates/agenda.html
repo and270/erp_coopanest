@@ -109,9 +109,8 @@
                 {% for date in calendar_dates %}
                     <div class="day" data-date="{{ date.day|date:'Y-m-d' }}">
                         <span>{{ date.day.day }}</span>
-                        {% for procedimento in procedimentos %}
+                        {% for procedimento in date.procedures %}
                             {% with local_time=procedimento.data_horario|localtime %}
-                            {% if local_time|date:'Y-m-d' == date.day|date:'Y-m-d' %}
                                 <div class="procedure-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
                                     <span class="procedure-time-patient">{{ local_time|date:"H:i" }} <b>{{ procedimento.nome_paciente }}</b></span>
                                     <span class="procedure-name">{{ procedimento.procedimento_principal.name|truncatechars:20 }}</span>
@@ -120,46 +119,6 @@
                                         {% if procedimento.anestesistas_livres %}{% if procedimento.cooperado %}, {% endif %}{{ procedimento.anestesistas_livres }}{% endif %}
                                     </span>
                                 </div>
-                                <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
-                                    <div class="procedure-modal-content">
-                                        <span class="close-modal">&times;</span>
-                                        <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                        <p>Data de Nascimento: <strong><span class="modal-birth-date">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</span></strong></p>
-                                        <p>Acomodação: <strong><span class="modal-accommodation">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</span></strong></p>
-                                        <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
-                                        <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
-                                        <br>
-                                        <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
-                                        <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
-                                        <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
-                                        <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
-                                        <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
-                                        <p>Cirurgião: <strong><span class="modal-surgeon">
-                                            {% if procedimento.cirurgiao %}
-                                                {{ procedimento.cirurgiao.name }}
-                                            {% else %}
-                                                {{ procedimento.cirurgiao_nome|default:"Não informado" }}
-                                            {% endif %}
-                                        </span></strong></p>
-                                        <p>Cooperado: <strong><span class="modal-cooperado">{% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% else %}--{% endif %}</span></strong></p>
-                                        <p>Anestesistas: <strong><span class="modal-anesthesiologists">{{ procedimento.anestesistas_livres|default:"--" }}</span></strong></p>
-                                        <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
-                                        <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
-                                        <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
-                                        <p>Anexo Visita Pré-Anestésica:
-                                            {% if procedimento.foto_anexo %}
-                                                <a href="{% url 'protected_file' procedimento.foto_anexo.name %}" target="_blank" class="modal-attachment">Ver anexo</a>
-                                            {% else %}
-                                                <span class="modal-attachment">Nenhum anexo disponível</span>
-                                            {% endif %}
-                                        </p>
-                                        <div class="modal-actions">
-                                            <button class="btn btn-primary edit-procedure">Editar</button>
-                                            <button class="btn btn-danger delete-procedure">Excluir</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
                             {% endwith %}
                         {% endfor %}
                     </div>
@@ -182,11 +141,10 @@
                 </div>
                 {% for date in week_dates %}
                     <div class="day-column" data-date="{{ date.full_date|date:'Y-m-d' }}">
-                        {% for hour in hours %}
-                            <div class="hour-slot" data-hour="{{ hour }}">
-                                {% for procedimento in procedimentos %}
+                        {% for slot in date.hour_slots %}
+                            <div class="hour-slot" data-hour="{{ slot.hour }}">
+                                {% for procedimento in slot.procedures %}
                                     {% with local_time=procedimento.data_horario|localtime %}
-                                    {% if local_time|date:"Y-m-d H" == date.full_date|date:"Y-m-d"|add:" "|add:hour %}
                                         <div class="procedure-card week-view-card {% if procedimento.procedimento_type == 'consulta' %}consulta{% elif procedimento.procedimento_type == 'cirurgia_procedimento_ambulatorial' %}cirurgia-ambulatorial{% endif %}" data-id="{{ procedimento.id }}" data-date="{{ local_time|date:'Y-m-d' }}">
                                             <div class="procedure-first-row">
                                                 <span class="procedure-time">{{ local_time|date:"H:i" }}</span>
@@ -198,46 +156,6 @@
                                                 {% if procedimento.anestesistas_livres %}{% if procedimento.cooperado %}, {% endif %}{{ procedimento.anestesistas_livres|truncatechars:30 }}{% endif %}
                                             </span>
                                         </div>
-                                        <div id="procedure-details-modal-{{ procedimento.id }}" class="procedure-modal" style="display:none;">
-                                            <div class="procedure-modal-content">
-                                                <span class="close-modal">&times;</span>
-                                                <p><span class="modal-patient-name">{{ procedimento.nome_paciente }}</span></p>
-                                                <p>Data de Nascimento: <strong><span class="modal-birth-date">{{ procedimento.data_nascimento|date:"d/m/Y"|default:"Não informado" }}</span></strong></p>
-                                                <p>Acomodação: <strong><span class="modal-accommodation">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</span></strong></p>
-                                                <p><span class="modal-date">{{ local_time|date:"d/m/Y" }}</span></p>
-                                                <p><span class="modal-start-time">{{ local_time|date:"H:i" }}</span>{% if procedimento.data_horario_fim %}<span> - </span><span class="modal-end-time">{{ procedimento.data_horario_fim|localtime|date:"H:i" }}</span>{% endif %}</p>
-                                                <br>
-                                                <p>Procedimento principal: <strong><span class="modal-procedure">{{ procedimento.procedimento_principal.name }}</span></strong></p>
-                                                <p>Eletiva ou Urgência: <strong><span>{{ procedimento.get_tipo_procedimento_display }}</span></strong></p>
-                                                <p>Email: <span class="modal-email"><strong>{{ procedimento.email_paciente|default:"Não informado" }}</strong></span></p>
-                                                <p>Convênio: <span class="modal-convenio"><strong>{{ procedimento.convenio.name|default:"Não informado" }}</strong></span></p>
-                                                <p>Local: <strong><span class="modal-hospital">{{ procedimento.hospital.name|default:procedimento.outro_local|default:"Não informado" }}</span></strong></p>
-                                                <p>Cirurgião: <strong><span class="modal-surgeon">
-                                                    {% if procedimento.cirurgiao %}
-                                                        {{ procedimento.cirurgiao.name }}
-                                                    {% else %}
-                                                        {{ procedimento.cirurgiao_nome|default:"Não informado" }}
-                                                    {% endif %}
-                                                </span></strong></p>
-                                                <p>Cooperado: <strong><span class="modal-cooperado">{% if procedimento.cooperado %}{{ procedimento.cooperado.name }}{% else %}--{% endif %}</span></strong></p>
-                                                <p>Anestesistas: <strong><span class="modal-anesthesiologists">{{ procedimento.anestesistas_livres|default:"--" }}</span></strong></p>
-                                                <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit">{{ procedimento.visita_pre_anestesica|yesno:"Sim,Não" }}</span></strong></p>
-                                                <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date">{{ procedimento.data_visita_pre_anestesica|date:"d/m/Y"|default:"Não realizada" }}</span></strong></p>
-                                                <p>Responsável pela Visita: <strong><span class="modal-visit-responsible">{{ procedimento.nome_responsavel_visita|default:"Não informado" }}</span></strong></p>
-                                                <p>Anexo Visita Pré-Anestésica:
-                                                    {% if procedimento.foto_anexo %}
-                                                        <a href="{% url 'protected_file' procedimento.foto_anexo.name %}" target="_blank" class="modal-attachment">Ver anexo</a>
-                                                    {% else %}
-                                                        <span class="modal-attachment">Nenhum anexo disponível</span>
-                                                    {% endif %}
-                                                </p>
-                                                <div class="modal-actions">
-                                                    <button class="btn btn-primary edit-procedure">Editar</button>
-                                                    <button class="btn btn-danger delete-procedure">Excluir</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {% endif %}
                                     {% endwith %}
                                 {% endfor %}
                             </div>
@@ -425,6 +343,44 @@
 </div>
 <div id="customAlert" class="custom-alert"></div>
 
+<div id="agenda-loading" class="agenda-loading" style="display:none;">
+    <div class="agenda-loading-content">
+        <span class="spinner"></span>
+        <span class="loading-text">Carregando...</span>
+    </div>
+</div>
+
+<div id="procedure-details-modal" class="procedure-modal" style="display:none;" data-procedure-id="">
+    <div class="procedure-modal-content">
+        <span class="close-modal">&times;</span>
+        <p><span class="modal-patient-name"></span></p>
+        <p>Data de Nascimento: <strong><span class="modal-birth-date"></span></strong></p>
+        <p>Acomodação: <strong><span class="modal-accommodation"></span></strong></p>
+        <p><span class="modal-date"></span></p>
+        <p><span class="modal-start-time"></span><span class="modal-time-sep"></span><span class="modal-end-time"></span></p>
+        <br>
+        <p>Procedimento principal: <strong><span class="modal-procedure"></span></strong></p>
+        <p>Eletiva ou Urgência: <strong><span class="modal-procedure-type"></span></strong></p>
+        <p>Email: <span class="modal-email"><strong></strong></span></p>
+        <p>Convênio: <span class="modal-convenio"><strong></strong></span></p>
+        <p>Local: <strong><span class="modal-hospital"></span></strong></p>
+        <p>Cirurgião: <strong><span class="modal-surgeon"></span></strong></p>
+        <p>Cooperado: <strong><span class="modal-cooperado"></span></strong></p>
+        <p>Anestesistas: <strong><span class="modal-anesthesiologists"></span></strong></p>
+        <p>Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit"></span></strong></p>
+        <p>Data da Visita Pré-Anestésica: <strong><span class="modal-pre-anesthetic-visit-date"></span></strong></p>
+        <p>Responsável pela Visita: <strong><span class="modal-visit-responsible"></span></strong></p>
+        <p>Anexo Visita Pré-Anestésica:
+            <a href="#" target="_blank" class="modal-attachment-link" style="display:none;">Ver anexo</a>
+            <span class="modal-attachment-empty">Nenhum anexo disponível</span>
+        </p>
+        <div class="modal-actions">
+            <button class="btn btn-primary edit-procedure">Editar</button>
+            <button class="btn btn-danger delete-procedure">Excluir</button>
+        </div>
+    </div>
+</div>
+
 <!-- Import Modal (same structure/styles as other modals) -->
 <div id="import-modal" class="modal" style="display:none;">
     <div class="modal-content">
@@ -446,6 +402,38 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+    .agenda-loading {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+    .agenda-loading-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #fff;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        font-size: 14px;
+    }
+    .agenda-loading .spinner {
+        width: 18px;
+        height: 18px;
+        border: 3px solid #ddd;
+        border-top-color: #555;
+        border-radius: 50%;
+        animation: agendaSpin 0.8s linear infinite;
+    }
+    @keyframes agendaSpin {
+        to { transform: rotate(360deg); }
+    }
+</style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js"></script>
@@ -592,6 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const currentDateRange = document.getElementById('current-date-range');
+    const loadingOverlay = document.getElementById('agenda-loading');
 
     let currentView = '{{ view_type }}';
     let currentYear = parseInt("{{ current_year }}");
@@ -603,6 +592,16 @@ document.addEventListener('DOMContentLoaded', function() {
         5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
         9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
     };
+
+    function setAgendaLoading(isLoading, message) {
+        if (!loadingOverlay) return;
+        const textEl = loadingOverlay.querySelector('.loading-text');
+        if (textEl && message) {
+            textEl.textContent = message;
+        }
+        loadingOverlay.style.display = isLoading ? 'flex' : 'none';
+    }
+    window.setAgendaLoading = setAgendaLoading;
 
     function updateDateRange() {
         if (currentView === 'month') {
@@ -628,6 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             url.searchParams.delete('week_start');
         }
+        setAgendaLoading(true, 'Carregando agenda...');
         window.location.href = url.toString();
     }
 
@@ -973,12 +973,95 @@ document.addEventListener('DOMContentLoaded', function() {
     const anestFreeInput = document.getElementById('anest-free-input');
     const addFreeAnestBtn = document.getElementById('add-free-anest');
     const hiddenAnestLivres = document.getElementById('id_anestesistas_livres');
+    const detailsModal = document.getElementById('procedure-details-modal');
+    const detailsModalClose = detailsModal ? detailsModal.querySelector('.close-modal') : null;
 
     function syncHiddenFromChips() {
         const names = Array.from(selectedAnesthesiologistsContainer.querySelectorAll('.selected-anesthesiologist'))
             .map(div => div.dataset.name)
             .filter(Boolean);
         hiddenAnestLivres.value = names.join(', ');
+    }
+
+    function formatIsoDateToPt(isoDate) {
+        if (!isoDate) return '';
+        const parts = isoDate.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return isoDate;
+    }
+
+    function setText(selector, value, fallback) {
+        if (!detailsModal) return;
+        const el = detailsModal.querySelector(selector);
+        if (!el) return;
+        const text = value ? String(value) : (fallback || '');
+        el.textContent = text;
+    }
+
+    function openProcedureDetails(procedureId) {
+        if (!procedureId || !detailsModal) return;
+        if (window.setAgendaLoading) {
+            window.setAgendaLoading(true, 'Carregando detalhes...');
+        }
+        fetch(`/get-procedure/${procedureId}/`)
+            .then(response => response.json())
+            .then(data => {
+                detailsModal.dataset.procedureId = procedureId;
+                setText('.modal-patient-name', data.nome_paciente, 'Não informado');
+                setText('.modal-birth-date', formatIsoDateToPt(data.data_nascimento), 'Não informado');
+                setText('.modal-accommodation', data.acomodacao_label || data.acomodacao, 'Não informado');
+                setText('.modal-date', data.data, '');
+                setText('.modal-start-time', data.time, '');
+
+                const timeSep = detailsModal.querySelector('.modal-time-sep');
+                if (timeSep) {
+                    timeSep.textContent = data.end_time ? ' - ' : '';
+                }
+                setText('.modal-end-time', data.end_time, '');
+
+                setText('.modal-procedure', data.procedimento_principal?.text, 'Não informado');
+                setText('.modal-procedure-type', data.tipo_procedimento_label || data.tipo_procedimento, 'Não informado');
+                setText('.modal-email strong', data.email_paciente, 'Não informado');
+                setText('.modal-convenio strong', data.convenio?.text, 'Não informado');
+
+                const hospitalText = data.hospital_name || data.outro_local || 'Não informado';
+                setText('.modal-hospital', hospitalText, 'Não informado');
+
+                const surgeonText = data.cirurgiao_text || data.cirurgiao_nome || 'Não informado';
+                setText('.modal-surgeon', surgeonText, 'Não informado');
+
+                setText('.modal-cooperado', data.cooperado?.name, '--');
+                setText('.modal-anesthesiologists', data.anestesistas_livres || '--', '--');
+                setText('.modal-pre-anesthetic-visit', data.visita_pre_anestesica ? 'Sim' : 'Não', 'Não');
+                setText('.modal-pre-anesthetic-visit-date', data.data_visita_pre_anestesica || 'Não realizada', 'Não realizada');
+                setText('.modal-visit-responsible', data.nome_responsavel_visita || 'Não informado', 'Não informado');
+
+                const attachmentLink = detailsModal.querySelector('.modal-attachment-link');
+                const attachmentEmpty = detailsModal.querySelector('.modal-attachment-empty');
+                if (data.foto_anexo_url) {
+                    if (attachmentLink) {
+                        attachmentLink.href = data.foto_anexo_url;
+                        attachmentLink.style.display = 'inline';
+                    }
+                    if (attachmentEmpty) attachmentEmpty.style.display = 'none';
+                } else {
+                    if (attachmentLink) attachmentLink.style.display = 'none';
+                    if (attachmentEmpty) attachmentEmpty.style.display = 'inline';
+                }
+
+                detailsModal.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showCustomAlert('Erro ao carregar detalhes do procedimento.', 'error');
+            })
+            .finally(() => {
+                if (window.setAgendaLoading) {
+                    window.setAgendaLoading(false);
+                }
+            });
     }
 
     function addFreeAnesthesiologist(name) {
@@ -1143,22 +1226,31 @@ document.addEventListener('DOMContentLoaded', function() {
         card.addEventListener('click', function(e) {
             e.stopPropagation();
             const procedureId = this.getAttribute('data-id');
-            const modal = document.getElementById(`procedure-details-modal-${procedureId}`);
-
-            if (modal) {
-                modal.style.display = 'block'; // Show the modal
-            }
+            openProcedureDetails(procedureId);
         });
+    });
+
+    if (detailsModalClose) {
+        detailsModalClose.addEventListener('click', function(e) {
+            e.stopPropagation();
+            detailsModal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', function(e) {
+        if (detailsModal && e.target === detailsModal) {
+            detailsModal.style.display = 'none';
+        }
     });
     
     // Edit button click handler
     document.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('edit-procedure')) {
             const modal = e.target.closest('.procedure-modal');
-            const procedureId = modal.id.split('-').pop();
+            const procedureId = modal ? modal.dataset.procedureId : null;
             
             // Hide the details modal
-            modal.style.display = 'none';
+            if (modal) modal.style.display = 'none';
             
             // Load the procedure data into the form
             loadProcedureDataIntoForm(procedureId);
@@ -1169,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         if (e.target && e.target.classList.contains('delete-procedure')) {
             const modal = e.target.closest('.procedure-modal');
-            const procedureId = modal.getAttribute('id').split('-').pop();
+            const procedureId = modal ? modal.dataset.procedureId : null;
             
             if (confirm('Tem certeza que deseja excluir este agendamento?')) {
                 deleteProcedure(procedureId);
@@ -1461,30 +1553,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const procedureModals = document.querySelectorAll('.procedure-modal');
-        const procedureFormModal = document.getElementById('procedimento-form-modal');
-        
-        // Close modal when clicking the "X"
-        procedureModals.forEach(modal => {
-            modal.querySelector('.close-modal').addEventListener('click', function(e) {
-                e.stopPropagation(); // Prevent further event propagation
-                modal.style.display = 'none';
-            });
-        });
-
-        // Close modal when clicking outside of it
-        window.addEventListener('click', function(e) {
-            procedureModals.forEach(modal => {
-                if (e.target == modal) {
-                    modal.style.display = 'none';
-                }
-            });
-        });
-    });
-</script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
         const agendaRadio = document.getElementById('agenda-view');
         const escalaRadio = document.getElementById('scale-view');
         
@@ -1643,6 +1711,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const month = dateParts[1].padStart(2, '0');
             const year = dateParts[2];
             const formattedDate = `${year}-${month}-${day}`;
+            if (window.setAgendaLoading) {
+                window.setAgendaLoading(true, 'Carregando resultados...');
+            }
             window.location.href = `/agenda/search?date=${formattedDate}`;
         } else {
             showCustomAlert('Formato de data inválido. Use DD/MM/YYYY.', 'error');
@@ -1653,6 +1724,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const query = searchPatientInput.value.trim();
         if (!query) return;
 
+        if (window.setAgendaLoading) {
+            window.setAgendaLoading(true, 'Carregando resultados...');
+        }
         window.location.href = `/agenda/search?paciente=${encodeURIComponent(query)}`;
     }
 

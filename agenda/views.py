@@ -246,6 +246,7 @@ def get_procedure(request, procedure_id):
         'email_paciente': procedure.email_paciente,
         'data_nascimento': procedure.data_nascimento.strftime('%Y-%m-%d') if procedure.data_nascimento else '',
         'acomodacao': procedure.acomodacao or '',
+        'acomodacao_label': procedure.get_acomodacao_display() if procedure.acomodacao else '',
         'convenio': {
             'id': procedure.convenio.id,
             'text': procedure.convenio.name
@@ -257,6 +258,7 @@ def get_procedure(request, procedure_id):
             'text': procedure.procedimento_principal.name
         } if procedure.procedimento_principal else None,
         'hospital': procedure.hospital.id if procedure.hospital else '',
+        'hospital_name': procedure.hospital.name if procedure.hospital else '',
         'outro_local': procedure.outro_local,
         'cirurgiao_id': procedure.cirurgiao.id if procedure.cirurgiao else None,
         'cirurgiao_text': procedure.cirurgiao.name if procedure.cirurgiao else None,
@@ -267,8 +269,10 @@ def get_procedure(request, procedure_id):
         'data_visita_pre_anestesica': procedure.data_visita_pre_anestesica.strftime('%d/%m/%Y') if procedure.data_visita_pre_anestesica else '',
         'nome_responsavel_visita': procedure.nome_responsavel_visita,
         'tipo_procedimento': procedure.tipo_procedimento,
+        'tipo_procedimento_label': procedure.get_tipo_procedimento_display() if procedure.tipo_procedimento else '',
         'tipo_clinica': procedure.tipo_clinica,
         'tipo_clinica_label': clinic_label_map.get(procedure.tipo_clinica, procedure.tipo_clinica or ''),
+        'foto_anexo_url': reverse('protected_file', args=[procedure.foto_anexo.name]) if procedure.foto_anexo else '',
     }
 
     # Add financial data if available
@@ -339,6 +343,35 @@ def get_week_dates(week_start):
         } for i in range(7)
     ]
 
+
+def _build_procedure_buckets(procedimentos, hours):
+    tz = timezone.get_current_timezone()
+    day_map = {}
+    for procedimento in procedimentos:
+        local_dt = timezone.localtime(procedimento.data_horario, tz)
+        day_key = local_dt.date()
+        hour_key = local_dt.strftime('%H')
+        entry = day_map.setdefault(day_key, {'procedures': [], 'hours': {}})
+        entry['procedures'].append(procedimento)
+        entry['hours'].setdefault(hour_key, []).append(procedimento)
+
+    def attach_to_calendar(calendar_dates):
+        for day_info in calendar_dates:
+            day_value = day_info.get('day')
+            day_key = day_value.date() if hasattr(day_value, 'date') else day_value
+            day_info['procedures'] = day_map.get(day_key, {}).get('procedures', [])
+
+    def attach_to_week(week_dates):
+        for day_info in week_dates:
+            day_key = day_info.get('full_date')
+            hours_map = day_map.get(day_key, {}).get('hours', {})
+            day_info['hour_slots'] = [
+                {'hour': hour, 'procedures': hours_map.get(hour, [])}
+                for hour in hours
+            ]
+
+    return attach_to_calendar, attach_to_week
+
 @login_required
 def search_agenda(request):
     date = request.GET.get('date')
@@ -361,17 +394,32 @@ def search_agenda(request):
         except ValueError:
             # Invalid date format
             date_obj = datetime.today().date()
-        procedimentos = Procedimento.objects.filter(data_horario__date=date_obj, group=request.user.group).order_by('data_horario')
+        procedimentos = (
+            Procedimento.objects.filter(data_horario__date=date_obj, group=request.user.group)
+            .select_related('procedimento_principal', 'convenio', 'hospital', 'cirurgiao', 'cooperado')
+            .prefetch_related('anestesistas_responsaveis')
+            .order_by('data_horario')
+        )
         view_type = 'week'
         highlight_date = date_obj
     elif paciente:
         search_type = 'paciente'
-        procedimentos = Procedimento.objects.filter(nome_paciente__icontains=paciente, group=request.user.group).order_by('data_horario')
+        procedimentos = (
+            Procedimento.objects.filter(nome_paciente__icontains=paciente, group=request.user.group)
+            .select_related('procedimento_principal', 'convenio', 'hospital', 'cirurgiao', 'cooperado')
+            .prefetch_related('anestesistas_responsaveis')
+            .order_by('data_horario')
+        )
         view_type = 'week'
         highlight_date = procedimentos.first().data_horario.date() if procedimentos.exists() else None
     elif procedimento:
         search_type = 'procedimento'
-        procedimentos = Procedimento.objects.filter(procedimento__icontains=procedimento, group=request.user.group).order_by('data_horario')
+        procedimentos = (
+            Procedimento.objects.filter(procedimento__icontains=procedimento, group=request.user.group)
+            .select_related('procedimento_principal', 'convenio', 'hospital', 'cirurgiao', 'cooperado')
+            .prefetch_related('anestesistas_responsaveis')
+            .order_by('data_horario')
+        )
         view_type = 'week'
         highlight_date = procedimentos.first().data_horario.date() if procedimentos.exists() else None
     else:
@@ -399,6 +447,7 @@ def search_agenda(request):
 
     if view_type == 'week':
         week_dates = get_week_dates(week_start)
+        calendar_dates = []
     else:
         week_dates = []
         calendar_dates = get_calendar_dates(year, month)
@@ -408,6 +457,12 @@ def search_agenda(request):
             procedimento.duration = (procedimento.data_horario_fim - procedimento.data_horario).total_seconds() // 3600  # Duration in hours
         else:
             procedimento.duration = 1
+
+    attach_to_calendar, attach_to_week = _build_procedure_buckets(procedimentos, hours)
+    if calendar_dates:
+        attach_to_calendar(calendar_dates)
+    if week_dates:
+        attach_to_week(week_dates)
 
     context = {
         'calendar_dates': calendar_dates if view_type == 'month' else [],
@@ -607,6 +662,12 @@ def agenda_view(request):
             procedimento.duration = (procedimento.data_horario_fim - procedimento.data_horario).total_seconds() // 3600  # Duration in hours
         else:
             procedimento.duration = 1
+
+    attach_to_calendar, attach_to_week = _build_procedure_buckets(procedimentos, hours)
+    if calendar_dates:
+        attach_to_calendar(calendar_dates)
+    if week_dates:
+        attach_to_week(week_dates)
     
     context = {
         'calendar_dates': calendar_dates,
