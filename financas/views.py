@@ -894,6 +894,19 @@ def parse_api_time(time_str):
         print(f"Warning: Could not parse time '{time_str}'")
         return None
 
+
+def _sorted_guias_newest_first(guias_dict):
+    def _guias_sort_key(item):
+        _, guia = item
+        guia_date = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+        guia_time = parse_api_time(guia.get('hora_inicial'))
+        if guia_date:
+            guia_time = guia_time or time(0, 0)
+            return datetime.combine(guia_date, guia_time)
+        return datetime.min
+
+    return sorted(guias_dict.items(), key=_guias_sort_key, reverse=True)
+
 def find_or_create_anesthesiologist(group, anesthesiologist_name):
     """Find existing anesthesiologist by similarity in the group or create a new one."""
     if not anesthesiologist_name or not str(anesthesiologist_name).strip():
@@ -1225,6 +1238,7 @@ def conciliar_financas(request):
             if g.get('nrocpsa') and str(g.get('nrocpsa')).strip()
         }
         print(f"API Fetch: Found {len(guias_dict)} guides with valid nrocpsa.")
+        guias_items = _sorted_guias_newest_first(guias_dict)
 
         # --- Fetch Existing DB Data ---
         # Fetch ALL relevant procedures for the group (within a reasonable timeframe?)
@@ -1306,7 +1320,7 @@ def conciliar_financas(request):
         ]
         
         print("--- Processing API Guides ---")
-        for cpsa_id, guia in guias_dict.items():
+        for cpsa_id, guia in guias_items:
             processed_cpsa_ids.add(cpsa_id) 
             
             guia_paciente = guia.get('paciente')
@@ -1717,12 +1731,13 @@ def _run_conciliacao_background(job_id, user_id):
             if g.get('nrocpsa') and str(g.get('nrocpsa')).strip()
         }
         
-        job.total_guias = len(guias_dict)
+        guias_items = _sorted_guias_newest_first(guias_dict)
+        job.total_guias = len(guias_items)
         job.current_step = f'Processando {job.total_guias} guias...'
         job.save()
         
         # Run the actual conciliation process
-        _execute_conciliation_logic(job, user, group, guias_dict)
+        _execute_conciliation_logic(job, user, group, guias_items)
         
         job.status = 'completed'
         job.completed_at = timezone.now()
@@ -1741,7 +1756,7 @@ def _run_conciliacao_background(job_id, user_id):
             pass
 
 
-def _execute_conciliation_logic(job, user, group, guias_dict):
+def _execute_conciliation_logic(job, user, group, guias_items):
     """
     Core conciliation logic - processes guides and updates job progress.
     Similar to conciliar_financas but updates job.processed_count periodically.
@@ -1795,17 +1810,17 @@ def _execute_conciliation_logic(job, user, group, guias_dict):
     ]
     
     processed_count = 0
-    update_interval = max(50, job.total_guias // 20)  # Update every 5% or 50 items
+    update_interval = max(200, job.total_guias // 10)  # Update every 10% or 200 items
     
-    for cpsa_id, guia in guias_dict.items():
+    for cpsa_id, guia in guias_items:
         processed_cpsa_ids.add(cpsa_id)
         processed_count += 1
         
         # Update job progress periodically
-        if processed_count % update_interval == 0:
+        if processed_count % update_interval == 0 or processed_count == job.total_guias:
             job.processed_count = processed_count
             job.current_step = f'Processando guia {processed_count} de {job.total_guias}...'
-            job.save()
+            job.save(update_fields=['processed_count', 'current_step'])
         
         guia_paciente = guia.get('paciente')
         guia_date_str = guia.get('dt_cirurg', guia.get('dt_cpsa'))
