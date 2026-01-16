@@ -1625,7 +1625,22 @@ def iniciar_conciliacao_async(request):
     if not user.connection_key:
         return JsonResponse({'error': 'Chave de conexão não configurada'}, status=400)
     
-    # Check if there's already a running job
+    # Auto-cleanup: Mark jobs stuck in 'running' for > 30 minutes as 'failed'
+    stale_cutoff = timezone.now() - timedelta(minutes=30)
+    stale_jobs = ConciliacaoJob.objects.filter(
+        group=group,
+        status='running',
+        started_at__lt=stale_cutoff
+    )
+    stale_count = stale_jobs.update(
+        status='failed',
+        error_message='Job marcado como falho automaticamente (timeout de 30 minutos)',
+        completed_at=timezone.now()
+    )
+    if stale_count > 0:
+        print(f"[CONCILIACAO] Auto-cleaned {stale_count} stale jobs for group {group.name}")
+    
+    # Check if there's already a running job (that isn't stale)
     running_job = ConciliacaoJob.objects.filter(group=group, status='running').first()
     if running_job:
         return JsonResponse({
