@@ -122,6 +122,16 @@ def clean_money_value(value_str):
     except (InvalidOperation, ValueError):
         return None
 
+
+def _api_decimal(value):
+    """Convert API numeric (str/float/int/Decimal) to Decimal safely."""
+    if value is None or value == '':
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
 @login_required
 def financas_view(request):
     # Base permission check
@@ -1252,29 +1262,27 @@ def conciliar_financas(request):
             "status": "Listagem Geral",
             "coopahub": "S"
         }
-        response = requests.post(api_url, json=api_payload)
+        response = requests.post(api_url, json=api_payload, timeout=120)
         response.raise_for_status()
         
-        # Debug prints for raw API response
-        print(f"=== RAW API RESPONSE DEBUG ===")
-        print(f"Response Status Code: {response.status_code}")
-        print(f"Raw Response Text (first 500 chars): {response.text[:500]}")
-        print(f"=== END RAW API RESPONSE DEBUG ===")
+        # Debug prints for raw API response (avoid heavy logging in production)
+        if getattr(settings, 'DEBUG', False):
+            print(f"=== RAW API RESPONSE DEBUG ===")
+            print(f"Response Status Code: {response.status_code}")
+            print(f"Raw Response Text (first 500 chars): {response.text[:500]}")
+            print(f"=== END RAW API RESPONSE DEBUG ===")
         
         api_response_data = response.json()
         
-        # Show example of a single guia for debugging
-        guias_for_debug = api_response_data.get('listaguias', [])
-        if guias_for_debug:
-            print(f"=== SINGLE GUIA EXAMPLE ===")
-            print(f"Example Guia JSON: {guias_for_debug[0]}")
-            print(f"\n=== ALL AVAILABLE FIELDS IN FIRST GUIA (for Américas group) ===")
-            import json
-            first_guia = guias_for_debug[0]
-            print(json.dumps(first_guia, indent=2, ensure_ascii=False, default=str))
-            print(f"\n=== ALL KEYS AVAILABLE: ===")
-            print(f"Keys: {list(first_guia.keys())}")
-            print(f"=== END SINGLE GUIA EXAMPLE ===")
+        # Show example of a single guia for debugging (avoid heavy logging in production)
+        if getattr(settings, 'DEBUG', False):
+            guias_for_debug = api_response_data.get('listaguias', [])
+            if guias_for_debug:
+                print(f"=== SINGLE GUIA EXAMPLE ===")
+                print(f"Example Guia JSON: {guias_for_debug[0]}")
+                print(f"\n=== ALL KEYS AVAILABLE: ===")
+                print(f"Keys: {list(guias_for_debug[0].keys())}")
+                print(f"=== END SINGLE GUIA EXAMPLE ===")
 
         if api_response_data.get('erro') != '000':
             error_msg = f"API Error: {api_response_data.get('msg', 'Unknown API error')}"
@@ -1928,17 +1936,41 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
             financa = financas_dict_by_cpsa[cpsa_id]
             # Update existing financa
             updated = False
-            if financa.valor_faturado != guia.get('valor_faturado'):
-                financa.valor_faturado = guia.get('valor_faturado'); updated = True
-            if financa.valor_recebido != guia.get('valor_recebido'):
-                financa.valor_recebido = guia.get('valor_recebido'); updated = True
+            guia_valor_faturado = _api_decimal(guia.get('valor_faturado'))
+            guia_valor_recebido = _api_decimal(guia.get('valor_recebido'))
+            guia_valor_recuperado = _api_decimal(guia.get('valor_receuperado', guia.get('valor_recuperado')))
+            guia_valor_acatado = _api_decimal(guia.get('valor_acatado'))
+
+            if guia_valor_faturado is not None and financa.valor_faturado != guia_valor_faturado:
+                financa.valor_faturado = guia_valor_faturado; updated = True
+            if guia_valor_recebido is not None and financa.valor_recebido != guia_valor_recebido:
+                financa.valor_recebido = guia_valor_recebido; updated = True
+            if guia_valor_recuperado is not None and financa.valor_recuperado != guia_valor_recuperado:
+                financa.valor_recuperado = guia_valor_recuperado; updated = True
+            if guia_valor_acatado is not None and financa.valor_acatado != guia_valor_acatado:
+                financa.valor_acatado = guia_valor_acatado; updated = True
             api_status = map_api_status(guia.get('STATUS'))
             if financa.status_pagamento != api_status:
                 financa.status_pagamento = api_status; updated = True
+            if financa.api_paciente_nome != guia.get('paciente'):
+                financa.api_paciente_nome = guia.get('paciente'); updated = True
+            if financa.api_hospital_nome != guia.get('hospital'):
+                financa.api_hospital_nome = guia.get('hospital'); updated = True
+            if financa.api_cooperado_nome != guia.get('cooperado'):
+                financa.api_cooperado_nome = guia.get('cooperado'); updated = True
+            if financa.matricula != guia.get('matricula'):
+                financa.matricula = guia.get('matricula'); updated = True
+            if financa.senha != guia.get('senha'):
+                financa.senha = guia.get('senha'); updated = True
+            guia_api_date_parsed = parse_api_date(guia.get('dt_cirurg', guia.get('dt_cpsa')))
+            if financa.api_data_cirurgia != guia_api_date_parsed:
+                financa.api_data_cirurgia = guia_api_date_parsed; updated = True
+            if financa.plantao_eletiva != guia.get('classificacao'):
+                financa.plantao_eletiva = guia.get('classificacao'); updated = True
             if updated:
                 if financa not in financas_to_update: financas_to_update.append(financa)
             
-            if financa.procedimento:
+            if financa.procedimento and needs_procedure_matching:
                 was_updated, updated_proc = update_procedimento_with_api_data(financa.procedimento, guia, group, save_immediately=False)
                 if was_updated:
                     procedimentos_to_update[updated_proc.id] = updated_proc
