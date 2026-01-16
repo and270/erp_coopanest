@@ -1230,13 +1230,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Conciliation Trigger (ASYNC VERSION) ---
     let conciliationJobId = null;
     let conciliationPollInterval = null;
+    const CONCILIATION_JOB_KEY = 'financas_conciliation_job_id';
     
+    function setConciliationButtonLoading(isLoading) {
+        const conciliateButton = document.getElementById('conciliate-header-btn');
+        if (!conciliateButton) return;
+        conciliateButton.disabled = isLoading;
+        conciliateButton.innerHTML = isLoading ? '<i class="fas fa-spinner fa-spin"></i>' : '<i class="fas fa-sync"></i>';
+    }
+
+    function persistConciliationJob(jobId) {
+        if (jobId) {
+            localStorage.setItem(CONCILIATION_JOB_KEY, String(jobId));
+        } else {
+            localStorage.removeItem(CONCILIATION_JOB_KEY);
+        }
+    }
+
     window.runConciliation = function() {
         const conciliateButton = document.getElementById('conciliate-header-btn');
         if (!conciliateButton) return;
-        
-        conciliateButton.disabled = true;
-        conciliateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        setConciliationButtonLoading(true);
         
         // Start async conciliation
         fetch('/financas/conciliar-async/')
@@ -1244,12 +1258,14 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success && data.job_id) {
                     conciliationJobId = data.job_id;
+                    persistConciliationJob(conciliationJobId);
                     showConciliationModal();
                     startPollingConciliationStatus();
                 } else if (data.error) {
                     // If there's already a running job, track it
                     if (data.job_id) {
                         conciliationJobId = data.job_id;
+                        persistConciliationJob(conciliationJobId);
                         showConciliationModal();
                         startPollingConciliationStatus();
                     } else {
@@ -1262,8 +1278,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error starting conciliation:', error);
                 alert('Erro: ' + error.message);
-                conciliateButton.disabled = false;
-                conciliateButton.innerHTML = '<i class="fas fa-sync"></i>';
+                setConciliationButtonLoading(false);
             });
     }
     
@@ -1293,11 +1308,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             document.getElementById('close-conciliation-modal').onclick = function() {
                 modal.style.display = 'none';
-                const conciliateButton = document.getElementById('conciliate-header-btn');
-                if (conciliateButton) {
-                    conciliateButton.disabled = false;
-                    conciliateButton.innerHTML = '<i class="fas fa-sync"></i>';
-                }
             };
         }
         modal.style.display = 'block';
@@ -1317,6 +1327,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.status === 'completed' || data.status === 'failed') {
                         clearInterval(conciliationPollInterval);
                         conciliationPollInterval = null;
+                        persistConciliationJob(null);
                         
                         if (data.status === 'completed') {
                             setTimeout(() => {
@@ -1328,12 +1339,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             alert('Erro na conciliação: ' + (data.error_message || 'Erro desconhecido'));
                         }
-                        
-                        const conciliateButton = document.getElementById('conciliate-header-btn');
-                        if (conciliateButton) {
-                            conciliateButton.disabled = false;
-                            conciliateButton.innerHTML = '<i class="fas fa-sync"></i>';
-                        }
+                        setConciliationButtonLoading(false);
                     }
                 })
                 .catch(error => {
@@ -1358,6 +1364,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 ✅ Criados: ${data.created_count || 0} | 🔄 Atualizados: ${data.updated_count || 0} | 🔗 Vinculados: ${data.linked_count || 0}
             `;
         }
+    }
+
+    // Resume polling if a job is already in progress (e.g., after navigation)
+    const storedJobId = localStorage.getItem(CONCILIATION_JOB_KEY);
+    if (storedJobId) {
+        conciliationJobId = storedJobId;
+        showConciliationModal();
+        setConciliationButtonLoading(true);
+        startPollingConciliationStatus();
     }
 
     // --- Re-focus on search input after search ---
