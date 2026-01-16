@@ -40,6 +40,55 @@ def make_aware_sao_paulo(dt):
 DATA_INICIO_PUXAR_GUIAS_API = datetime(2025, 1, 1).date()
 
 
+def _get_conciliation_start_date(group, force_full=False):
+    if force_full:
+        return DATA_INICIO_PUXAR_GUIAS_API
+    last_completed = (
+        ConciliacaoJob.objects
+        .filter(group=group, status='completed', completed_at__isnull=False)
+        .order_by('-completed_at')
+        .first()
+    )
+    buffer_candidates = []
+    if last_completed and last_completed.completed_at:
+        buffer_candidates.append((last_completed.completed_at - timedelta(days=7)).date())
+
+    # Ensure we also cover any old guides still pending or in glosa
+    pending_statuses = [
+        'em_processamento',
+        'aguardando_pagamento',
+        'recurso_de_glosa',
+    ]
+    pending_qs = ProcedimentoFinancas.objects.filter(
+        Q(group=group) | Q(procedimento__group=group),
+        status_pagamento__in=pending_statuses,
+    )
+    oldest_pending_date = (
+        pending_qs
+        .exclude(procedimento__data_horario__isnull=True)
+        .order_by('procedimento__data_horario')
+        .values_list('procedimento__data_horario', flat=True)
+        .first()
+    )
+    if oldest_pending_date:
+        buffer_candidates.append((oldest_pending_date - timedelta(days=7)).date())
+
+    oldest_pending_api_date = (
+        pending_qs
+        .exclude(api_data_cirurgia__isnull=True)
+        .order_by('api_data_cirurgia')
+        .values_list('api_data_cirurgia', flat=True)
+        .first()
+    )
+    if oldest_pending_api_date:
+        buffer_candidates.append((oldest_pending_api_date - timedelta(days=7)))
+
+    if buffer_candidates:
+        return max(DATA_INICIO_PUXAR_GUIAS_API, min(buffer_candidates))
+
+    return DATA_INICIO_PUXAR_GUIAS_API
+
+
 def clean_money_value(value_str):
     """
     Clean money string from mask format to decimal
@@ -1193,9 +1242,12 @@ def conciliar_financas(request):
         # --- Fetch API Data ---
         api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
         #api_url = "https://aplicacao.coopanestrio.dev.br/portal/guias/ajaxGuias.php"  #TODO : endpoint dev para testes na parteb de procedimnto principal
+        fast = request.GET.get('fast') == '1'
+        force_full = request.GET.get('full') == '1' or not fast
+        start_date = _get_conciliation_start_date(group, force_full=force_full)
         api_payload = {
             "conexao": user.connection_key,
-            "periodo_de": DATA_INICIO_PUXAR_GUIAS_API.strftime('%Y-%m-%d'),
+            "periodo_de": start_date.strftime('%Y-%m-%d'),
             "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
             "status": "Listagem Geral",
             "coopahub": "S"
@@ -1241,23 +1293,6 @@ def conciliar_financas(request):
         guias_items = _sorted_guias_newest_first(guias_dict)
 
         # --- Fetch Existing DB Data ---
-        # Fetch ALL relevant procedures for the group (within a reasonable timeframe?)
-        # Let's keep fetching recent procedures for matching, but not filter by financas__isnull
-        cutoff_date =  DATA_INICIO_PUXAR_GUIAS_API
-        all_procs_qs = Procedimento.objects.filter(
-            group=group,
-            data_horario__date__gte=cutoff_date
-        ).select_related('hospital', 'convenio').prefetch_related('financas_records') # Use prefetch_related for financas_records
-
-        # Add anesthesiologist filter if applicable
-        active_role = user.get_active_role()
-        #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
-        if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
-            all_procs_qs = all_procs_qs.filter(anestesistas_responsaveis=user.anesthesiologist)
-        
-        all_procs_list = list(all_procs_qs)
-        print(f"DB Fetch: Found {len(all_procs_list)} potentially relevant procedures.")
-
         # Fetch existing financas records with CPSA (for quick lookup and updates)
         financas_qs = ProcedimentoFinancas.objects.filter(
             Q(procedimento__group=group) | Q(group=group)
@@ -1274,28 +1309,60 @@ def conciliar_financas(request):
         financas_dict_by_cpsa = {f.cpsa: f for f in financas_qs if f.cpsa}
         print(f"DB Fetch: Found {len(financas_dict_by_cpsa)} existing financas records with CPSA.")
 
-        # --- Build O(1) lookup dictionary for procedures by (patient_name_lower, date) ---
-        # This avoids O(n) iteration for each guide
-        from collections import defaultdict
-        proc_lookup_dict = defaultdict(list)
-        for proc in all_procs_list:
-            if proc.nome_paciente and proc.data_horario:
-                key = (proc.nome_paciente.strip().lower(), proc.data_horario.date())
-                proc_lookup_dict[key].append(proc)
-        print(f"Built procedure lookup with {len(proc_lookup_dict)} unique (patient, date) keys.")
+        guias_cpsa_ids = set(guias_dict.keys())
+        missing_cpsa_ids = guias_cpsa_ids - set(financas_dict_by_cpsa.keys())
+        unlinked_financas_exists = financas_qs.filter(procedimento__isnull=True).exists()
+        needs_procedure_matching = bool(missing_cpsa_ids) or unlinked_financas_exists
 
-        # --- Build caches for related entities to avoid repeated get_or_create queries ---
-        # Cache hospitals by name (lowercase)
-        hospital_cache = {h.name.lower(): h for h in HospitalClinic.objects.filter(group=group)}
-        # Cache convenios by name (lowercase)
-        convenio_cache = {c.name.lower(): c for c in Convenios.objects.all()}
-        # Cache surgeons by name (lowercase)
-        surgeon_cache = {s.name.lower(): s for s in Surgeon.objects.filter(group=group) if s.name}
-        # Cache anesthesiologists by name (lowercase)
-        anesthesiologist_cache = {a.name.lower(): a for a in Anesthesiologist.objects.filter(group=group) if a.name}
-        # Cache procedimento detalhes by codigo
-        proc_detalhes_cache = {pd.codigo_procedimento: pd for pd in ProcedimentoDetalhes.objects.all() if pd.codigo_procedimento}
-        print(f"Built entity caches: {len(hospital_cache)} hospitals, {len(convenio_cache)} convenios, {len(surgeon_cache)} surgeons, {len(anesthesiologist_cache)} anesthesiologists, {len(proc_detalhes_cache)} proc_detalhes.")
+        from collections import defaultdict
+        all_procs_list = []
+        proc_lookup_dict = defaultdict(list)
+        hospital_cache = {}
+        convenio_cache = {}
+        surgeon_cache = {}
+        anesthesiologist_cache = {}
+        proc_detalhes_cache = {}
+
+        if needs_procedure_matching:
+            # Fetch ALL relevant procedures for the group (within a reasonable timeframe?)
+            # Let's keep fetching recent procedures for matching, but not filter by financas__isnull
+            cutoff_date = start_date
+            all_procs_qs = Procedimento.objects.filter(
+                group=group,
+                data_horario__date__gte=cutoff_date
+            ).select_related('hospital', 'convenio').prefetch_related('financas_records') # Use prefetch_related for financas_records
+
+            # Add anesthesiologist filter if applicable
+            active_role = user.get_active_role()
+            #Apesar de anestesista não terem acesso a parte de financas, assegurado pela validação acima, deixamos essa parte caso futuramnete venham a ter e então verão apenas a sua parte
+            if active_role == ANESTESISTA_USER and hasattr(user, 'anesthesiologist'):
+                all_procs_qs = all_procs_qs.filter(anestesistas_responsaveis=user.anesthesiologist)
+            
+            all_procs_list = list(all_procs_qs)
+            print(f"DB Fetch: Found {len(all_procs_list)} potentially relevant procedures.")
+
+            # --- Build O(1) lookup dictionary for procedures by (patient_name_lower, date) ---
+            # This avoids O(n) iteration for each guide
+            for proc in all_procs_list:
+                if proc.nome_paciente and proc.data_horario:
+                    key = (proc.nome_paciente.strip().lower(), proc.data_horario.date())
+                    proc_lookup_dict[key].append(proc)
+            print(f"Built procedure lookup with {len(proc_lookup_dict)} unique (patient, date) keys.")
+
+            # --- Build caches for related entities to avoid repeated get_or_create queries ---
+            # Cache hospitals by name (lowercase)
+            hospital_cache = {h.name.lower(): h for h in HospitalClinic.objects.filter(group=group)}
+            # Cache convenios by name (lowercase)
+            convenio_cache = {c.name.lower(): c for c in Convenios.objects.all()}
+            # Cache surgeons by name (lowercase)
+            surgeon_cache = {s.name.lower(): s for s in Surgeon.objects.filter(group=group) if s.name}
+            # Cache anesthesiologists by name (lowercase)
+            anesthesiologist_cache = {a.name.lower(): a for a in Anesthesiologist.objects.filter(group=group) if a.name}
+            # Cache procedimento detalhes by codigo
+            proc_detalhes_cache = {pd.codigo_procedimento: pd for pd in ProcedimentoDetalhes.objects.all() if pd.codigo_procedimento}
+            print(f"Built entity caches: {len(hospital_cache)} hospitals, {len(convenio_cache)} convenios, {len(surgeon_cache)} surgeons, {len(anesthesiologist_cache)} anesthesiologists, {len(proc_detalhes_cache)} proc_detalhes.")
+        else:
+            print("Skipping procedure/caches: no missing CPSA and no unlinked financas.")
 
         # --- Processing ---
         financas_to_update = []
@@ -1375,7 +1442,7 @@ def conciliar_financas(request):
                     if updated:
                         if financa not in financas_to_update: financas_to_update.append(financa)
 
-                if not financa.procedimento:
+                if not financa.procedimento and needs_procedure_matching:
                      best_match_proc = None
                      highest_similarity = 0.7 
                      if guia_paciente and guia_date:
@@ -1654,12 +1721,14 @@ def iniciar_conciliacao_async(request):
         status='pending',
         current_step='Iniciando conciliação...'
     )
+    fast = request.GET.get('fast') == '1'
+    force_full = request.GET.get('full') == '1' or not fast
     
     # Start background thread
     def run_conciliation():
         from django.db import connection
         connection.close()  # Close connection before threading
-        _run_conciliacao_background(job.id, user.id)
+        _run_conciliacao_background(job.id, user.id, force_full=force_full)
     
     thread = threading.Thread(target=run_conciliation, daemon=True)
     thread.start()
@@ -1704,7 +1773,7 @@ def status_conciliacao(request, job_id):
     })
 
 
-def _run_conciliacao_background(job_id, user_id):
+def _run_conciliacao_background(job_id, user_id, force_full=False):
     """
     Executa a conciliação em background. Esta função roda em uma thread separada.
     Atualiza o ConciliacaoJob com progresso durante a execução.
@@ -1723,9 +1792,10 @@ def _run_conciliacao_background(job_id, user_id):
         
         # --- Fetch API Data ---
         api_url = f"{settings.COOPAHUB_API['BASE_URL']}/portal/guias/ajaxGuias.php"
+        start_date = _get_conciliation_start_date(group, force_full=force_full)
         api_payload = {
             "conexao": user.connection_key,
-            "periodo_de": DATA_INICIO_PUXAR_GUIAS_API.strftime('%Y-%m-%d'),
+            "periodo_de": start_date.strftime('%Y-%m-%d'),
             "periodo_ate": timezone.now().strftime('%Y-%m-%d'),
             "status": "Listagem Geral",
             "coopahub": "S"
@@ -1752,7 +1822,7 @@ def _run_conciliacao_background(job_id, user_id):
         job.save()
         
         # Run the actual conciliation process
-        _execute_conciliation_logic(job, user, group, guias_items)
+        _execute_conciliation_logic(job, user, group, guias_items, start_date=start_date)
         
         job.status = 'completed'
         job.completed_at = timezone.now()
@@ -1771,7 +1841,7 @@ def _run_conciliacao_background(job_id, user_id):
             pass
 
 
-def _execute_conciliation_logic(job, user, group, guias_items):
+def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
     """
     Core conciliation logic - processes guides and updates job progress.
     Similar to conciliar_financas but updates job.processed_count periodically.
@@ -1779,31 +1849,44 @@ def _execute_conciliation_logic(job, user, group, guias_items):
     from collections import defaultdict
     
     # Fetch existing data
-    cutoff_date = DATA_INICIO_PUXAR_GUIAS_API
-    all_procs_qs = Procedimento.objects.filter(
-        group=group,
-        data_horario__date__gte=cutoff_date
-    ).select_related('hospital', 'convenio').prefetch_related('financas_records')
-    all_procs_list = list(all_procs_qs)
-    
     financas_qs = ProcedimentoFinancas.objects.filter(
         Q(procedimento__group=group) | Q(group=group)
     ).select_related('procedimento')
     financas_dict_by_cpsa = {f.cpsa: f for f in financas_qs if f.cpsa}
-    
-    # Build lookup dictionaries
+
+    guias_cpsa_ids = {cpsa_id for cpsa_id, _ in guias_items}
+    missing_cpsa_ids = guias_cpsa_ids - set(financas_dict_by_cpsa.keys())
+    unlinked_financas_exists = financas_qs.filter(procedimento__isnull=True).exists()
+    needs_procedure_matching = bool(missing_cpsa_ids) or unlinked_financas_exists
+
+    cutoff_date = start_date or DATA_INICIO_PUXAR_GUIAS_API
+    all_procs_list = []
     proc_lookup_dict = defaultdict(list)
-    for proc in all_procs_list:
-        if proc.nome_paciente and proc.data_horario:
-            key = (proc.nome_paciente.strip().lower(), proc.data_horario.date())
-            proc_lookup_dict[key].append(proc)
-    
-    # Build entity caches
-    hospital_cache = {h.name.lower(): h for h in HospitalClinic.objects.filter(group=group)}
-    convenio_cache = {c.name.lower(): c for c in Convenios.objects.all()}
-    surgeon_cache = {s.name.lower(): s for s in Surgeon.objects.filter(group=group) if s.name}
-    anesthesiologist_cache = {a.name.lower(): a for a in Anesthesiologist.objects.filter(group=group) if a.name}
-    proc_detalhes_cache = {pd.codigo_procedimento: pd for pd in ProcedimentoDetalhes.objects.all() if pd.codigo_procedimento}
+    hospital_cache = {}
+    convenio_cache = {}
+    surgeon_cache = {}
+    anesthesiologist_cache = {}
+    proc_detalhes_cache = {}
+
+    if needs_procedure_matching:
+        all_procs_qs = Procedimento.objects.filter(
+            group=group,
+            data_horario__date__gte=cutoff_date
+        ).select_related('hospital', 'convenio').prefetch_related('financas_records')
+        all_procs_list = list(all_procs_qs)
+        
+        # Build lookup dictionaries
+        for proc in all_procs_list:
+            if proc.nome_paciente and proc.data_horario:
+                key = (proc.nome_paciente.strip().lower(), proc.data_horario.date())
+                proc_lookup_dict[key].append(proc)
+        
+        # Build entity caches
+        hospital_cache = {h.name.lower(): h for h in HospitalClinic.objects.filter(group=group)}
+        convenio_cache = {c.name.lower(): c for c in Convenios.objects.all()}
+        surgeon_cache = {s.name.lower(): s for s in Surgeon.objects.filter(group=group) if s.name}
+        anesthesiologist_cache = {a.name.lower(): a for a in Anesthesiologist.objects.filter(group=group) if a.name}
+        proc_detalhes_cache = {pd.codigo_procedimento: pd for pd in ProcedimentoDetalhes.objects.all() if pd.codigo_procedimento}
     
     # Processing
     financas_to_update = []
