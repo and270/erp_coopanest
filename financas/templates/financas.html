@@ -1401,7 +1401,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const processed = data.processed_count || 0;
         const total = data.total_guias || 0;
         const now = Date.now();
-        const progressedEnough = (processed - lastTableRefreshProcessed) >= 50;
+        const progressedEnough = (processed - lastTableRefreshProcessed) >= 20;
         const waitedEnough = (now - lastTableRefreshTs) >= 30000;
         const hasProgress = processed > 0 && total > 0;
 

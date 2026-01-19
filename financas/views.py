@@ -1534,6 +1534,10 @@ def conciliar_financas(request):
             if cpsa_id in financas_dict_by_cpsa:
                 financa = financas_dict_by_cpsa[cpsa_id]
                 
+                # Skip records that are already finalized - no need to update them
+                if financa.status_pagamento == 'processo_finalizado':
+                    continue
+                
                 if financa.tipo_cobranca == 'cooperativa':
                     updated = False
                     guia_valor_faturado = guia.get('valor_faturado')
@@ -2027,7 +2031,7 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
     financas_pending_proc = []
     processed_cpsa_ids = set()
     
-    BATCH_SIZE = 50  # Smaller batch size for faster table refresh
+    BATCH_SIZE = 20  # Smaller batch size for faster table refresh and real-time updates
     FINANCAS_UPDATE_FIELDS = [
         'valor_faturado', 'valor_recebido', 'valor_recuperado', 'valor_acatado',
         'status_pagamento', 'api_paciente_nome', 'api_hospital_nome', 'api_cooperado_nome',
@@ -2057,6 +2061,11 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
         
         if cpsa_id in financas_dict_by_cpsa:
             financa = financas_dict_by_cpsa[cpsa_id]
+            
+            # Skip records that are already finalized - no need to update them
+            if financa.status_pagamento == 'processo_finalizado':
+                continue
+            
             # Update existing financa
             updated = False
             guia_valor_faturado = _api_decimal(guia.get('valor_faturado'))
@@ -2174,22 +2183,28 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
                     except Exception as e:
                         print(f"Error preparing proc: {e}")
         
-        # Batch saves
+        # Batch saves - IMMEDIATELY commit after each batch for real-time visibility
         if len(procedimentos_to_create) >= BATCH_SIZE:
             with transaction.atomic():
                 created_procs = Procedimento.objects.bulk_create(procedimentos_to_create)
+                # Create financas records that were waiting for these procedures
+                pending_financas = []
                 for financa_data, proc_idx in financas_pending_proc:
                     financa_data['procedimento'] = created_procs[proc_idx]
-                    financas_to_create.append(ProcedimentoFinancas(**financa_data))
+                    pending_financas.append(ProcedimentoFinancas(**financa_data))
+                if pending_financas:
+                    ProcedimentoFinancas.objects.bulk_create(pending_financas)
             job.created_count += len(procedimentos_to_create)
             procedimentos_to_create = []
             financas_pending_proc = []
+            job.save(update_fields=['created_count'])
         
         if len(financas_to_update) >= BATCH_SIZE:
             with transaction.atomic():
                 ProcedimentoFinancas.objects.bulk_update(financas_to_update, FINANCAS_UPDATE_FIELDS)
             job.updated_count += len(financas_to_update)
             financas_to_update = []
+            job.save(update_fields=['updated_count'])
         
         if len(procedimentos_to_update) >= BATCH_SIZE:
             with transaction.atomic():
@@ -2205,9 +2220,13 @@ def _execute_conciliation_logic(job, user, group, guias_items, start_date=None):
     if procedimentos_to_create:
         with transaction.atomic():
             created_procs = Procedimento.objects.bulk_create(procedimentos_to_create)
+            # Immediately create financas records for these procedures
+            pending_financas = []
             for financa_data, proc_idx in financas_pending_proc:
                 financa_data['procedimento'] = created_procs[proc_idx]
-                financas_to_create.append(ProcedimentoFinancas(**financa_data))
+                pending_financas.append(ProcedimentoFinancas(**financa_data))
+            if pending_financas:
+                ProcedimentoFinancas.objects.bulk_create(pending_financas)
         job.created_count += len(procedimentos_to_create)
     
     if procedimentos_to_update:
