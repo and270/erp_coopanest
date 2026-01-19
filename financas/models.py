@@ -286,3 +286,42 @@ class ConciliacaoTentativa(models.Model):
 
     class Meta:
         unique_together = ('procedimento_financas', 'cpsa_id')
+
+
+class ConciliacaoJob(models.Model):
+    """Tracks background conciliation jobs for async processing."""
+    STATUS_CHOICES = [
+        ('pending', 'Pendente'),
+        ('running', 'Em Execução'),
+        ('completed', 'Concluído'),
+        ('failed', 'Falhou'),
+    ]
+    
+    group = models.ForeignKey(Groups, on_delete=models.CASCADE, related_name='conciliacao_jobs')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Progress tracking
+    total_guias = models.IntegerField(default=0)
+    processed_count = models.IntegerField(default=0)
+    created_count = models.IntegerField(default=0)
+    updated_count = models.IntegerField(default=0)
+    linked_count = models.IntegerField(default=0)
+    
+    # Status message for UI
+    current_step = models.CharField(max_length=255, default='Iniciando...')
+    error_message = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-started_at']
+    
+    def __str__(self):
+        return f"Conciliação {self.group.name} - {self.status} ({self.started_at})"
+    
+    @property
+    def progress_percent(self):
+        if self.total_guias == 0:
+            return 0
+        return int((self.processed_count / self.total_guias) * 100)
+
