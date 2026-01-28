@@ -22,6 +22,7 @@ from django.db import transaction
 import re
 from decimal import Decimal, InvalidOperation
 import pytz
+from constants import acomodacao_to_label
 
 # Timezone de São Paulo - usar sempre este para processar horários do Brasil
 SAO_PAULO_TZ = pytz.timezone('America/Sao_Paulo')
@@ -753,7 +754,7 @@ def export_finances(request):
             if user_group_name in ('Américas', 'AMCRJ - SERVICOS MEDICOS LTDA'):
                 row['Plantão/Eletiva'] = item.plantao_eletiva or ''
             
-            row['Acomodação'] = item.procedimento.acomodacao if item.procedimento else ''
+            row['Acomodação'] = acomodacao_to_label(item.procedimento.acomodacao) if item.procedimento else ''
 
             # Continue with remaining columns
             row.update({

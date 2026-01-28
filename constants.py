@@ -45,3 +45,40 @@ ACOMODACAO_CHOICES = [
     ('apartamento', 'Apartamento'),
     ('enfermaria', 'Enfermaria'),
 ]
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+ACOMODACAO_NUMERIC_LABELS = {
+    '1': 'Enfermaria',
+    '2': 'Apartamento',
+    '3': 'Ambulatório',
+}
+
+ACOMODACAO_TEXT_LABELS = {
+    'enfermaria': 'Enfermaria',
+    'apartamento': 'Apartamento',
+    'ambulatorio': 'Ambulatório',
+    'ambulatório': 'Ambulatório',
+}
+
+
+def acomodacao_to_label(value) -> str:
+    """
+    Normaliza a acomodação para um rótulo amigável.
+
+    Aceita tanto códigos numéricos (1/2/3) quanto valores textuais.
+    """
+    if value is None:
+        return ''
+    raw = str(value).strip()
+    if raw == '':
+        return ''
+
+    key = raw.lower()
+    if key in ACOMODACAO_NUMERIC_LABELS:
+        return ACOMODACAO_NUMERIC_LABELS[key]
+    if key in ACOMODACAO_TEXT_LABELS:
+        return ACOMODACAO_TEXT_LABELS[key]
+
+    return raw

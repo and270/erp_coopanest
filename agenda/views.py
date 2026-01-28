@@ -33,6 +33,7 @@ import unicodedata
 import io
 import re
 from difflib import get_close_matches
+from constants import acomodacao_to_label
 
 MONTH_NAMES_PT = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -246,7 +247,7 @@ def get_procedure(request, procedure_id):
         'email_paciente': procedure.email_paciente,
         'data_nascimento': procedure.data_nascimento.strftime('%Y-%m-%d') if procedure.data_nascimento else '',
         'acomodacao': procedure.acomodacao or '',
-        'acomodacao_label': procedure.get_acomodacao_display() if procedure.acomodacao else '',
+        'acomodacao_label': acomodacao_to_label(procedure.acomodacao) if procedure.acomodacao else '',
         'convenio': {
             'id': procedure.convenio.id,
             'text': procedure.convenio.name

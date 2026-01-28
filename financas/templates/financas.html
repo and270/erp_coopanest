@@ -175,7 +175,19 @@
                             {% if user_group_name == 'Américas' or user_group_name == 'AMCRJ - SERVICOS MEDICOS LTDA' %}
                                 <td>{{ item.plantao_eletiva|default:"--" }}</td>
                             {% endif %}
-                            <td>{{ item.procedimento.acomodacao|default:"--" }}</td>
+                            <td>
+                                {% with acomod=item.procedimento.acomodacao %}
+                                    {% if acomod == 1 or acomod == '1' %}
+                                        Enfermaria
+                                    {% elif acomod == 2 or acomod == '2' %}
+                                        Apartamento
+                                    {% elif acomod == 3 or acomod == '3' %}
+                                        Ambulatório
+                                    {% else %}
+                                        {{ acomod|default:"--" }}
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
                             {# Revert to original formatting #}
                             <td>{% if item.valor_faturado is not None %}R$ {{ item.valor_faturado|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>
                             <td>{% if item.valor_recebido is not None %}R$ {{ item.valor_recebido|floatformat:2|intcomma|replace:',.' }}{% else %}R$ --{% endif %}</td>

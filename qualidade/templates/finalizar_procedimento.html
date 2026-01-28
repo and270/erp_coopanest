@@ -34,7 +34,7 @@
             </div>
             <div class="info-item">
                 <div class="info-label">Acomodação</div>
-                <div class="info-value">{{ procedimento.get_acomodacao_display|default:"Não informado" }}</div>
+                <div class="info-value">{{ procedimento.acomodacao|acomodacao_label|default:"Não informado" }}</div>
             </div>
         </div>
 
